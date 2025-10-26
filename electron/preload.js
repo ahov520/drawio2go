@@ -1,0 +1,17 @@
+const { contextBridge, ipcRenderer } = require("electron");
+
+// 暴露安全的 API 到渲染进程
+contextBridge.exposeInMainWorld("electron", {
+  // 选择文件夹
+  selectFolder: () => ipcRenderer.invoke("select-folder"),
+
+  // 保存图表
+  saveDiagram: (xml, defaultPath) =>
+    ipcRenderer.invoke("save-diagram", xml, defaultPath),
+
+  // 加载图表
+  loadDiagram: () => ipcRenderer.invoke("load-diagram"),
+
+  // 打开外部链接
+  openExternal: (url) => ipcRenderer.invoke("open-external", url),
+});

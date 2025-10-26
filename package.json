@@ -1,0 +1,73 @@
+{
+  "name": "drawio2go",
+  "version": "1.0.0",
+  "description": "Electron + Next.js DrawIO Application",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "electron": "electron .",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron:build": "npm run build && electron-builder"
+  },
+  "keywords": [
+    "electron",
+    "nextjs",
+    "drawio",
+    "heroui"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@heroui/react": "^3.0.0-alpha.35",
+    "@heroui/styles": "^3.0.0-alpha.35",
+    "@tailwindcss/postcss": "^4.1.16",
+    "electron-store": "^11.0.2",
+    "next": "^15.1.8",
+    "postcss": "^8.5.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-drawio": "^1.0.7",
+    "tailwind-variants": "^3.1.1",
+    "tailwindcss": "^4.1.16"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "concurrently": "^8.0.0",
+    "electron": "^38.0.0",
+    "electron-builder": "^24.0.0",
+    "typescript": "^5.0.0",
+    "wait-on": "^7.0.0"
+  },
+  "build": {
+    "appId": "com.drawio2go.app",
+    "productName": "DrawIO2Go",
+    "files": [
+      "electron/**/*",
+      ".next/**/*",
+      "public/**/*"
+    ],
+    "directories": {
+      "buildResources": "assets"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ]
+    }
+  }
+}
