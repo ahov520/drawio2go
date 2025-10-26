@@ -9,8 +9,8 @@
     "start": "next start",
     "lint": "next lint",
     "electron": "electron .",
-    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
-    "electron:build": "npm run build && electron-builder"
+    "electron:dev": "concurrently \"pnpm run dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron:build": "pnpm run build && electron-builder"
   },
   "keywords": [
     "electron",
@@ -21,9 +21,11 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@ai-sdk/react": "^2.0.79",
     "@heroui/react": "^3.0.0-alpha.35",
     "@heroui/styles": "^3.0.0-alpha.35",
     "@tailwindcss/postcss": "^4.1.16",
+    "ai": "^5.0.79",
     "electron-store": "^11.0.2",
     "next": "^15.1.8",
     "postcss": "^8.5.6",
@@ -31,7 +33,8 @@
     "react-dom": "^19.0.0",
     "react-drawio": "^1.0.7",
     "tailwind-variants": "^3.1.1",
-    "tailwindcss": "^4.1.16"
+    "tailwindcss": "^4.1.16",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

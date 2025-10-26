@@ -4,13 +4,13 @@ import { useState, useEffect } from "react";
 // import DrawioEditor from "./components/DrawioEditor";
 import DrawioEditorNative from "./components/DrawioEditorNative"; // 使用原生 iframe 实现
 import BottomBar from "./components/BottomBar";
-import SettingsSidebar from "./components/SettingsSidebar";
+import UnifiedSidebar from "./components/UnifiedSidebar";
 
 export default function Home() {
   const [diagramXml, setDiagramXml] = useState<string>("");
   const [currentXml, setCurrentXml] = useState<string>("");
   const [settings, setSettings] = useState({ defaultPath: "" });
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [activeSidebar, setActiveSidebar] = useState<"none" | "settings" | "chat">("none");
 
   // 加载保存的图表
   useEffect(() => {
@@ -106,31 +106,39 @@ export default function Home() {
 
   // 切换设置侧栏
   const handleToggleSettings = () => {
-    setIsSettingsOpen(!isSettingsOpen);
+    setActiveSidebar((prev) => (prev === "settings" ? "none" : "settings"));
+  };
+
+  // 切换聊天侧栏
+  const handleToggleChat = () => {
+    setActiveSidebar((prev) => (prev === "chat" ? "none" : "chat"));
   };
 
   return (
     <main className="main-container">
       {/* DrawIO 编辑器区域 */}
-      <div className={`editor-container ${isSettingsOpen ? 'sidebar-open' : ''}`}>
+      <div className={`editor-container ${activeSidebar !== "none" ? "sidebar-open" : ""}`}>
         <DrawioEditorNative
           initialXml={diagramXml}
           onSave={handleAutoSave}
         />
       </div>
 
-      {/* 设置侧拉栏 */}
-      <SettingsSidebar
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
+      {/* 统一侧拉栏 */}
+      <UnifiedSidebar
+        isOpen={activeSidebar !== "none"}
+        activeSidebar={activeSidebar}
+        onClose={() => setActiveSidebar("none")}
         onSettingsChange={handleSettingsChange}
       />
 
       {/* 底部工具栏 */}
       <BottomBar
         onToggleSettings={handleToggleSettings}
+        onToggleChat={handleToggleChat}
         onSave={handleManualSave}
         onLoad={handleLoad}
+        activeSidebar={activeSidebar}
       />
     </main>
   );

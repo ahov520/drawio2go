@@ -20,7 +20,9 @@ app/
 │   ├── DrawioEditorNative.tsx  # DrawIO 编辑器（原生 iframe + PostMessage）
 │   ├── DrawioEditor.tsx        # DrawIO 编辑器（react-drawio 备用）
 │   ├── BottomBar.tsx           # 底部工具栏
-│   └── SettingsSidebar.tsx     # 设置侧边栏（可调整宽度）
+│   ├── UnifiedSidebar.tsx      # 统一侧边栏容器（可调整宽度）
+│   ├── SettingsSidebar.tsx     # 设置侧边栏内容组件
+│   └── ChatSidebar.tsx         # 聊天侧边栏内容组件（@ai-sdk/react）
 ├── layout.tsx                  # 根布局
 ├── page.tsx                    # 主页面
 └── globals.css                 # 全局样式
@@ -34,6 +36,7 @@ electron/
 
 ### 1. HeroUI v3 使用规范
 - **复合组件**: 使用 `Card.Root`, `Card.Header`, `Card.Content` 等，不使用扁平化 props
+- **Tooltip 组件**: 使用 `<TooltipRoot><Button>...</Button><TooltipContent>...</TooltipContent></TooltipRoot>` 模式
 - **事件处理**: 使用 `onPress` 代替 `onClick`
 - **客户端指令**: 带交互的组件必须添加 `"use client"`
 - **无 Provider**: HeroUI v3 不需要全局 Provider 包裹
@@ -170,8 +173,20 @@ interface DrawioEditorNativeProps {
 ```typescript
 interface BottomBarProps {
   onToggleSettings?: () => void;  // 切换设置侧栏
+  onToggleChat?: () => void;      // 切换聊天侧栏
   onSave?: () => void;            // 保存按钮
   onLoad?: () => void;            // 加载按钮
+  activeSidebar?: "none" | "settings" | "chat"; // 当前激活的侧栏
+}
+```
+
+### UnifiedSidebar
+```typescript
+interface UnifiedSidebarProps {
+  isOpen: boolean;                                    // 是否打开
+  activeSidebar: "none" | "settings" | "chat";       // 当前显示的内容
+  onClose: () => void;                                // 关闭回调
+  onSettingsChange?: (settings: {defaultPath: string}) => void; // 设置变更
 }
 ```
 
@@ -183,10 +198,58 @@ interface SettingsSidebarProps {
   onSettingsChange?: (settings: {defaultPath: string}) => void; // 设置变更
 }
 ```
+**特性**:
+- 无顶部标题栏和关闭按钮
+- 无底部固定按钮区
+- 浮动保存/取消按钮：仅在设置有修改时出现在右下角
+- 自动检测修改：对比当前值与已保存值
+
+### ChatSidebar
+```typescript
+interface ChatSidebarProps {
+  isOpen: boolean;     // 是否打开
+  onClose: () => void; // 关闭回调
+}
+```
+**特性**:
+- 使用 `@ai-sdk/react` 的 `useChat` hook
+- 无顶部标题栏和关闭按钮
+- 一体化设计：无分隔线，上方消息区 + 下方输入区
+- 圆角矩形边框输入框
+- 按钮组布局：
+  - 左侧：新建聊天、历史对话（仅图标 + Tooltip）
+  - 右侧：版本管理、文件上传（仅图标 + Tooltip）、发送（图标+文本）
+- 后端功能暂未实现，仅有 UI
 
 ## 项目仓库
 
 **GitHub**: https://github.com/Menghuan1918/drawio2go
+
+## 最近更新
+
+### 2025-10-26 - 侧边栏简化设计
+- ✅ **删除冗余 UI 元素**:
+  - 聊天侧边栏：删除顶部 "AI 助手" 标题和关闭按钮
+  - 设置侧边栏：删除顶部 "应用设置" 标题、关闭按钮和底部固定按钮区
+  - 删除所有分隔线，完全扁平化设计
+- ✅ **智能浮动按钮**:
+  - 设置页面：仅在有修改时，右下角浮现"保存"和"取消"按钮
+  - 自动检测修改：对比当前值与已保存值
+  - 淡入淡出动画效果
+- ✅ **样式优化**:
+  - 调整顶部 padding，内容更贴近顶部
+  - 移除所有 section 分隔线
+  - 更简洁的视觉体验
+
+### 2025-10-26 - 聊天页面重构
+- ✅ **统一侧边栏架构**: 创建 `UnifiedSidebar` 组件，聊天和设置共享同一容器
+- ✅ **聊天界面重新设计**:
+  - 一体化布局：无分隔线，上方消息区 + 下方输入区
+  - 圆角矩形边框输入框（placeholder 提示图像上传功能）
+  - 按钮组：左侧新建/历史，右侧版本/上传/发送
+  - 所有按钮支持 Tooltip（HeroUI v3 复合组件模式）
+- ✅ **样式优化**: 扁平化设计，保持 #3388BB 主题色
+- ⚠️ **后端留空**: 所有聊天功能仅 `console.log`，不连接真实 API
 
 ---
 
