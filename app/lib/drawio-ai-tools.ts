@@ -33,11 +33,11 @@ export const replaceDrawioXMLTool = tool({
  * 批量精准替换 DrawIO XML 中的内容片段
  */
 export const batchReplaceDrawioXMLTool = tool({
-  description: '批量精准替换 DrawIO XML 中的内容片段。使用场景：需要修改图表中的特定文本、属性或样式时使用。每个 search 字符串必须在 XML 中唯一出现，否则会跳过该替换。建议先使用 get_drawio_xml 获取内容，确认要替换的字符串唯一后再调用。',
+  description: '批量精准替换 DrawIO XML 中的内容片段。使用场景：需要修改图表中的特定文本、属性或样式时使用。会替换所有匹配的内容（全局替换）。建议先使用 get_drawio_xml 获取内容，确认要替换的字符串正确后再调用。',
   inputSchema: z.object({
     replacements: z.array(
       z.object({
-        search: z.string().describe('要搜索的字符串，必须在 XML 中唯一出现'),
+        search: z.string().describe('要搜索的字符串，将替换所有匹配项'),
         replace: z.string().describe('替换后的字符串'),
       })
     ).describe('替换对数组，每个对象包含 search 和 replace 字段'),

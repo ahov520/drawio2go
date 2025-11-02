@@ -63,20 +63,20 @@ ReplaceXMLResult {
 ```
 
 ### 3. batchReplaceDrawioXML(replacements: Replacement[])
-批量替换 XML 中的文本内容。
+批量替换 XML 中的文本内容，支持全局替换（替换所有匹配项）。
 
 **参数**:
 - `replacements`: 替换规则数组
   ```typescript
   Replacement {
-    search: string;    // 查找文本
+    search: string;    // 查找文本（将替换所有匹配项）
     replace: string;   // 替换文本
   }
   ```
 
 **功能**:
-- 逐项验证和替换
-- 跳过无效的替换项
+- 全局替换所有匹配的内容
+- 自动跳过未找到的搜索内容
 - 详细的错误报告
 
 **返回**:

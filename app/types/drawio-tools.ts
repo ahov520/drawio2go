@@ -29,7 +29,7 @@ export interface Replacement {
 }
 
 /**
- * 批量替换中跳过项的错误详情
+ * 批量替换中失败项的错误详情
  */
 export interface ReplacementError {
   index: number;

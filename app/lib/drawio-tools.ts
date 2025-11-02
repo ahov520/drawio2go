@@ -56,6 +56,33 @@ function validateXML(xml: string): XMLValidationResult {
 }
 
 /**
+ * 解码 base64 编码的 XML 内容
+ *
+ * 检测并解码 data:image/svg+xml;base64, 前缀的内容
+ *
+ * @param xml - 原始 XML 字符串（可能包含 base64 编码）
+ * @returns 解码后的 XML 字符串，如果不是 base64 格式则返回原始内容
+ */
+function decodeBase64XML(xml: string): string {
+  const prefix = 'data:image/svg+xml;base64,';
+
+  if (xml.startsWith(prefix)) {
+    try {
+      // 提取 base64 部分
+      const base64Content = xml.substring(prefix.length);
+      // 解码 base64
+      const decoded = atob(base64Content);
+      return decoded;
+    } catch (error) {
+      console.error('[DrawIO Tools] Base64 解码失败:', error);
+      return xml; // 解码失败时返回原始内容
+    }
+  }
+
+  return xml; // 不是 base64 格式，直接返回
+}
+
+/**
  * 触发自定义事件，通知组件 XML 已更新
  *
  * @param xml - 更新后的 XML 内容
@@ -101,9 +128,12 @@ export function getDrawioXML(): GetXMLResult {
       };
     }
 
+    // 解码 base64 编码的 XML（如果需要）
+    const decodedXml = decodeBase64XML(xml);
+
     return {
       success: true,
-      xml,
+      xml: decodedXml,
     };
   } catch (error) {
     return {
@@ -171,7 +201,7 @@ export function replaceDrawioXML(drawio_xml: string): ReplaceXMLResult {
 /**
  * 3. 批量精准替换 XML 内容
  *
- * 对每个 search-replace 对进行唯一性检查，只替换唯一出现的内容
+ * 对每个 search-replace 对进行全局替换，替换所有匹配的内容
  *
  * @param replacements - 替换对数组，每个对象包含 search 和 replace 字段
  * @returns 详细的批量替换结果报告
@@ -181,7 +211,7 @@ export function replaceDrawioXML(drawio_xml: string): ReplaceXMLResult {
  *   { search: 'oldText1', replace: 'newText1' },
  *   { search: 'oldText2', replace: 'newText2' }
  * ]);
- * console.log(`成功替换 ${result.successCount} 条，跳过 ${result.skippedCount} 条`);
+ * console.log(`成功替换 ${result.successCount} 条`);
  * result.errors.forEach(err => console.log(`错误: ${err.reason}`));
  */
 export function batchReplaceDrawioXML(
@@ -225,45 +255,28 @@ export function batchReplaceDrawioXML(
   const errors: ReplacementError[] = [];
   let successCount = 0;
 
-  // 阶段 1: 唯一性检查
-  const validReplacements: Array<{ index: number; replacement: Replacement }> =
-    [];
-
+  // 执行全局替换
   replacements.forEach((replacement, index) => {
-    const { search } = replacement;
+    const { search, replace } = replacement;
 
-    // 检查出现次数
-    const regex = new RegExp(escapeRegExp(search), "g");
-    const matches = currentXml.match(regex);
-    const count = matches ? matches.length : 0;
-
-    if (count === 0) {
+    // 检查搜索内容是否存在
+    if (!currentXml.includes(search)) {
       errors.push({
         index,
-        search: replacement.search,
-        replace: replacement.replace,
+        search,
+        replace,
         reason: `未找到搜索内容 "${search}"`,
       });
-    } else if (count > 1) {
-      errors.push({
-        index,
-        search: replacement.search,
-        replace: replacement.replace,
-        reason: `搜索内容 "${search}" 在 XML 中出现 ${count} 次，不唯一`,
-      });
-    } else {
-      // count === 1，标记为合法
-      validReplacements.push({ index, replacement });
+      return;
     }
+
+    // 使用全局替换替换所有匹配项
+    const regex = new RegExp(escapeRegExp(search), "g");
+    currentXml = currentXml.replace(regex, replace);
+    successCount++;
   });
 
-  // 阶段 2: 执行替换
-  for (const { replacement } of validReplacements) {
-    currentXml = currentXml.replace(replacement.search, replacement.replace);
-    successCount++;
-  }
-
-  // 阶段 3: 验证替换后的 XML
+  // 验证替换后的 XML 格式
   if (successCount > 0) {
     const validation = validateXML(currentXml);
     if (!validation.valid) {
@@ -285,7 +298,7 @@ export function batchReplaceDrawioXML(
       };
     }
 
-    // 阶段 4: 保存到 localStorage
+    // 保存到 localStorage 并触发更新事件
     try {
       localStorage.setItem(STORAGE_KEY, currentXml);
       triggerUpdateEvent(currentXml);
@@ -319,8 +332,8 @@ export function batchReplaceDrawioXML(
     message: allSuccess
       ? `成功替换 ${successCount} 条`
       : successCount > 0
-      ? `成功替换 ${successCount} 条，跳过 ${skippedCount} 条`
-      : `所有替换均失败，跳过 ${skippedCount} 条`,
+      ? `部分成功：成功替换 ${successCount} 条，失败 ${skippedCount} 条`
+      : `所有替换均失败，失败 ${skippedCount} 条`,
     totalRequested: replacements.length,
     successCount,
     skippedCount,
