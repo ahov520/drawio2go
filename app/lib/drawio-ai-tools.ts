@@ -1,11 +1,16 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { DOMParser } from '@xmldom/xmldom';
 
 import {
   executeDrawioEditBatch,
   executeDrawioRead,
 } from './drawio-xml-service';
-import type { DrawioEditOperation } from '@/app/types/drawio-tools';
+import { executeToolOnClient } from './tool-executor';
+import type {
+  DrawioEditOperation,
+  ReplaceXMLResult,
+} from '@/app/types/drawio-tools';
 
 const operationSchema = z
   .object({
@@ -117,7 +122,43 @@ export const drawioEditBatchTool = tool({
   },
 });
 
+export const drawioOverwriteTool = tool({
+  description:
+    '完整覆写 DrawIO XML 内容。此操作会替换整个图表，用于模板替换等场景。XML 格式会被强制验证。',
+  inputSchema: z.object({
+    drawio_xml: z.string().min(1, 'drawio_xml 不能为空'),
+  }),
+  execute: async ({ drawio_xml }) => {
+    // 强制验证 XML 格式
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(drawio_xml, 'text/xml');
+      const parseErrors = doc.getElementsByTagName('parsererror');
+
+      if (parseErrors.length > 0) {
+        return {
+          success: false,
+          error: 'XML 格式无效: 解析失败',
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: `XML 验证失败: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
+
+    // 调用前端工具覆写 XML
+    return (await executeToolOnClient(
+      'replace_drawio_xml',
+      { drawio_xml },
+      30000
+    )) as ReplaceXMLResult;
+  },
+});
+
 export const drawioTools = {
   drawio_read: drawioReadTool,
   drawio_edit_batch: drawioEditBatchTool,
+  drawio_overwrite: drawioOverwriteTool,
 };
