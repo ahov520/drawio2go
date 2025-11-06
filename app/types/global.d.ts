@@ -42,8 +42,20 @@ declare global {
       }) => Promise<string[] | null>;
       writeFile: (filePath: string, data: string) => Promise<{ success: boolean; error?: string }>;
       readFile: (filePath: string) => Promise<string>;
+      enableSelectionWatcher: () => Promise<{ success: boolean; message?: string }>;
     };
   }
+}
+
+declare module 'xpath' {
+  import type { Document, Node } from '@xmldom/xmldom';
+
+  export type XPathValue = Node | string | number | boolean;
+
+  export function select(
+    expression: string,
+    node: Node | Document
+  ): XPathValue | XPathValue[];
 }
 
 export {};

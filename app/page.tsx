@@ -7,12 +7,16 @@ import BottomBar from "./components/BottomBar";
 import UnifiedSidebar from "./components/UnifiedSidebar";
 import { UPDATE_EVENT, saveDrawioXML } from "./lib/drawio-tools";
 import { useDrawioSocket } from "./hooks/useDrawioSocket";
+import { DrawioSelectionInfo } from "./types/drawio-tools";
 
 export default function Home() {
   const [diagramXml, setDiagramXml] = useState<string>("");
   const [currentXml, setCurrentXml] = useState<string>("");
   const [settings, setSettings] = useState({ defaultPath: "" });
   const [activeSidebar, setActiveSidebar] = useState<"none" | "settings" | "chat">("none");
+  const [selectionInfo, setSelectionInfo] = useState<DrawioSelectionInfo>({ count: 0, cells: [] });
+  const [isElectronEnv, setIsElectronEnv] = useState<boolean>(false);
+  const [forceReload, setForceReload] = useState<boolean>(false); // 控制是否强制完全重载
 
   // 初始化 Socket.IO 连接
   const { isConnected } = useDrawioSocket();
@@ -20,6 +24,8 @@ export default function Home() {
   // 加载保存的图表
   useEffect(() => {
     if (typeof window !== "undefined") {
+      setIsElectronEnv(Boolean(window.electron));
+
       const savedXml = localStorage.getItem("currentDiagram");
       if (savedXml) {
         setDiagramXml(savedXml);
@@ -32,10 +38,13 @@ export default function Home() {
       }
 
       // 监听 DrawIO XML 更新事件（由工具函数触发）
+      // 注意：这里只更新 React 状态，实际的 DrawIO 编辑器更新在 DrawioEditorNative 组件内部完成
+      // DrawioEditorNative 会监听 initialXml prop 的变化，并使用 merge 动作增量更新，保留编辑状态
       const handleXmlUpdate = (event: Event) => {
         const customEvent = event as CustomEvent<{ xml: string }>;
         if (customEvent.detail?.xml) {
-          console.log("🔄 收到 DrawIO 工具触发的 XML 更新事件");
+          console.log("🔄 收到 DrawIO 工具触发的 XML 更新事件，开始更新状态");
+          console.log("🔄 新 XML 长度:", customEvent.detail.xml.length);
           setDiagramXml(customEvent.detail.xml);
           setCurrentXml(customEvent.detail.xml);
         }
@@ -55,6 +64,12 @@ export default function Home() {
     if (typeof window !== "undefined") {
       saveDrawioXML(xml);
     }
+  };
+
+  // 处理 DrawIO 选区变化
+  const handleSelectionChange = (info: DrawioSelectionInfo) => {
+    setSelectionInfo(info);
+    console.log('🎯 选中元素详情:', JSON.stringify(info.cells, null, 2));
   };
 
   // 手动保存到文件
@@ -92,9 +107,13 @@ export default function Home() {
     if (typeof window !== "undefined" && window.electron) {
       const result = await window.electron.loadDiagram();
       if (result.success && result.xml) {
+        console.log("📂 用户手动加载文件，触发完全重载");
+        setForceReload(true); // 触发完全重载
         setDiagramXml(result.xml);
         setCurrentXml(result.xml);
         saveDrawioXML(result.xml);
+        // 重置 forceReload 标志
+        setTimeout(() => setForceReload(false), 100);
       } else if (result.message !== "用户取消打开") {
         alert(`加载失败: ${result.message}`);
       }
@@ -109,9 +128,13 @@ export default function Home() {
           const reader = new FileReader();
           reader.onload = (event) => {
             const xml = event.target?.result as string;
+            console.log("📂 用户手动加载文件，触发完全重载");
+            setForceReload(true); // 触发完全重载
             setDiagramXml(xml);
             setCurrentXml(xml);
             saveDrawioXML(xml);
+            // 重置 forceReload 标志
+            setTimeout(() => setForceReload(false), 100);
           };
           reader.readAsText(file);
         }
@@ -160,6 +183,8 @@ export default function Home() {
         <DrawioEditorNative
           initialXml={diagramXml}
           onSave={handleAutoSave}
+          onSelectionChange={handleSelectionChange}
+          forceReload={forceReload}
         />
       </div>
 
@@ -178,6 +203,10 @@ export default function Home() {
         onSave={handleManualSave}
         onLoad={handleLoad}
         activeSidebar={activeSidebar}
+        selectionLabel={isElectronEnv
+          ? `选中了${selectionInfo.count}个对象${selectionInfo.cells.length > 0 ? ` (IDs: ${selectionInfo.cells.map(c => c.id).slice(0, 3).join(', ')}${selectionInfo.cells.length > 3 ? '...' : ''})` : ''}`
+          : "网页无法使用该功能"
+        }
       />
     </main>
   );
