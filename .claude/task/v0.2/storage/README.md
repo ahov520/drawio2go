@@ -98,12 +98,40 @@ interface StorageAdapter {
 
 ### 📊 关系型数据库设计
 ```sql
+-- 设置信息表
+CREATE TABLE settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+)
+
+-- XML版本表
+CREATE TABLE xml_versions (
+  version_id TEXT PRIMARY KEY,
+  xml_content TEXT NOT NULL,
+  name TEXT NOT NULL,
+  notes TEXT,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)
+
+-- 项目状态表
+CREATE TABLE project_state (
+  id TEXT PRIMARY KEY DEFAULT 'current',
+  active_xml_version TEXT NOT NULL DEFAULT '1.0.0',
+  active_session_id TEXT,
+  last_modified INTEGER NOT NULL,
+  FOREIGN KEY (active_xml_version) REFERENCES xml_versions(version_id)
+)
+
 -- 聊天会话表
 CREATE TABLE chat_sessions (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
+  xml_version TEXT NOT NULL,
   created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
+  updated_at INTEGER NOT NULL,
+  FOREIGN KEY (xml_version) REFERENCES xml_versions(version_id)
 )
 
 -- 聊天消息表
@@ -116,33 +144,22 @@ CREATE TABLE chat_messages (
   created_at INTEGER NOT NULL,
   FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
 )
-
--- 图表数据表
-CREATE TABLE diagrams (
-  id TEXT PRIMARY KEY DEFAULT 'current',
-  xml_content TEXT NOT NULL,
-  updated_at INTEGER NOT NULL
-)
-
--- 配置表
-CREATE TABLE config (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL
-)
 ```
 
 ### 🎯 数据分层策略
-1. **配置数据**（LLM 配置、UI 设置）
+1. **设置信息**（LLM 配置、UI 设置）
    - 小数据量，频繁读取
-   - 存储在 `config` 表
+   - 存储在 `settings` 表
 
-2. **图表数据**（DrawIO XML）
-   - 中等数据量，实时保存
-   - 存储在 `diagrams` 表
+2. **工程信息**（DrawIO XML、项目状态）
+   - 支持多版本管理
+   - 存储在 `xml_versions` 和 `project_state` 表
+   - 通过版本号关联会话历史
 
 3. **聊天数据**（会话、消息）
    - 大数据量，增长型
    - 关系型存储，支持复杂查询
+   - 会话关联 XML 版本，支持历史追溯
 
 ## 破坏性变更说明
 

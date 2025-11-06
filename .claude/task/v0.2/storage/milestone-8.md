@@ -18,7 +18,7 @@
   import type { LLMConfig } from '@/types/chat';
   import { DEFAULT_LLM_CONFIG, normalizeLLMConfig } from '@/lib/llm-config';
   import { getStorage } from '@/lib/storage';
-  import { CONFIG_KEYS } from '@/lib/storage';
+  import { SETTINGS_KEYS } from '@/lib/storage';
 
   export function useLLMConfig() {
     const [config, setConfig] = useState<LLMConfig>(DEFAULT_LLM_CONFIG);
@@ -31,14 +31,14 @@
         try {
           setIsLoading(true);
           const storage = await getStorage();
-          const saved = await storage.get<LLMConfig>(CONFIG_KEYS.LLM_CONFIG);
+          const saved = await storage.get<LLMConfig>(SETTINGS_KEYS.LLM_CONFIG);
 
           if (saved) {
             const normalized = normalizeLLMConfig(saved);
             setConfig(normalized);
           } else {
             // 首次使用，保存默认配置
-            await storage.set(CONFIG_KEYS.LLM_CONFIG, DEFAULT_LLM_CONFIG);
+            await storage.set(SETTINGS_KEYS.LLM_CONFIG, DEFAULT_LLM_CONFIG);
             setConfig(DEFAULT_LLM_CONFIG);
           }
 
@@ -61,7 +61,7 @@
       try {
         const normalized = normalizeLLMConfig(newConfig);
         const storage = await getStorage();
-        await storage.set(CONFIG_KEYS.LLM_CONFIG, normalized);
+        await storage.set(SETTINGS_KEYS.LLM_CONFIG, normalized);
 
         setConfig(normalized);
         setError(null);
@@ -78,7 +78,7 @@
     const resetConfig = useCallback(async () => {
       try {
         const storage = await getStorage();
-        await storage.set(CONFIG_KEYS.LLM_CONFIG, DEFAULT_LLM_CONFIG);
+        await storage.set(SETTINGS_KEYS.LLM_CONFIG, DEFAULT_LLM_CONFIG);
 
         setConfig(DEFAULT_LLM_CONFIG);
         setError(null);
@@ -182,7 +182,7 @@
 
   import { useState, useEffect, useCallback } from 'react';
   import { getStorage } from '@/lib/storage';
-  import { CONFIG_KEYS } from '@/lib/storage';
+  import { SETTINGS_KEYS } from '@/lib/storage';
 
   export interface UIConfig {
     defaultPath: string;
@@ -212,8 +212,8 @@
           // 加载各个配置项
           const [defaultPath, sidebarWidth, theme, language] =
             await Promise.all([
-              storage.get<string>(CONFIG_KEYS.DEFAULT_PATH),
-              storage.get<number>(CONFIG_KEYS.SIDEBAR_WIDTH),
+              storage.get<string>(SETTINGS_KEYS.DEFAULT_PATH),
+              storage.get<number>(SETTINGS_KEYS.SIDEBAR_WIDTH),
               storage.get<'light' | 'dark' | 'auto'>('theme'),
               storage.get<'zh-CN' | 'en-US'>('language'),
             ]);
@@ -242,9 +242,9 @@
           const storage = await getStorage();
           const storageKey =
             key === 'defaultPath'
-              ? CONFIG_KEYS.DEFAULT_PATH
+              ? SETTINGS_KEYS.DEFAULT_PATH
               : key === 'sidebarWidth'
-              ? CONFIG_KEYS.SIDEBAR_WIDTH
+              ? SETTINGS_KEYS.SIDEBAR_WIDTH
               : key;
 
           await storage.set(storageKey, value);
@@ -267,8 +267,8 @@
 
         await storage.setMany(
           new Map([
-            [CONFIG_KEYS.DEFAULT_PATH, newConfig.defaultPath],
-            [CONFIG_KEYS.SIDEBAR_WIDTH, newConfig.sidebarWidth],
+            [SETTINGS_KEYS.DEFAULT_PATH, newConfig.defaultPath],
+            [SETTINGS_KEYS.SIDEBAR_WIDTH, newConfig.sidebarWidth],
             ['theme', newConfig.theme],
             ['language', newConfig.language],
           ])
@@ -336,10 +336,10 @@
 
     // 获取所有配置
     const [llmConfig, uiConfig] = await Promise.all([
-      storage.get(CONFIG_KEYS.LLM_CONFIG),
+      storage.get(SETTINGS_KEYS.LLM_CONFIG),
       storage.getMany([
-        CONFIG_KEYS.DEFAULT_PATH,
-        CONFIG_KEYS.SIDEBAR_WIDTH,
+        SETTINGS_KEYS.DEFAULT_PATH,
+        SETTINGS_KEYS.SIDEBAR_WIDTH,
         'theme',
         'language',
       ]),
@@ -377,7 +377,7 @@
       const storage = await getStorage();
 
       // 保存 LLM 配置
-      await storage.set(CONFIG_KEYS.LLM_CONFIG, imported.llm);
+      await storage.set(SETTINGS_KEYS.LLM_CONFIG, imported.llm);
 
       // 保存 UI 配置
       const uiEntries = new Map(Object.entries(imported.ui));
@@ -429,11 +429,11 @@
     useEffect(() => {
       // 监听存储变化事件
       const handleStorageChange = async (event: StorageEvent) => {
-        if (event.key === CONFIG_KEYS.LLM_CONFIG) {
+        if (event.key === SETTINGS_KEYS.LLM_CONFIG) {
           // 重新加载配置
           const storage = await getStorage();
           const newConfig = await storage.get<LLMConfig>(
-            CONFIG_KEYS.LLM_CONFIG
+            SETTINGS_KEYS.LLM_CONFIG
           );
           if (newConfig) {
             setConfig(newConfig);

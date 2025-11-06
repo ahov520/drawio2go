@@ -48,12 +48,40 @@
 
     createTables() {
       const schema = `
+        -- 设置信息表
+        CREATE TABLE IF NOT EXISTS settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL,
+          updated_at INTEGER NOT NULL
+        );
+
+        -- XML版本表
+        CREATE TABLE IF NOT EXISTS xml_versions (
+          version_id TEXT PRIMARY KEY,
+          xml_content TEXT NOT NULL,
+          name TEXT NOT NULL,
+          notes TEXT,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        );
+
+        -- 项目状态表
+        CREATE TABLE IF NOT EXISTS project_state (
+          id TEXT PRIMARY KEY DEFAULT 'current',
+          active_xml_version TEXT NOT NULL DEFAULT '1.0.0',
+          active_session_id TEXT,
+          last_modified INTEGER NOT NULL,
+          FOREIGN KEY (active_xml_version) REFERENCES xml_versions(version_id)
+        );
+
         -- 聊天会话表
         CREATE TABLE IF NOT EXISTS chat_sessions (
           id TEXT PRIMARY KEY,
           title TEXT NOT NULL,
+          xml_version TEXT NOT NULL,
           created_at INTEGER NOT NULL,
-          updated_at INTEGER NOT NULL
+          updated_at INTEGER NOT NULL,
+          FOREIGN KEY (xml_version) REFERENCES xml_versions(version_id)
         );
 
         -- 聊天消息表
@@ -68,25 +96,20 @@
         );
 
         -- 创建索引
+        CREATE INDEX IF NOT EXISTS idx_settings_updated_at
+          ON settings(updated_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_xml_versions_created_at
+          ON xml_versions(created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_xml_versions_updated_at
+          ON xml_versions(updated_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_sessions_xml_version
+          ON chat_sessions(xml_version);
         CREATE INDEX IF NOT EXISTS idx_messages_session_id
           ON chat_messages(session_id);
         CREATE INDEX IF NOT EXISTS idx_messages_created_at
           ON chat_messages(created_at DESC);
         CREATE INDEX IF NOT EXISTS idx_sessions_updated_at
           ON chat_sessions(updated_at DESC);
-
-        -- 图表数据表
-        CREATE TABLE IF NOT EXISTS diagrams (
-          id TEXT PRIMARY KEY DEFAULT 'current',
-          xml_content TEXT NOT NULL,
-          updated_at INTEGER NOT NULL
-        );
-
-        -- 配置表
-        CREATE TABLE IF NOT EXISTS config (
-          key TEXT PRIMARY KEY,
-          value TEXT NOT NULL
-        );
       `;
 
       this.db.exec(schema);
@@ -110,7 +133,7 @@
   async get(key) {
     this.ensureInitialized();
 
-    const stmt = this.db.prepare('SELECT value FROM config WHERE key = ?');
+    const stmt = this.db.prepare('SELECT value FROM settings WHERE key = ?');
     const row = stmt.get(key);
 
     if (!row) return null;
@@ -134,12 +157,14 @@
       : JSON.stringify(value);
 
     const stmt = this.db.prepare(`
-      INSERT INTO config (key, value)
-      VALUES (?, ?)
-      ON CONFLICT(key) DO UPDATE SET value = excluded.value
+      INSERT INTO settings (key, value, updated_at)
+      VALUES (?, ?, ?)
+      ON CONFLICT(key) DO UPDATE SET
+        value = excluded.value,
+        updated_at = excluded.updated_at
     `);
 
-    stmt.run(key, jsonValue);
+    stmt.run(key, jsonValue, Date.now());
   }
   ```
 
@@ -148,7 +173,7 @@
   async delete(key) {
     this.ensureInitialized();
 
-    const stmt = this.db.prepare('DELETE FROM config WHERE key = ?');
+    const stmt = this.db.prepare('DELETE FROM settings WHERE key = ?');
     stmt.run(key);
   }
   ```
@@ -158,10 +183,11 @@
   async clear() {
     this.ensureInitialized();
 
-    this.db.exec('DELETE FROM config');
+    this.db.exec('DELETE FROM settings');
     this.db.exec('DELETE FROM chat_messages');
     this.db.exec('DELETE FROM chat_sessions');
-    this.db.exec('DELETE FROM diagrams');
+    this.db.exec('DELETE FROM project_state');
+    this.db.exec('DELETE FROM xml_versions');
   }
   ```
 
@@ -173,7 +199,7 @@
 
     const placeholders = keys.map(() => '?').join(',');
     const stmt = this.db.prepare(
-      `SELECT key, value FROM config WHERE key IN (${placeholders})`
+      `SELECT key, value FROM settings WHERE key IN (${placeholders})`
     );
 
     const rows = stmt.all(...keys);
@@ -197,17 +223,20 @@
     this.ensureInitialized();
 
     const insert = this.db.prepare(`
-      INSERT INTO config (key, value)
-      VALUES (?, ?)
-      ON CONFLICT(key) DO UPDATE SET value = excluded.value
+      INSERT INTO settings (key, value, updated_at)
+      VALUES (?, ?, ?)
+      ON CONFLICT(key) DO UPDATE SET
+        value = excluded.value,
+        updated_at = excluded.updated_at
     `);
 
     const transaction = this.db.transaction((items) => {
+      const now = Date.now();
       for (const [key, value] of items) {
         const jsonValue = typeof value === 'string'
           ? value
           : JSON.stringify(value);
-        insert.run(key, jsonValue);
+        insert.run(key, jsonValue, now);
       }
     });
 
@@ -277,8 +306,8 @@
     this.ensureInitialized();
 
     const stmt = this.db.prepare(`
-      INSERT INTO chat_sessions (id, title, created_at, updated_at)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO chat_sessions (id, title, xml_version, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         title = excluded.title,
         updated_at = excluded.updated_at
@@ -287,6 +316,7 @@
     stmt.run(
       session.id,
       session.title,
+      session.xml_version,
       session.created_at,
       session.updated_at
     );
@@ -344,33 +374,10 @@
   }
   ```
 
-### 6. 实现图表数据专用方法
-- [ ] 添加 `saveDiagram` 方法：
-  ```javascript
-  async saveDiagram(id, xmlContent) {
-    this.ensureInitialized();
-
-    const stmt = this.db.prepare(`
-      INSERT INTO diagrams (id, xml_content, updated_at)
-      VALUES (?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        xml_content = excluded.xml_content,
-        updated_at = excluded.updated_at
-    `);
-
-    stmt.run(id, xmlContent, Date.now());
-  }
-  ```
-
-- [ ] 添加 `getDiagram` 方法：
-  ```javascript
-  async getDiagram(id) {
-    this.ensureInitialized();
-
-    const stmt = this.db.prepare('SELECT * FROM diagrams WHERE id = ?');
-    return stmt.get(id);
-  }
-  ```
+### 6. XML 版本管理方法
+> **注意**：图表数据管理已迁移到 XML 版本管理系统。
+> 原 `saveDiagram()` 和 `getDiagram()` 方法已移除。
+> 相关功能在 [里程碑 7：DrawIO 多版本管理实现](./milestone-7.md) 中实现。
 
 ### 7. 添加工具方法
 - [ ] 添加 `ensureInitialized` 方法：
@@ -398,12 +405,14 @@
 
     const sessions = this.db.prepare('SELECT COUNT(*) as count FROM chat_sessions').get();
     const messages = this.db.prepare('SELECT COUNT(*) as count FROM chat_messages').get();
-    const diagrams = this.db.prepare('SELECT COUNT(*) as count FROM diagrams').get();
+    const xmlVersions = this.db.prepare('SELECT COUNT(*) as count FROM xml_versions').get();
+    const settings = this.db.prepare('SELECT COUNT(*) as count FROM settings').get();
 
     return {
       sessions: sessions.count,
       messages: messages.count,
-      diagrams: diagrams.count,
+      xml_versions: xmlVersions.count,
+      settings: settings.count,
     };
   }
   ```
@@ -426,15 +435,19 @@
      const adapter = new SQLiteAdapter();
      await adapter.initialize();
 
-     // 测试配置存储
+     // 测试设置存储
      await adapter.set('test', { value: 'hello' });
      const result = await adapter.get('test');
-     console.log('配置测试:', result);
+     console.log('设置测试:', result);
 
-     // 测试会话存储
+     // 测试 XML 版本存储（需要先创建版本）
+     // 注：完整的 XML 版本管理在里程碑 7 中实现
+
+     // 测试会话存储（需要关联 XML 版本）
      await adapter.saveChatSession({
        id: 'test-session',
        title: '测试会话',
+       xml_version: '1.0.0',
        created_at: Date.now(),
        updated_at: Date.now(),
      });

@@ -86,16 +86,9 @@
           addResult('✗ 查询消息失败');
         }
 
-        // 测试图表数据
-        await storage.saveDiagram('test', '<mxfile>...</mxfile>');
-        addResult('✓ 保存图表成功');
-
-        const diagram = await storage.getDiagram('test');
-        if (diagram) {
-          addResult('✓ 读取图表成功');
-        } else {
-          addResult('✗ 读取图表失败');
-        }
+        // 测试 XML 版本管理（在里程碑 7 中实现）
+        // 注：图表数据管理已迁移到 XML 版本管理系统
+        addResult('✓ XML 版本管理测试跳过（见里程碑 7）');
 
         // 测试统计
         const stats = await storage.getStats();
@@ -182,6 +175,7 @@
       await storage.saveChatSession({
         id: `session-${i}`,
         title: `会话 ${i}`,
+        xml_version: '1.0.0',
         created_at: Date.now(),
         updated_at: Date.now(),
       });

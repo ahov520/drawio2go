@@ -19,7 +19,9 @@
     QueryResult,
     ChatSessionModel,
     ChatMessageModel,
-    DiagramModel,
+    SettingsModel,
+    XmlVersionModel,
+    ProjectStateModel,
   } from './types';
   import { StorageError, StorageErrorCode } from './types';
 
@@ -35,11 +37,34 @@
       try {
         this.db = await openDB(this.DB_NAME, this.DB_VERSION, {
           upgrade(db) {
+            // 创建 settings 存储
+            if (!db.objectStoreNames.contains('settings')) {
+              const settingsStore = db.createObjectStore('settings', {
+                keyPath: 'key',
+              });
+              settingsStore.createIndex('updated_at', 'updated_at');
+            }
+
+            // 创建 xml_versions 存储
+            if (!db.objectStoreNames.contains('xml_versions')) {
+              const versionsStore = db.createObjectStore('xml_versions', {
+                keyPath: 'version_id',
+              });
+              versionsStore.createIndex('created_at', 'created_at');
+              versionsStore.createIndex('updated_at', 'updated_at');
+            }
+
+            // 创建 project_state 存储
+            if (!db.objectStoreNames.contains('project_state')) {
+              db.createObjectStore('project_state', { keyPath: 'id' });
+            }
+
             // 创建 chat_sessions 存储
             if (!db.objectStoreNames.contains('chat_sessions')) {
               const sessionsStore = db.createObjectStore('chat_sessions', {
                 keyPath: 'id',
               });
+              sessionsStore.createIndex('xml_version', 'xml_version');
               sessionsStore.createIndex('updated_at', 'updated_at');
             }
 
@@ -50,16 +75,6 @@
               });
               messagesStore.createIndex('session_id', 'session_id');
               messagesStore.createIndex('created_at', 'created_at');
-            }
-
-            // 创建 diagrams 存储
-            if (!db.objectStoreNames.contains('diagrams')) {
-              db.createObjectStore('diagrams', { keyPath: 'id' });
-            }
-
-            // 创建 config 存储
-            if (!db.objectStoreNames.contains('config')) {
-              db.createObjectStore('config', { keyPath: 'key' });
             }
           },
         });
@@ -101,8 +116,8 @@
     this.ensureInitialized();
 
     try {
-      const tx = this.db!.transaction('config', 'readonly');
-      const store = tx.objectStore('config');
+      const tx = this.db!.transaction('settings', 'readonly');
+      const store = tx.objectStore('settings');
       const result = await store.get(key);
 
       if (!result) return null;
@@ -115,7 +130,7 @@
       }
     } catch (error) {
       throw new StorageError(
-        `获取配置失败: ${key}`,
+        `获取设置失败: ${key}`,
         StorageErrorCode.QUERY_FAILED,
         error
       );
@@ -132,13 +147,13 @@
       const jsonValue =
         typeof value === 'string' ? value : JSON.stringify(value);
 
-      const tx = this.db!.transaction('config', 'readwrite');
-      const store = tx.objectStore('config');
-      await store.put({ key, value: jsonValue });
+      const tx = this.db!.transaction('settings', 'readwrite');
+      const store = tx.objectStore('settings');
+      await store.put({ key, value: jsonValue, updated_at: Date.now() });
       await tx.done;
     } catch (error) {
       throw new StorageError(
-        `保存配置失败: ${key}`,
+        `保存设置失败: ${key}`,
         StorageErrorCode.QUERY_FAILED,
         error
       );
@@ -152,13 +167,13 @@
     this.ensureInitialized();
 
     try {
-      const tx = this.db!.transaction('config', 'readwrite');
-      const store = tx.objectStore('config');
+      const tx = this.db!.transaction('settings', 'readwrite');
+      const store = tx.objectStore('settings');
       await store.delete(key);
       await tx.done;
     } catch (error) {
       throw new StorageError(
-        `删除配置失败: ${key}`,
+        `删除设置失败: ${key}`,
         StorageErrorCode.QUERY_FAILED,
         error
       );
@@ -173,15 +188,16 @@
 
     try {
       const tx = this.db!.transaction(
-        ['config', 'chat_sessions', 'chat_messages', 'diagrams'],
+        ['settings', 'chat_sessions', 'chat_messages', 'project_state', 'xml_versions'],
         'readwrite'
       );
 
       await Promise.all([
-        tx.objectStore('config').clear(),
+        tx.objectStore('settings').clear(),
         tx.objectStore('chat_sessions').clear(),
         tx.objectStore('chat_messages').clear(),
-        tx.objectStore('diagrams').clear(),
+        tx.objectStore('project_state').clear(),
+        tx.objectStore('xml_versions').clear(),
       ]);
 
       await tx.done;
@@ -202,8 +218,8 @@
     this.ensureInitialized();
 
     try {
-      const tx = this.db!.transaction('config', 'readonly');
-      const store = tx.objectStore('config');
+      const tx = this.db!.transaction('settings', 'readonly');
+      const store = tx.objectStore('settings');
 
       const results = await Promise.all(
         keys.map((key) => store.get(key))
@@ -223,7 +239,7 @@
       return map;
     } catch (error) {
       throw new StorageError(
-        '批量获取配置失败',
+        '批量获取设置失败',
         StorageErrorCode.QUERY_FAILED,
         error
       );
@@ -237,20 +253,21 @@
     this.ensureInitialized();
 
     try {
-      const tx = this.db!.transaction('config', 'readwrite');
-      const store = tx.objectStore('config');
+      const tx = this.db!.transaction('settings', 'readwrite');
+      const store = tx.objectStore('settings');
+      const now = Date.now();
 
       const promises = Array.from(entries.entries()).map(([key, value]) => {
         const jsonValue =
           typeof value === 'string' ? value : JSON.stringify(value);
-        return store.put({ key, value: jsonValue });
+        return store.put({ key, value: jsonValue, updated_at: now });
       });
 
       await Promise.all(promises);
       await tx.done;
     } catch (error) {
       throw new StorageError(
-        '批量保存配置失败',
+        '批量保存设置失败',
         StorageErrorCode.QUERY_FAILED,
         error
       );
@@ -409,50 +426,10 @@
   }
   ```
 
-### 6. 实现图表数据专用方法
-- [ ] 添加 `saveDiagram` 方法：
-  ```typescript
-  async saveDiagram(id: string, xmlContent: string): Promise<void> {
-    this.ensureInitialized();
-
-    try {
-      const diagram: DiagramModel = {
-        id,
-        xml_content: xmlContent,
-        updated_at: Date.now(),
-      };
-
-      const tx = this.db!.transaction('diagrams', 'readwrite');
-      await tx.objectStore('diagrams').put(diagram);
-      await tx.done;
-    } catch (error) {
-      throw new StorageError(
-        '保存图表失败',
-        StorageErrorCode.QUERY_FAILED,
-        error
-      );
-    }
-  }
-  ```
-
-- [ ] 添加 `getDiagram` 方法：
-  ```typescript
-  async getDiagram(id: string): Promise<DiagramModel | null> {
-    this.ensureInitialized();
-
-    try {
-      const tx = this.db!.transaction('diagrams', 'readonly');
-      const result = await tx.objectStore('diagrams').get(id);
-      return result || null;
-    } catch (error) {
-      throw new StorageError(
-        '获取图表失败',
-        StorageErrorCode.QUERY_FAILED,
-        error
-      );
-    }
-  }
-  ```
+### 6. XML 版本管理方法
+> **注意**：图表数据管理已迁移到 XML 版本管理系统。
+> 原 `saveDiagram()` 和 `getDiagram()` 方法已移除。
+> 相关功能在 [里程碑 7：DrawIO 多版本管理实现](./milestone-7.md) 中实现。
 
 ### 7. 添加工具方法
 - [ ] 添加 `getStats` 方法：
@@ -460,23 +437,25 @@
   async getStats(): Promise<{
     sessions: number;
     messages: number;
-    diagrams: number;
+    xml_versions: number;
+    settings: number;
   }> {
     this.ensureInitialized();
 
     try {
       const tx = this.db!.transaction(
-        ['chat_sessions', 'chat_messages', 'diagrams'],
+        ['chat_sessions', 'chat_messages', 'xml_versions', 'settings'],
         'readonly'
       );
 
-      const [sessions, messages, diagrams] = await Promise.all([
+      const [sessions, messages, xmlVersions, settings] = await Promise.all([
         tx.objectStore('chat_sessions').count(),
         tx.objectStore('chat_messages').count(),
-        tx.objectStore('diagrams').count(),
+        tx.objectStore('xml_versions').count(),
+        tx.objectStore('settings').count(),
       ]);
 
-      return { sessions, messages, diagrams };
+      return { sessions, messages, xml_versions: xmlVersions, settings };
     } catch (error) {
       throw new StorageError(
         '获取统计信息失败',

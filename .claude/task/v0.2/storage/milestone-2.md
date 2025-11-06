@@ -51,11 +51,43 @@
   ```
 
 ### 3. 定义数据模型
+- [ ] 定义设置信息模型：
+  ```typescript
+  export interface SettingsModel {
+    key: string;
+    value: string; // JSON 字符串
+    updated_at: number;
+  }
+  ```
+
+- [ ] 定义XML版本模型：
+  ```typescript
+  export interface XmlVersionModel {
+    version_id: string;      // 语义化版本号，如 "1.0.0"
+    xml_content: string;     // DrawIO XML内容
+    name: string;           // 版本名称/描述
+    notes?: string;         // 版本备注
+    created_at: number;
+    updated_at: number;
+  }
+  ```
+
+- [ ] 定义项目状态模型：
+  ```typescript
+  export interface ProjectStateModel {
+    id: string;             // 固定为 'current'
+    active_xml_version: string;  // 当前活动版本ID，默认 "1.0.0"
+    active_session_id?: string;  // 当前活动会话ID
+    last_modified: number;
+  }
+  ```
+
 - [ ] 定义聊天会话模型：
   ```typescript
   export interface ChatSessionModel {
     id: string;
     title: string;
+    xml_version: string;        // 会话创建时的XML版本
     created_at: number;
     updated_at: number;
   }
@@ -70,33 +102,44 @@
   }
   ```
 
-- [ ] 定义图表数据模型：
-  ```typescript
-  export interface DiagramModel {
-    id: string;
-    xml_content: string;
-    updated_at: number;
-  }
-  ```
-
-- [ ] 定义配置模型：
-  ```typescript
-  export interface ConfigModel {
-    key: string;
-    value: string; // JSON 字符串
-  }
-  ```
-
 ### 4. 定义数据库表结构
 - [ ] 创建 `app/lib/storage/schema.ts`：
   ```typescript
   export const SQLITE_SCHEMA = `
+    -- 设置信息表
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    -- XML版本表
+    CREATE TABLE IF NOT EXISTS xml_versions (
+      version_id TEXT PRIMARY KEY,
+      xml_content TEXT NOT NULL,
+      name TEXT NOT NULL,
+      notes TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    -- 项目状态表
+    CREATE TABLE IF NOT EXISTS project_state (
+      id TEXT PRIMARY KEY DEFAULT 'current',
+      active_xml_version TEXT NOT NULL DEFAULT '1.0.0',
+      active_session_id TEXT,
+      last_modified INTEGER NOT NULL,
+      FOREIGN KEY (active_xml_version) REFERENCES xml_versions(version_id)
+    );
+
     -- 聊天会话表
     CREATE TABLE IF NOT EXISTS chat_sessions (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
+      xml_version TEXT NOT NULL,
       created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
+      updated_at INTEGER NOT NULL,
+      FOREIGN KEY (xml_version) REFERENCES xml_versions(version_id)
     );
 
     -- 聊天消息表
@@ -111,25 +154,20 @@
     );
 
     -- 创建索引
+    CREATE INDEX IF NOT EXISTS idx_settings_updated_at
+      ON settings(updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_xml_versions_created_at
+      ON xml_versions(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_xml_versions_updated_at
+      ON xml_versions(updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_sessions_xml_version
+      ON chat_sessions(xml_version);
     CREATE INDEX IF NOT EXISTS idx_messages_session_id
       ON chat_messages(session_id);
     CREATE INDEX IF NOT EXISTS idx_messages_created_at
       ON chat_messages(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_sessions_updated_at
       ON chat_sessions(updated_at DESC);
-
-    -- 图表数据表
-    CREATE TABLE IF NOT EXISTS diagrams (
-      id TEXT PRIMARY KEY DEFAULT 'current',
-      xml_content TEXT NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-
-    -- 配置表
-    CREATE TABLE IF NOT EXISTS config (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL
-    );
   `;
 
   export const INDEXEDDB_SCHEMA = {
@@ -137,9 +175,29 @@
     version: 1,
     stores: [
       {
+        name: 'settings',
+        keyPath: 'key',
+        indexes: [
+          { name: 'updated_at', keyPath: 'updated_at' },
+        ],
+      },
+      {
+        name: 'xml_versions',
+        keyPath: 'version_id',
+        indexes: [
+          { name: 'created_at', keyPath: 'created_at' },
+          { name: 'updated_at', keyPath: 'updated_at' },
+        ],
+      },
+      {
+        name: 'project_state',
+        keyPath: 'id',
+      },
+      {
         name: 'chat_sessions',
         keyPath: 'id',
         indexes: [
+          { name: 'xml_version', keyPath: 'xml_version' },
           { name: 'updated_at', keyPath: 'updated_at' },
         ],
       },
@@ -151,14 +209,6 @@
           { name: 'created_at', keyPath: 'created_at' },
         ],
       },
-      {
-        name: 'diagrams',
-        keyPath: 'id',
-      },
-      {
-        name: 'config',
-        keyPath: 'key',
-      },
     ],
   };
   ```
@@ -166,24 +216,30 @@
 ### 5. 定义存储键常量
 - [ ] 创建 `app/lib/storage/keys.ts`：
   ```typescript
-  // 配置键
-  export const CONFIG_KEYS = {
+  // 设置信息键
+  export const SETTINGS_KEYS = {
     LLM_CONFIG: 'llmConfig',
     DEFAULT_PATH: 'defaultPath',
     SIDEBAR_WIDTH: 'unifiedSidebarWidth',
   } as const;
 
-  // 图表键
-  export const DIAGRAM_KEYS = {
-    CURRENT: 'current',
+  // XML版本相关键
+  export const XML_VERSION_KEYS = {
+    DEFAULT_VERSION: '1.0.0',  // 默认版本号
+  } as const;
+
+  // 项目状态键
+  export const PROJECT_STATE_KEYS = {
+    CURRENT: 'current',  // 项目状态记录ID
   } as const;
 
   // 表名
   export const TABLE_NAMES = {
+    SETTINGS: 'settings',
+    XML_VERSIONS: 'xml_versions',
+    PROJECT_STATE: 'project_state',
     CHAT_SESSIONS: 'chat_sessions',
     CHAT_MESSAGES: 'chat_messages',
-    DIAGRAMS: 'diagrams',
-    CONFIG: 'config',
   } as const;
   ```
 
@@ -238,9 +294,32 @@
   ```typescript
   import { z } from 'zod';
 
+  export const SettingsSchema = z.object({
+    key: z.string(),
+    value: z.string(),
+    updated_at: z.number().int().positive(),
+  });
+
+  export const XmlVersionSchema = z.object({
+    version_id: z.string().regex(/^\d+\.\d+\.\d+$/), // 语义化版本号
+    xml_content: z.string(),
+    name: z.string().min(1).max(200),
+    notes: z.string().optional(),
+    created_at: z.number().int().positive(),
+    updated_at: z.number().int().positive(),
+  });
+
+  export const ProjectStateSchema = z.object({
+    id: z.string(),
+    active_xml_version: z.string(),
+    active_session_id: z.string().optional(),
+    last_modified: z.number().int().positive(),
+  });
+
   export const ChatSessionSchema = z.object({
     id: z.string().uuid(),
     title: z.string().min(1).max(200),
+    xml_version: z.string(),
     created_at: z.number().int().positive(),
     updated_at: z.number().int().positive(),
   });
@@ -252,17 +331,6 @@
     content: z.string(),
     tool_invocations: z.string().optional(),
     created_at: z.number().int().positive(),
-  });
-
-  export const DiagramSchema = z.object({
-    id: z.string(),
-    xml_content: z.string(),
-    updated_at: z.number().int().positive(),
-  });
-
-  export const ConfigSchema = z.object({
-    key: z.string(),
-    value: z.string(),
   });
   ```
 
@@ -283,6 +351,8 @@
 - [ ] 环境检测工具正确实现
 - [ ] Zod 验证模式覆盖所有数据模型
 - [ ] TypeScript 编译无错误
+- [ ] 支持多版本XML管理的数据结构
+- [ ] 分级存储架构清晰明确
 
 ## 测试步骤
 1. 运行 `pnpm run type-check` 验证类型定义
@@ -318,24 +388,42 @@
 
 ### 表关系
 ```
+xml_versions (1) ──< (N) chat_sessions
+project_state (1) ── (1) xml_versions (当前活动版本)
 chat_sessions (1) ──< (N) chat_messages
+settings (独立) - 存储配置信息
 ```
 
 ### 索引策略
+- `idx_settings_updated_at`：加速设置查询排序
+- `idx_xml_versions_created_at`：加速按创建时间排序版本
+- `idx_xml_versions_updated_at`：加速按更新时间排序版本
+- `idx_sessions_xml_version`：加速按XML版本查询会话
 - `idx_messages_session_id`：加速按会话查询消息
 - `idx_messages_created_at`：加速按时间排序
 - `idx_sessions_updated_at`：加速会话列表排序
 
 ### 数据类型选择
-- `TEXT`：字符串数据（ID、标题、内容）
+- `TEXT`：字符串数据（ID、版本号、标题、内容、XML）
 - `INTEGER`：时间戳（Unix 毫秒）
-- `JSON 字符串`：复杂对象（tool_invocations、config value）
+- `JSON 字符串`：复杂对象（settings value、tool_invocations）
+
+### 分级存储架构
+1. **设置信息**：独立表存储，键值对形式
+2. **工程信息**：
+   - XML版本管理：支持多版本存储和切换
+   - 项目状态：跟踪当前活动版本和会话
+   - 聊天历史：关联XML版本，支持历史追溯
 
 ## 注意事项
 - 所有时间戳使用 Unix 毫秒（`Date.now()`）
 - JSON 数据存储为字符串，读取时需要解析
 - 外键约束在 SQLite 中需要手动启用：`PRAGMA foreign_keys = ON`
 - IndexedDB 不支持外键，需要在应用层处理级联删除
+- 版本号遵循语义化版本规范（如 1.0.0, 1.1.2, 2.3.21）
+- 默认所有DrawIO操作定向到版本 "1.0.0"
+- 会话创建时记录对应的XML版本，支持历史追溯
+- DrawIO相关功能的重写实现详见 [里程碑 7：DrawIO 多版本管理实现](./milestone-7.md)
 
 ---
 

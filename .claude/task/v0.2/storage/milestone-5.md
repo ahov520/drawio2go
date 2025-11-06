@@ -158,27 +158,10 @@
   });
   ```
 
-### 6. 实现图表数据 IPC 处理器
-- [ ] 添加图表数据处理器：
-  ```javascript
-  ipcMain.handle('storage:saveDiagram', async (event, id, xmlContent) => {
-    try {
-      await storageAdapter.saveDiagram(id, xmlContent);
-    } catch (error) {
-      console.error('[IPC] storage:saveDiagram 失败:', error);
-      throw error;
-    }
-  });
-
-  ipcMain.handle('storage:getDiagram', async (event, id) => {
-    try {
-      return await storageAdapter.getDiagram(id);
-    } catch (error) {
-      console.error('[IPC] storage:getDiagram 失败:', error);
-      throw error;
-    }
-  });
-  ```
+### 6. XML 版本管理 IPC 处理器
+> **注意**：图表数据管理已迁移到 XML 版本管理系统。
+> 原 `storage:saveDiagram` 和 `storage:getDiagram` IPC 处理器已移除。
+> 相关 IPC 处理器在 [里程碑 7：DrawIO 多版本管理实现](./milestone-7.md) 中实现。
 
 ### 7. 实现工具方法 IPC 处理器
 - [ ] 添加工具方法处理器：
@@ -239,17 +222,15 @@
       deleteChatSession: (sessionId) =>
         ipcRenderer.invoke('storage:deleteChatSession', sessionId),
 
-      // 图表数据
-      saveDiagram: (id, xmlContent) =>
-        ipcRenderer.invoke('storage:saveDiagram', id, xmlContent),
-      getDiagram: (id) => ipcRenderer.invoke('storage:getDiagram', id),
-
       // 工具方法
       getStats: () => ipcRenderer.invoke('storage:getStats'),
       vacuum: () => ipcRenderer.invoke('storage:vacuum'),
     },
   });
   ```
+
+> **注意**：图表数据相关的 IPC API（saveDiagram、getDiagram）已移除。
+> 相关功能在 [里程碑 7：DrawIO 多版本管理实现](./milestone-7.md) 中通过 XML 版本管理 API 实现。
 
 ### 9. 创建渲染进程 SQLite 适配器包装器
 - [ ] 创建 `app/lib/storage/electron-sqlite-adapter.ts`：
@@ -260,7 +241,9 @@
     QueryResult,
     ChatSessionModel,
     ChatMessageModel,
-    DiagramModel,
+    SettingsModel,
+    XmlVersionModel,
+    ProjectStateModel,
   } from './types';
   import { StorageError, StorageErrorCode } from './types';
 
@@ -279,12 +262,11 @@
           saveChatMessage: (message: ChatMessageModel) => Promise<void>;
           getChatMessages: (sessionId: string) => Promise<ChatMessageModel[]>;
           deleteChatSession: (sessionId: string) => Promise<void>;
-          saveDiagram: (id: string, xmlContent: string) => Promise<void>;
-          getDiagram: (id: string) => Promise<DiagramModel | null>;
           getStats: () => Promise<{
             sessions: number;
             messages: number;
-            diagrams: number;
+            xml_versions: number;
+            settings: number;
           }>;
           vacuum: () => Promise<void>;
         };
@@ -380,22 +362,12 @@
       return window.electron!.storage.deleteChatSession(sessionId);
     }
 
-    // 图表数据方法
-    async saveDiagram(id: string, xmlContent: string): Promise<void> {
-      this.ensureInitialized();
-      return window.electron!.storage.saveDiagram(id, xmlContent);
-    }
-
-    async getDiagram(id: string): Promise<DiagramModel | null> {
-      this.ensureInitialized();
-      return window.electron!.storage.getDiagram(id);
-    }
-
     // 工具方法
     async getStats(): Promise<{
       sessions: number;
       messages: number;
-      diagrams: number;
+      xml_versions: number;
+      settings: number;
     }> {
       this.ensureInitialized();
       return window.electron!.storage.getStats();

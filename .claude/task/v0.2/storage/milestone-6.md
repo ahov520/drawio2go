@@ -96,10 +96,15 @@
       try {
         const storage = await getStorage();
 
+        // 获取当前活动的 XML 版本
+        const projectState = await storage.get('project_state:current');
+        const xmlVersion = projectState?.active_xml_version || '1.0.0';
+
         // 保存会话元数据
         const sessionModel: ChatSessionModel = {
           id: session.id,
           title: session.title,
+          xml_version: xmlVersion,
           created_at: session.createdAt,
           updated_at: session.updatedAt,
         };
@@ -118,16 +123,30 @@
 
     // 创建新会话
     const createSession = useCallback(async () => {
-      const newSession: ChatSession = {
-        id: uuidv4(),
-        title: '新对话',
-        messages: [],
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      };
-
       try {
-        await saveSession(newSession);
+        const storage = await getStorage();
+
+        // 获取当前活动的 XML 版本
+        const projectState = await storage.get('project_state:current');
+        const xmlVersion = projectState?.active_xml_version || '1.0.0';
+
+        const newSession: ChatSession = {
+          id: uuidv4(),
+          title: '新对话',
+          messages: [],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+
+        // 保存会话元数据（包含 xml_version）
+        const sessionModel: ChatSessionModel = {
+          id: newSession.id,
+          title: newSession.title,
+          xml_version: xmlVersion,
+          created_at: newSession.createdAt,
+          updated_at: newSession.updatedAt,
+        };
+        await storage.saveChatSession(sessionModel);
 
         setSessionsData((prev) => ({
           sessions: { ...prev.sessions, [newSession.id]: newSession },
@@ -140,7 +159,7 @@
         console.error('[useChatSessions] 创建会话失败:', err);
         throw err;
       }
-    }, [saveSession]);
+    }, []);
 
     // 删除会话
     const deleteSession = useCallback(async (sessionId: string) => {

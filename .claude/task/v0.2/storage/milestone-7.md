@@ -1,40 +1,100 @@
-# 里程碑 7：DrawIO 数据迁移
+# 里程碑 7：DrawIO 多版本管理实现
 
 **状态**：⏳ 待开始
-**预计耗时**：60 分钟
+**预计耗时**：120 分钟
 **依赖**：里程碑 2, 3, 4, 5
 
 ## 目标
-将 DrawIO 图表数据存储从 localStorage 迁移到新的存储抽象层，支持大型图表和实时保存
+完全重写 DrawIO 图表数据管理系统，实现多版本XML管理、版本切换、历史追溯等功能。当前阶段默认所有操作定向到版本 "1.0.0"，为后续多版本管理UI预留接口
 
 ## 任务清单
 
-### 1. 重构 drawio-tools.ts
-- [ ] 修改 `app/lib/drawio-tools.ts`，移除 localStorage 依赖：
+### 1. 完全重写 drawio-tools.ts - 核心版本管理
+- [ ] 重写 `app/lib/drawio-tools.ts`，实现多版本XML管理：
   ```typescript
   import { DOMParser, XMLSerializer } from '@xmldom/xmldom';
   import xpath from 'xpath';
   import { getStorage } from '@/lib/storage';
-  import { DIAGRAM_KEYS } from '@/lib/storage';
-
-  // 移除旧的 STORAGE_KEY 常量
-  // const STORAGE_KEY = "currentDiagram";
+  import { XML_VERSION_KEYS, TABLE_NAMES } from '@/lib/storage';
+  import type { XmlVersionModel } from '@/lib/storage';
 
   /**
-   * 保存 DrawIO XML 到存储
+   * 获取当前活动的XML版本号
+   */
+  export async function getActiveXmlVersion(): Promise<string> {
+    try {
+      const storage = await getStorage();
+      const projectState = await storage.get('project_state:current');
+
+      return projectState?.active_xml_version || XML_VERSION_KEYS.DEFAULT_VERSION;
+    } catch (error) {
+      console.error('[DrawIO] 获取活动版本失败:', error);
+      return XML_VERSION_KEYS.DEFAULT_VERSION;
+    }
+  }
+
+  /**
+   * 设置当前活动的XML版本号
+   */
+  export async function setActiveXmlVersion(versionId: string): Promise<void> {
+    try {
+      const storage = await getStorage();
+
+      // 验证版本是否存在
+      const version = await storage.get(`xml_version:${versionId}`);
+      if (!version) {
+        throw new Error(`版本 ${versionId} 不存在`);
+      }
+
+      // 更新项目状态
+      await storage.set('project_state:current', {
+        id: 'current',
+        active_xml_version: versionId,
+        last_modified: Date.now(),
+      });
+
+      console.log(`[DrawIO] 切换到版本 ${versionId}`);
+    } catch (error) {
+      console.error('[DrawIO] 设置活动版本失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 保存 DrawIO XML 到当前活动版本
    */
   export async function saveDrawioXML(xml: string): Promise<void> {
     try {
       const decodedXml = decodeBase64XML(xml);
       const storage = await getStorage();
+      const versionId = await getActiveXmlVersion();
+
+      // 获取现有版本数据
+      let version = await storage.get<XmlVersionModel>(`xml_version:${versionId}`);
+
+      if (!version) {
+        // 如果版本不存在，创建新版本
+        version = {
+          version_id: versionId,
+          xml_content: decodedXml,
+          name: '默认版本',
+          notes: '自动创建的默认版本',
+          created_at: Date.now(),
+          updated_at: Date.now(),
+        };
+      } else {
+        // 更新现有版本
+        version.xml_content = decodedXml;
+        version.updated_at = Date.now();
+      }
 
       // 保存到存储
-      await storage.saveDiagram(DIAGRAM_KEYS.CURRENT, decodedXml);
+      await storage.set(`xml_version:${versionId}`, version);
 
-      // 触发更新事件（保持现有功能）
+      // 触发更新事件
       triggerUpdateEvent(decodedXml);
 
-      console.log('[DrawIO] XML 保存成功');
+      console.log(`[DrawIO] XML 保存到版本 ${versionId} 成功`);
     } catch (error) {
       console.error('[DrawIO] 保存 XML 失败:', error);
       throw error;
@@ -42,23 +102,26 @@
   }
 
   /**
-   * 从存储获取 DrawIO XML
+   * 从当前活动版本获取 DrawIO XML
    */
   export async function getDrawioXML(): Promise<GetXMLResult> {
     try {
       const storage = await getStorage();
-      const diagram = await storage.getDiagram(DIAGRAM_KEYS.CURRENT);
+      const versionId = await getActiveXmlVersion();
 
-      if (!diagram || !diagram.xml_content) {
+      const version = await storage.get<XmlVersionModel>(`xml_version:${versionId}`);
+
+      if (!version || !version.xml_content) {
         return {
           success: false,
-          error: '未找到图表数据',
+          error: `未找到版本 ${versionId} 的图表数据`,
         };
       }
 
       return {
         success: true,
-        xml: diagram.xml_content,
+        xml: version.xml_content,
+        version: versionId,
       };
     } catch (error) {
       console.error('[DrawIO] 获取 XML 失败:', error);
@@ -70,150 +133,316 @@
   }
 
   /**
-   * 清空当前图表
+   * 获取指定版本的 DrawIO XML
    */
-  export async function clearDrawioXML(): Promise<void> {
+  export async function getDrawioXMLByVersion(versionId: string): Promise<GetXMLResult> {
     try {
       const storage = await getStorage();
-      await storage.delete(DIAGRAM_KEYS.CURRENT);
+      const version = await storage.get<XmlVersionModel>(`xml_version:${versionId}`);
 
-      // 触发更新事件
-      triggerUpdateEvent('');
+      if (!version || !version.xml_content) {
+        return {
+          success: false,
+          error: `未找到版本 ${versionId} 的图表数据`,
+        };
+      }
 
-      console.log('[DrawIO] 图表已清空');
+      return {
+        success: true,
+        xml: version.xml_content,
+        version: versionId,
+      };
     } catch (error) {
-      console.error('[DrawIO] 清空图表失败:', error);
+      console.error('[DrawIO] 获取版本 XML 失败:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : '未知错误',
+      };
+    }
+  }
+
+  // 保留现有的工具函数...
+  // decodeBase64XML, triggerUpdateEvent, getSelectedElements 等
+  ```
+
+### 2. 添加版本管理功能
+- [ ] 在 `app/lib/drawio-tools.ts` 中添加版本管理功能：
+  ```typescript
+  /**
+   * 创建新的XML版本
+   */
+  export async function createXmlVersion(
+    versionId: string,
+    name: string,
+    xmlContent: string = '',
+    notes?: string
+  ): Promise<void> {
+    try {
+      // 验证版本号格式（语义化版本）
+      if (!/^\d+\.\d+\.\d+$/.test(versionId)) {
+        throw new Error('版本号必须符合语义化版本格式（如 1.0.0）');
+      }
+
+      const storage = await getStorage();
+
+      // 检查版本是否已存在
+      const existingVersion = await storage.get(`xml_version:${versionId}`);
+      if (existingVersion) {
+        throw new Error(`版本 ${versionId} 已存在`);
+      }
+
+      // 创建新版本
+      const newVersion: XmlVersionModel = {
+        version_id: versionId,
+        xml_content: xmlContent,
+        name,
+        notes,
+        created_at: Date.now(),
+        updated_at: Date.now(),
+      };
+
+      await storage.set(`xml_version:${versionId}`, newVersion);
+
+      console.log(`[DrawIO] 创建版本 ${versionId} 成功`);
+    } catch (error) {
+      console.error('[DrawIO] 创建版本失败:', error);
       throw error;
     }
   }
 
-  // 保留现有的其他函数...
-  // decodeBase64XML, triggerUpdateEvent, getSelectedElements 等
+  /**
+   * 删除XML版本
+   */
+  export async function deleteXmlVersion(versionId: string): Promise<void> {
+    try {
+      // 禁止删除默认版本
+      if (versionId === XML_VERSION_KEYS.DEFAULT_VERSION) {
+        throw new Error('无法删除默认版本');
+      }
+
+      const storage = await getStorage();
+
+      // 检查是否为当前活动版本
+      const activeVersion = await getActiveXmlVersion();
+      if (activeVersion === versionId) {
+        throw new Error('无法删除当前活动版本，请先切换到其他版本');
+      }
+
+      // 删除版本
+      await storage.delete(`xml_version:${versionId}`);
+
+      console.log(`[DrawIO] 删除版本 ${versionId} 成功`);
+    } catch (error) {
+      console.error('[DrawIO] 删除版本失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取所有XML版本列表
+   */
+  export async function listXmlVersions(): Promise<XmlVersionModel[]> {
+    try {
+      const storage = await getStorage();
+
+      const result = await storage.query<XmlVersionModel>({
+        table: TABLE_NAMES.XML_VERSIONS,
+        orderBy: { field: 'created_at', direction: 'desc' },
+      });
+
+      return result.data;
+    } catch (error) {
+      console.error('[DrawIO] 获取版本列表失败:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 更新版本信息（名称和备注）
+   */
+  export async function updateXmlVersionInfo(
+    versionId: string,
+    updates: { name?: string; notes?: string }
+  ): Promise<void> {
+    try {
+      const storage = await getStorage();
+      const version = await storage.get<XmlVersionModel>(`xml_version:${versionId}`);
+
+      if (!version) {
+        throw new Error(`版本 ${versionId} 不存在`);
+      }
+
+      if (updates.name !== undefined) {
+        version.name = updates.name;
+      }
+      if (updates.notes !== undefined) {
+        version.notes = updates.notes;
+      }
+      version.updated_at = Date.now();
+
+      await storage.set(`xml_version:${versionId}`, version);
+
+      console.log(`[DrawIO] 更新版本 ${versionId} 信息成功`);
+    } catch (error) {
+      console.error('[DrawIO] 更新版本信息失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 复制版本
+   */
+  export async function duplicateXmlVersion(
+    sourceVersionId: string,
+    newVersionId: string,
+    newName: string
+  ): Promise<void> {
+    try {
+      const storage = await getStorage();
+
+      // 获取源版本
+      const sourceVersion = await storage.get<XmlVersionModel>(`xml_version:${sourceVersionId}`);
+      if (!sourceVersion) {
+        throw new Error(`源版本 ${sourceVersionId} 不存在`);
+      }
+
+      // 创建新版本
+      await createXmlVersion(
+        newVersionId,
+        newName,
+        sourceVersion.xml_content,
+        `从版本 ${sourceVersionId} 复制`
+      );
+
+      console.log(`[DrawIO] 复制版本 ${sourceVersionId} 到 ${newVersionId} 成功`);
+    } catch (error) {
+      console.error('[DrawIO] 复制版本失败:', error);
+      throw error;
+    }
+  }
   ```
 
-### 2. 创建 useDrawioData Hook
-- [ ] 创建 `app/hooks/useDrawioData.ts`：
+### 3. 创建版本管理 Hook
+- [ ] 创建 `app/hooks/useXmlVersion.ts`：
   ```typescript
   'use client';
 
   import { useState, useEffect, useCallback } from 'react';
-  import { getDrawioXML, saveDrawioXML, clearDrawioXML } from '@/lib/drawio-tools';
+  import {
+    getActiveXmlVersion,
+    setActiveXmlVersion,
+    listXmlVersions,
+    createXmlVersion,
+    deleteXmlVersion,
+    getDrawioXML,
+    getDrawioXMLByVersion,
+  } from '@/lib/drawio-tools';
+  import type { XmlVersionModel } from '@/lib/storage';
 
-  export function useDrawioData() {
-    const [xml, setXml] = useState<string>('');
+  export function useXmlVersion() {
+    const [activeVersion, setActiveVersionState] = useState<string>('1.0.0');
+    const [versions, setVersions] = useState<XmlVersionModel[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
-    const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
-    // 初始化：从存储加载图表
+    // 加载活动版本和版本列表
+    const loadVersions = useCallback(async () => {
+      try {
+        setIsLoading(true);
+        const [currentVersion, versionList] = await Promise.all([
+          getActiveXmlVersion(),
+          listXmlVersions(),
+        ]);
+
+        setActiveVersionState(currentVersion);
+        setVersions(versionList);
+        setError(null);
+      } catch (err) {
+        console.error('[useXmlVersion] 加载版本失败:', err);
+        setError(err as Error);
+      } finally {
+        setIsLoading(false);
+      }
+    }, []);
+
     useEffect(() => {
-      async function loadDiagram() {
-        try {
-          setIsLoading(true);
-          const result = await getDrawioXML();
+      loadVersions();
+    }, [loadVersions]);
 
-          if (result.success && result.xml) {
-            setXml(result.xml);
-            setError(null);
-          } else {
-            setXml('');
-            setError(new Error(result.error || '加载图表失败'));
-          }
-        } catch (err) {
-          console.error('[useDrawioData] 加载图表失败:', err);
-          setError(err as Error);
-        } finally {
-          setIsLoading(false);
-        }
-      }
-
-      loadDiagram();
-    }, []);
-
-    // 保存图表
-    const saveDiagram = useCallback(async (newXml: string) => {
+    // 切换活动版本
+    const switchVersion = useCallback(async (versionId: string) => {
       try {
-        await saveDrawioXML(newXml);
-        setXml(newXml);
-        setLastSaved(new Date());
+        await setActiveXmlVersion(versionId);
+        setActiveVersionState(versionId);
         setError(null);
       } catch (err) {
-        console.error('[useDrawioData] 保存图表失败:', err);
+        console.error('[useXmlVersion] 切换版本失败:', err);
         setError(err as Error);
         throw err;
       }
     }, []);
 
-    // 清空图表
-    const clearDiagram = useCallback(async () => {
+    // 创建新版本
+    const createVersion = useCallback(async (
+      versionId: string,
+      name: string,
+      xmlContent?: string,
+      notes?: string
+    ) => {
       try {
-        await clearDrawioXML();
-        setXml('');
-        setLastSaved(null);
+        await createXmlVersion(versionId, name, xmlContent, notes);
+        await loadVersions();
         setError(null);
       } catch (err) {
-        console.error('[useDrawioData] 清空图表失败:', err);
+        console.error('[useXmlVersion] 创建版本失败:', err);
         setError(err as Error);
         throw err;
       }
+    }, [loadVersions]);
+
+    // 删除版本
+    const deleteVersion = useCallback(async (versionId: string) => {
+      try {
+        await deleteXmlVersion(versionId);
+        await loadVersions();
+        setError(null);
+      } catch (err) {
+        console.error('[useXmlVersion] 删除版本失败:', err);
+        setError(err as Error);
+        throw err;
+      }
+    }, [loadVersions]);
+
+    // 获取当前版本的XML
+    const getCurrentXml = useCallback(async () => {
+      const result = await getDrawioXML();
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+      return result.xml || '';
+    }, []);
+
+    // 获取指定版本的XML
+    const getVersionXml = useCallback(async (versionId: string) => {
+      const result = await getDrawioXMLByVersion(versionId);
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+      return result.xml || '';
     }, []);
 
     return {
-      xml,
+      activeVersion,
+      versions,
       isLoading,
       error,
-      lastSaved,
-      saveDiagram,
-      clearDiagram,
+      switchVersion,
+      createVersion,
+      deleteVersion,
+      getCurrentXml,
+      getVersionXml,
+      reloadVersions: loadVersions,
     };
-  }
-  ```
-
-### 3. 更新主页面组件
-- [ ] 修改 `app/page.tsx`，使用新的 Hook：
-  ```typescript
-  'use client';
-
-  import { useDrawioData } from '@/hooks/useDrawioData';
-  import { Spinner } from '@heroui/react';
-
-  export default function Home() {
-    const { xml, isLoading, error, lastSaved } = useDrawioData();
-
-    // 加载状态
-    if (isLoading) {
-      return (
-        <div className="flex items-center justify-center h-screen">
-          <Spinner size="lg" label="加载图表中..." />
-        </div>
-      );
-    }
-
-    // 错误状态
-    if (error) {
-      return (
-        <div className="flex items-center justify-center h-screen">
-          <div className="text-center">
-            <p className="text-red-500 mb-4">加载图表失败</p>
-            <p className="text-sm text-gray-500">{error.message}</p>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="flex h-screen">
-        {/* DrawIO 编辑器 */}
-        <DrawioEditor initialXml={xml} />
-
-        {/* 显示最后保存时间 */}
-        {lastSaved && (
-          <div className="absolute bottom-4 right-4 text-xs text-gray-500">
-            最后保存: {lastSaved.toLocaleTimeString()}
-          </div>
-        )}
-      </div>
-    );
   }
   ```
 
@@ -293,183 +522,259 @@
   }
   ```
 
-### 5. 实现图表版本历史
-- [ ] 添加图表版本历史功能：
+### 5. 实现从文件导入/导出版本
+- [ ] 添加从文件导入XML并创建版本的功能：
   ```typescript
-  // 在 storage/schema.ts 中添加版本历史表
-  CREATE TABLE IF NOT EXISTS diagram_history (
-    id TEXT PRIMARY KEY,
-    diagram_id TEXT NOT NULL,
-    xml_content TEXT NOT NULL,
-    created_at INTEGER NOT NULL,
-    FOREIGN KEY (diagram_id) REFERENCES diagrams(id) ON DELETE CASCADE
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_history_diagram_id
-    ON diagram_history(diagram_id);
-  CREATE INDEX IF NOT EXISTS idx_history_created_at
-    ON diagram_history(created_at DESC);
-  ```
-
-- [ ] 实现保存历史版本：
-  ```typescript
-  export async function saveDiagramWithHistory(
-    id: string,
-    xmlContent: string
+  /**
+   * 从文件导入XML并创建新版本
+   */
+  export async function importXmlFromFile(
+    file: File,
+    versionId: string,
+    name: string
   ): Promise<void> {
-    const storage = await getStorage();
-
-    // 保存当前版本
-    await storage.saveDiagram(id, xmlContent);
-
-    // 保存历史版本
-    const historyId = `${id}-${Date.now()}`;
-    await storage.set(`diagram_history:${historyId}`, {
-      diagram_id: id,
-      xml_content: xmlContent,
-      created_at: Date.now(),
-    });
-  }
-  ```
-
-- [ ] 实现获取历史版本：
-  ```typescript
-  export async function getDiagramHistory(
-    diagramId: string,
-    limit: number = 10
-  ): Promise<Array<{ id: string; created_at: number }>> {
-    const storage = await getStorage();
-
-    const result = await storage.query({
-      table: 'diagram_history',
-      where: { diagram_id: diagramId },
-      orderBy: { field: 'created_at', direction: 'desc' },
-      limit,
-    });
-
-    return result.data;
-  }
-  ```
-
-### 6. 实现图表导入导出
-- [ ] 添加导出图表为文件的功能：
-  ```typescript
-  export async function exportDiagram(id: string): Promise<void> {
-    const storage = await getStorage();
-    const diagram = await storage.getDiagram(id);
-
-    if (!diagram) {
-      throw new Error('图表不存在');
-    }
-
-    const blob = new Blob([diagram.xml_content], {
-      type: 'application/xml',
-    });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `diagram-${id}-${Date.now()}.drawio`;
-    a.click();
-
-    URL.revokeObjectURL(url);
-  }
-  ```
-
-- [ ] 添加从文件导入图表的功能：
-  ```typescript
-  export async function importDiagram(file: File): Promise<void> {
-    const xmlContent = await file.text();
-
-    // 验证 XML 格式
     try {
+      const xmlContent = await file.text();
+
+      // 验证 XML 格式
       const parser = new DOMParser();
       const doc = parser.parseFromString(xmlContent, 'text/xml');
 
       if (doc.getElementsByTagName('parsererror').length > 0) {
         throw new Error('无效的 XML 格式');
       }
-    } catch (error) {
-      throw new Error('导入失败: 无效的图表文件');
-    }
 
-    // 保存到存储
-    await saveDrawioXML(xmlContent);
+      // 创建新版本
+      await createXmlVersion(
+        versionId,
+        name,
+        xmlContent,
+        `从文件 ${file.name} 导入`
+      );
+
+      console.log(`[DrawIO] 从文件导入到版本 ${versionId} 成功`);
+    } catch (error) {
+      console.error('[DrawIO] 导入文件失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 导出指定版本的XML为文件
+   */
+  export async function exportXmlToFile(versionId: string): Promise<void> {
+    try {
+      const result = await getDrawioXMLByVersion(versionId);
+
+      if (!result.success || !result.xml) {
+        throw new Error(result.error || '未找到版本数据');
+      }
+
+      const storage = await getStorage();
+      const version = await storage.get<XmlVersionModel>(`xml_version:${versionId}`);
+
+      const blob = new Blob([result.xml], {
+        type: 'application/xml',
+      });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${version?.name || 'diagram'}-${versionId}.drawio`;
+      a.click();
+
+      URL.revokeObjectURL(url);
+
+      console.log(`[DrawIO] 导出版本 ${versionId} 成功`);
+    } catch (error) {
+      console.error('[DrawIO] 导出文件失败:', error);
+      throw error;
+    }
   }
   ```
 
-### 7. 添加图表大小监控
-- [ ] 实现图表大小监控和警告：
+### 6. 实现localStorage数据迁移
+- [ ] 添加数据迁移功能，将现有localStorage的DrawIO数据迁移到版本1.0.0：
   ```typescript
-  export function getXmlSize(xml: string): number {
-    return new Blob([xml]).size;
-  }
+  /**
+   * 从localStorage迁移数据到版本1.0.0
+   */
+  export async function migrateFromLocalStorage(): Promise<void> {
+    try {
+      const storage = await getStorage();
 
-  export function formatSize(bytes: number): string {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-  }
+      // 检查是否已迁移
+      const existingVersion = await storage.get<XmlVersionModel>('xml_version:1.0.0');
+      if (existingVersion) {
+        console.log('[DrawIO] 数据已迁移，跳过');
+        return;
+      }
 
-  export async function checkDiagramSize(): Promise<{
-    size: number;
-    formatted: string;
-    warning: boolean;
-  }> {
-    const result = await getDrawioXML();
+      // 从localStorage读取旧数据
+      const oldXml = localStorage.getItem('currentDiagram');
+      if (!oldXml) {
+        console.log('[DrawIO] 没有需要迁移的数据');
 
-    if (!result.success || !result.xml) {
-      return { size: 0, formatted: '0 B', warning: false };
+        // 创建空的默认版本
+        await createXmlVersion(
+          '1.0.0',
+          '默认版本',
+          '',
+          '初始化创建的版本'
+        );
+
+        // 设置为活动版本
+        await storage.set('project_state:current', {
+          id: 'current',
+          active_xml_version: '1.0.0',
+          last_modified: Date.now(),
+        });
+
+        return;
+      }
+
+      // 解码base64
+      const decodedXml = decodeBase64XML(oldXml);
+
+      // 创建版本1.0.0
+      await createXmlVersion(
+        '1.0.0',
+        '默认版本',
+        decodedXml,
+        '从localStorage迁移的数据'
+      );
+
+      // 设置为活动版本
+      await storage.set('project_state:current', {
+        id: 'current',
+        active_xml_version: '1.0.0',
+        last_modified: Date.now(),
+      });
+
+      // 清除localStorage中的旧数据（可选）
+      // localStorage.removeItem('currentDiagram');
+
+      console.log('[DrawIO] 数据迁移成功');
+    } catch (error) {
+      console.error('[DrawIO] 数据迁移失败:', error);
+      throw error;
     }
+  }
 
-    const size = getXmlSize(result.xml);
-    const formatted = formatSize(size);
-    const warning = size > 5 * 1024 * 1024; // 超过 5MB 警告
+  /**
+   * 应用启动时自动执行迁移
+   */
+  export async function initializeDrawioStorage(): Promise<void> {
+    await migrateFromLocalStorage();
+  }
+  ```
 
-    return { size, formatted, warning };
+### 7. 更新聊天会话集成
+- [ ] 修改聊天会话创建逻辑，记录XML版本：
+  ```typescript
+  // 在 useChatSessions.ts 中更新创建会话的逻辑
+  import { getActiveXmlVersion } from '@/lib/drawio-tools';
+
+  export async function createNewChatSession(title: string): Promise<ChatSessionModel> {
+    const storage = await getStorage();
+    const xmlVersion = await getActiveXmlVersion();
+
+    const newSession: ChatSessionModel = {
+      id: crypto.randomUUID(),
+      title,
+      xml_version: xmlVersion,  // 记录创建时的XML版本
+      created_at: Date.now(),
+      updated_at: Date.now(),
+    };
+
+    await storage.set(`chat_session:${newSession.id}`, newSession);
+
+    return newSession;
   }
   ```
 
 ## 验收标准
-- [ ] 图表数据成功从存储加载
-- [ ] 保存和清空图表正常工作
+- [ ] 默认版本 "1.0.0" 自动创建并设置为活动版本
+- [ ] localStorage 数据成功迁移到版本 "1.0.0"
+- [ ] 能够创建、删除、切换XML版本
+- [ ] 版本号验证（语义化版本格式）正常工作
+- [ ] 无法删除默认版本和当前活动版本
+- [ ] 能够获取版本列表并正确排序
+- [ ] 图表XML保存到当前活动版本成功
+- [ ] 能够从指定版本加载XML
 - [ ] 自动保存功能正常（2 秒延迟）
-- [ ] 加载状态和错误状态正确显示
-- [ ] 支持大型图表（> 10MB）
-- [ ] 图表导入导出功能正常
-- [ ] 版本历史功能正常（可选）
-- [ ] 图表大小监控正常
+- [ ] 版本导入导出功能正常
+- [ ] 版本复制功能正常
+- [ ] 聊天会话创建时正确记录XML版本
+- [ ] 支持大型XML数据（> 10MB）
 
 ## 测试步骤
-1. 启动应用并打开 DrawIO 编辑器
-2. 创建一个简单的图表
-3. 等待 2 秒，验证自动保存
-4. 刷新页面，验证图表正确加载
-5. 创建一个大型图表（> 10MB）
-6. 验证保存和加载性能
-7. 导出图表为文件
-8. 清空图表后导入文件
-9. 查看版本历史（如果实现）
 
-## 性能优化
+### 基础功能测试
+1. 启动应用，验证版本 "1.0.0" 自动创建
+2. 检查localStorage数据是否成功迁移
+3. 创建一个简单的图表并编辑
+4. 等待 2 秒，验证自动保存到版本 "1.0.0"
+5. 刷新页面，验证图表正确从版本 "1.0.0" 加载
 
-### 1. 增量保存
-- 只保存变化的部分
-- 使用 diff 算法减少存储量
+### 版本管理测试
+6. 创建新版本 "1.1.0"，验证版本号格式验证
+7. 切换到版本 "1.1.0"，验证编辑器加载空白图表
+8. 在版本 "1.1.0" 中创建不同的图表内容
+9. 切换回版本 "1.0.0"，验证显示原始内容
+10. 获取版本列表，验证所有版本都存在
+11. 尝试删除当前活动版本，验证被拒绝
+12. 切换到其他版本后删除版本 "1.1.0"，验证成功
 
-### 2. 压缩存储
-- 使用 gzip 压缩 XML
-- 减少存储空间占用
+### 导入导出测试
+13. 导出版本 "1.0.0" 为文件
+14. 创建版本 "2.0.0"，从文件导入
+15. 验证导入的内容与原版本一致
 
-### 3. 延迟加载
-- 大型图表分块加载
-- 提升初始加载速度
+### 复制功能测试
+16. 复制版本 "1.0.0" 为版本 "1.0.1"
+17. 验证两个版本内容一致但独立
+
+### 聊天集成测试
+18. 创建新的聊天会话
+19. 验证会话记录了当前活动的XML版本
+20. 切换版本后创建新会话，验证记录了新版本
+
+### 性能测试
+21. 创建大型图表（> 10MB）
+22. 验证保存和加载性能
+23. 测试在多个版本间切换的性能
+
+## 设计要点
+
+### 1. 版本隔离
+- 每个版本的XML数据完全独立
+- 版本间切换不影响各自的内容
+- 当前未实现版本UI，所有操作通过代码
+
+### 2. 默认行为
+- 所有DrawIO操作定向到当前活动版本
+- 首次启动自动创建版本 "1.0.0"
+- localStorage数据自动迁移到版本 "1.0.0"
+
+### 3. 数据安全
+- 禁止删除默认版本 "1.0.0"
+- 禁止删除当前活动版本
+- 版本切换前验证版本存在性
+
+### 4. 扩展性
+- 为后续版本管理UI预留完整接口
+- 支持版本元数据（名称、备注）管理
+- 支持版本复制和导入导出
 
 ## 注意事项
 - DrawIO XML 可能很大（> 10MB），需要测试性能
 - 自动保存要防抖，避免频繁写入
-- 错误处理要完善，避免图表丢失
-- 考虑添加本地备份机制
+- 版本号必须符合语义化版本格式（如 1.0.0）
+- 当前阶段所有操作默认定向到版本 "1.0.0"
+- 聊天会话与XML版本关联，支持历史追溯
+- localStorage数据迁移只执行一次
+- 错误处理要完善，避免数据丢失
 
 ---
 

@@ -507,56 +507,6 @@
   }
   ```
 
-### 9. 添加离线状态检测
-- [ ] 创建 `app/hooks/useOnlineStatus.ts`：
-  ```typescript
-  'use client';
-
-  import { useState, useEffect } from 'react';
-
-  export function useOnlineStatus() {
-    const [isOnline, setIsOnline] = useState(
-      typeof navigator !== 'undefined' ? navigator.onLine : true
-    );
-
-    useEffect(() => {
-      const handleOnline = () => setIsOnline(true);
-      const handleOffline = () => setIsOnline(false);
-
-      window.addEventListener('online', handleOnline);
-      window.addEventListener('offline', handleOffline);
-
-      return () => {
-        window.removeEventListener('online', handleOnline);
-        window.removeEventListener('offline', handleOffline);
-      };
-    }, []);
-
-    return isOnline;
-  }
-  ```
-
-- [ ] 在应用中显示离线提示：
-  ```typescript
-  import { useOnlineStatus } from '@/hooks/useOnlineStatus';
-
-  export function App() {
-    const isOnline = useOnlineStatus();
-
-    return (
-      <>
-        {!isOnline && (
-          <div className="fixed top-0 left-0 right-0 bg-yellow-500 text-white text-center py-2 z-50">
-            ⚠️ 当前处于离线状态，部分功能可能不可用
-          </div>
-        )}
-
-        {/* 应用内容 */}
-      </>
-    );
-  }
-  ```
-
 ## 验收标准
 - [ ] 所有组件正确显示加载状态
 - [ ] 错误状态有友好的提示和重试选项
@@ -564,7 +514,6 @@
 - [ ] 操作成功有明确的反馈
 - [ ] 危险操作有确认对话框
 - [ ] Toast 通知正常工作
-- [ ] 离线状态正确检测和提示
 
 ## 测试步骤
 1. 启动应用，观察各个页面的加载状态
@@ -572,7 +521,6 @@
 3. 测试保存操作的反馈
 4. 测试删除操作的确认对话框
 5. 测试 Toast 通知
-6. 断开网络，验证离线提示（Web 环境）
 
 ## 用户体验优化
 
