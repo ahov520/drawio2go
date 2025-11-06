@@ -10,7 +10,9 @@
     "lint": "eslint . && npx tsc --noEmit",
     "electron": "electron .",
     "electron:dev": "concurrently \"pnpm run dev\" \"wait-on http://localhost:3000 && electron .\"",
-    "electron:build": "pnpm run build && electron-builder"
+    "electron:build": "pnpm run build && electron-builder",
+    "rebuild": "electron-rebuild -f -w better-sqlite3",
+    "postinstall": "electron-rebuild -f -w better-sqlite3"
   },
   "keywords": [
     "electron",
@@ -30,7 +32,9 @@
     "@tailwindcss/postcss": "^4.1.16",
     "@xmldom/xmldom": "^0.8.11",
     "ai": "^5.0.86",
+    "better-sqlite3": "^12.4.1",
     "electron-store": "^11.0.2",
+    "idb": "^8.0.3",
     "next": "^15.5.6",
     "postcss": "^8.5.6",
     "react": "^19.2.0",
@@ -46,7 +50,9 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.1",
     "@eslint/eslintrc": "^3.3.1",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20.19.24",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
@@ -65,36 +71,40 @@
       "electron"
     ],
     "ignoredBuiltDependencies": [
+      "better-sqlite3",
       "electron",
-      "sharp",
-      "unrs-resolver"
+      "sharp"
     ]
   },
   "build": {
     "appId": "com.drawio2go.app",
     "productName": "DrawIO2Go",
     "files": [
+      "out/**/*",
       "electron/**/*",
-      ".next/**/*",
-      "public/**/*"
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraFiles": [
+      {
+        "from": "node_modules/better-sqlite3/build/Release",
+        "to": "."
+      }
     ],
     "directories": {
-      "buildResources": "assets"
-    },
-    "win": {
-      "target": [
-        "nsis"
-      ]
+      "buildResources": "assets",
+      "output": "dist"
     },
     "mac": {
-      "target": [
-        "dmg"
-      ]
+      "target": ["dmg", "zip"],
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": ["nsis", "portable"]
     },
     "linux": {
-      "target": [
-        "AppImage"
-      ]
+      "target": ["AppImage", "deb"],
+      "category": "Office"
     }
   }
 }
