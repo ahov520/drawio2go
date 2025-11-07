@@ -10,14 +10,14 @@
 ## 任务清单
 
 ### 1. 安装依赖
-- [ ] 安装 SQLite 相关依赖：
+- [x] 安装 SQLite 相关依赖：
   ```bash
   pnpm add better-sqlite3
   pnpm add -D @types/better-sqlite3
   ```
 
 ### 2. 创建 SQLite 管理器（主进程）
-- [ ] 创建 `electron/storage/sqlite-manager.js`：
+- [x] 创建 `electron/storage/sqlite-manager.js`：
 
 #### 初始化数据库
 ```javascript
@@ -432,13 +432,13 @@ module.exports = SQLiteManager;
 ```
 
 ### 3. 添加 IPC 处理器（electron/main.js）
-- [ ] 在 `electron/main.js` 中导入 SQLiteManager：
+- [x] 在 `electron/main.js` 中导入 SQLiteManager：
   ```javascript
   const SQLiteManager = require('./storage/sqlite-manager');
   let storageManager = null;
   ```
 
-- [ ] 在 `app.whenReady()` 中初始化：
+- [x] 在 `app.whenReady()` 中初始化：
   ```javascript
   app.whenReady().then(() => {
     // 初始化存储
@@ -449,7 +449,7 @@ module.exports = SQLiteManager;
   });
   ```
 
-- [ ] 添加所有 IPC 通道处理器（在 `app.whenReady()` 后）：
+- [x] 添加所有 IPC 通道处理器（在 `app.whenReady()` 后）：
 
 ```javascript
 // ==================== Storage IPC Handlers ====================
@@ -562,7 +562,7 @@ ipcMain.handle('storage:createMessages', async (event, messages) => {
 });
 ```
 
-- [ ] 在 `app.on('window-all-closed')` 中关闭数据库：
+- [x] 在 `app.on('window-all-closed')` 中关闭数据库：
   ```javascript
   app.on('window-all-closed', () => {
     if (storageManager) {
@@ -575,7 +575,7 @@ ipcMain.handle('storage:createMessages', async (event, messages) => {
   ```
 
 ### 4. 暴露 IPC 接口（electron/preload.js）
-- [ ] 在 `electron/preload.js` 中添加存储接口：
+- [x] 在 `electron/preload.js` 中添加存储接口：
 
 ```javascript
 const { contextBridge, ipcRenderer } = require('electron');
@@ -626,7 +626,7 @@ contextBridge.exposeInMainWorld('electronStorage', {
 ```
 
 ### 5. 创建 SQLite 客户端（渲染进程）
-- [ ] 创建 `app/lib/storage/sqlite-storage.ts`：
+- [x] 创建 `app/lib/storage/sqlite-storage.ts`：
 
 ```typescript
 import type { StorageAdapter } from './adapter';
@@ -807,16 +807,16 @@ export class SQLiteStorage implements StorageAdapter {
 ```
 
 ## 验收标准
-- [ ] `electron/storage/sqlite-manager.js` 创建成功
-- [ ] SQLiteManager 实现所有 CRUD 方法（约 25+ 个）
-- [ ] 数据库表结构正确（5 张表 + 索引）
-- [ ] 外键约束正确配置
-- [ ] 默认工程自动创建
-- [ ] `electron/main.js` 添加所有 IPC 处理器（约 25+ 个）
-- [ ] `electron/preload.js` 暴露所有存储接口
-- [ ] `app/lib/storage/sqlite-storage.ts` 实现 StorageAdapter
-- [ ] 图片数据正确处理（Buffer ↔ Blob ↔ ArrayBuffer）
-- [ ] 编译无错误
+- [x] `electron/storage/sqlite-manager.js` 创建成功
+- [x] SQLiteManager 实现所有 CRUD 方法（约 25+ 个）
+- [x] 数据库表结构正确（5 张表 + 索引）
+- [x] 外键约束正确配置
+- [x] 默认工程自动创建
+- [x] `electron/main.js` 添加所有 IPC 处理器（约 25+ 个）
+- [x] `electron/preload.js` 暴露所有存储接口
+- [x] `app/lib/storage/sqlite-storage.ts` 实现 StorageAdapter
+- [x] 图片数据正确处理（Buffer ↔ Blob ↔ ArrayBuffer）
+- [x] 编译无错误
 
 ## 测试步骤
 1. 安装依赖：`pnpm add better-sqlite3 @types/better-sqlite3 -D`

@@ -10,13 +10,13 @@
 ## 任务清单
 
 ### 1. 安装依赖
-- [ ] 安装 IndexedDB 封装库：
+- [x] 安装 IndexedDB 封装库：
   ```bash
   pnpm add idb
   ```
 
 ### 2. 创建 IndexedDB 存储实现
-- [ ] 创建 `app/lib/storage/indexeddb-storage.ts`：
+- [x] 创建 `app/lib/storage/indexeddb-storage.ts`：
 
 ```typescript
 import { openDB, type IDBPDatabase } from 'idb';
@@ -434,14 +434,14 @@ export class IndexedDBStorage implements StorageAdapter {
 ```
 
 ## 验收标准
-- [ ] `app/lib/storage/indexeddb-storage.ts` 创建成功
-- [ ] IndexedDBStorage 实现所有 StorageAdapter 方法（约 25+ 个）
-- [ ] 数据库结构正确（5 个 Object Stores + 索引）
-- [ ] 默认工程自动创建
-- [ ] 级联删除正确实现（deleteProject, deleteXMLVersion, deleteConversation）
-- [ ] 图片数据使用 Blob 存储
-- [ ] 编译无 TypeScript 错误
-- [ ] 在浏览器中测试通过
+- [x] `app/lib/storage/indexeddb-storage.ts` 创建成功
+- [x] IndexedDBStorage 实现所有 StorageAdapter 方法（约 25+ 个）
+- [x] 数据库结构正确（5 个 Object Stores + 索引）
+- [x] 默认工程自动创建
+- [x] 级联删除正确实现（deleteProject, deleteXMLVersion, deleteConversation）
+- [x] 图片数据使用 Blob 存储
+- [x] 编译无 TypeScript 错误
+- [x] 在浏览器中测试通过
 
 ## 测试步骤
 1. 安装依赖：`pnpm add idb`
