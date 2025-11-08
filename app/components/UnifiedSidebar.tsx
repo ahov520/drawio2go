@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import ChatSidebar from "./ChatSidebar";
 import SettingsSidebar from "./SettingsSidebar";
 import { useStorageSettings } from "@/app/hooks/useStorageSettings";
@@ -11,6 +12,11 @@ interface UnifiedSidebarProps {
   onClose: () => void;
   onSettingsChange?: (settings: { defaultPath: string }) => void;
 }
+
+const MIN_WIDTH = 300;
+const MAX_WIDTH = 3000;
+
+type SidebarPointerEvent = ReactPointerEvent<HTMLDivElement>;
 
 export default function UnifiedSidebar({
   isOpen,
@@ -23,6 +29,32 @@ export default function UnifiedSidebar({
 
   const [sidebarWidth, setSidebarWidth] = useState(400);
   const [isResizing, setIsResizing] = useState(false);
+  const sidebarWidthRef = useRef(sidebarWidth);
+
+  const applySidebarWidth = (width: number) => {
+    setSidebarWidth(width);
+    document.documentElement.style.setProperty("--sidebar-width", `${width}px`);
+  };
+
+  const calculateWidth = (clientX: number) => {
+    const viewportWidth = window.innerWidth;
+    const rawWidth = viewportWidth - clientX;
+    const clampedMax = Math.min(MAX_WIDTH, viewportWidth);
+    return Math.max(MIN_WIDTH, Math.min(rawWidth, clampedMax));
+  };
+
+  const finalizeResize = async () => {
+    setIsResizing(false);
+    try {
+      await setSetting("unifiedSidebarWidth", sidebarWidthRef.current.toString());
+    } catch (e) {
+      console.error("保存侧栏宽度失败:", e);
+    }
+  };
+
+  useEffect(() => {
+    sidebarWidthRef.current = sidebarWidth;
+  }, [sidebarWidth]);
 
   // 从存储恢复侧栏宽度
   useEffect(() => {
@@ -31,11 +63,7 @@ export default function UnifiedSidebar({
         const savedWidth = await getSetting("unifiedSidebarWidth");
         if (savedWidth) {
           const width = parseInt(savedWidth);
-          setSidebarWidth(width);
-          document.documentElement.style.setProperty(
-            "--sidebar-width",
-            `${width}px`,
-          );
+          applySidebarWidth(width);
         }
       } catch (e) {
         console.error("加载侧栏宽度失败:", e);
@@ -45,47 +73,36 @@ export default function UnifiedSidebar({
     loadWidth();
   }, [getSetting]);
 
-  // 拖拽调整宽度
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handlePointerDown = (e: SidebarPointerEvent) => {
+    if (e.button !== 0 && e.pointerType !== "touch") {
+      return;
+    }
     e.preventDefault();
     setIsResizing(true);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (err) {
+      console.warn("无法捕获指针事件:", err);
+    }
   };
 
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return;
+  const handlePointerMove = (e: SidebarPointerEvent) => {
+    if (!isResizing) return;
+    const newWidth = calculateWidth(e.clientX);
+    applySidebarWidth(newWidth);
+  };
 
-      const newWidth = window.innerWidth - e.clientX;
-      if (newWidth >= 300 && newWidth <= 800) {
-        setSidebarWidth(newWidth);
-        document.documentElement.style.setProperty(
-          "--sidebar-width",
-          `${newWidth}px`,
-        );
+  const handlePointerUp = async (e: SidebarPointerEvent) => {
+    if (!isResizing) return;
+    try {
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
       }
-    };
-
-    const handleMouseUp = async () => {
-      if (isResizing) {
-        setIsResizing(false);
-        try {
-          await setSetting("unifiedSidebarWidth", sidebarWidth.toString());
-        } catch (e) {
-          console.error("保存侧栏宽度失败:", e);
-        }
-      }
-    };
-
-    if (isResizing) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
+    } catch (err) {
+      console.warn("释放指针捕获失败:", err);
     }
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isResizing, sidebarWidth, setSetting]);
+    await finalizeResize();
+  };
 
   return (
     <div
@@ -95,7 +112,13 @@ export default function UnifiedSidebar({
       style={{ width: `${sidebarWidth}px` }}
     >
       {/* 拖拽分隔条 */}
-      <div className="resize-handle" onMouseDown={handleMouseDown} />
+      <div
+        className="resize-handle"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+      />
 
       {/* 根据 activeSidebar 渲染不同内容 */}
       {activeSidebar === "settings" && (

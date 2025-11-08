@@ -57,18 +57,19 @@ export default function LLMSettingsPanel({
         }
       >
         <Label>请求供应商</Label>
-        <Select.Trigger>
-          <Select.Value />
-          <Select.Indicator />
+        <Select.Trigger className="mt-3 flex w-full items-center justify-between rounded-md border border-default-200 bg-content1 px-3 py-2 text-left text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 hover:border-primary">
+          <Select.Value className="text-sm leading-6 text-foreground" />
+          <Select.Indicator className="text-default-500" />
         </Select.Trigger>
-        <Select.Content>
-          <ListBox>
+        <Select.Content className="rounded-2xl border border-default-200 bg-content1 p-2 shadow-2xl">
+          <ListBox className="flex flex-col gap-1">
             {PROVIDER_OPTIONS.map((option) => (
               <ListBox.Item
                 key={option.value}
                 id={option.value}
                 textValue={option.label}
                 isDisabled={option.disabled}
+                className="select-item flex items-center justify-between rounded-xl text-sm text-foreground hover:bg-primary-50"
               >
                 {option.label}
                 <ListBox.ItemIndicator />

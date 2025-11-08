@@ -76,6 +76,7 @@
   background: transparent;
   transition: background-color 0.2s ease;
   z-index: 101;
+  touch-action: none;
 }
 
 .resize-handle:hover {
