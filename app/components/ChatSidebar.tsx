@@ -182,6 +182,12 @@ export default function ChatSidebar({}: ChatSidebarProps) {
   // 使用 ref 来跟踪发送消息时的会话ID
   const sendingSessionIdRef = useRef<string | null>(null);
 
+  // 追踪正在创建的对话 Promise（用于异步创建对话时的同步）
+  const creatingConversationPromiseRef = useRef<{
+    promise: Promise<Conversation>;
+    conversationId: string;
+  } | null>(null);
+
   // ========== 派生状态 ==========
   const activeConversation = useMemo(() => {
     return conversations.find((c) => c.id === activeConversationId) || null;
@@ -309,7 +315,7 @@ export default function ChatSidebar({}: ChatSidebarProps) {
     id: activeConversationId || "default",
     messages: initialMessages,
     onFinish: async ({ messages: finishedMessages }) => {
-      const targetSessionId = sendingSessionIdRef.current;
+      let targetSessionId = sendingSessionIdRef.current;
 
       if (!targetSessionId) {
         console.error("[ChatSidebar] onFinish: 没有记录的目标会话ID");
@@ -317,9 +323,45 @@ export default function ChatSidebar({}: ChatSidebarProps) {
       }
 
       try {
+        // 如果对话正在异步创建中，等待创建完成
+        if (creatingConversationPromiseRef.current) {
+          const { promise, conversationId } =
+            creatingConversationPromiseRef.current;
+
+          if (conversationId === targetSessionId) {
+            console.log(
+              "[ChatSidebar] onFinish: 等待对话创建完成...",
+              targetSessionId,
+            );
+            try {
+              const newConv = await promise;
+              targetSessionId = newConv.id;
+              console.log(
+                "[ChatSidebar] onFinish: 对话创建已完成，真实ID:",
+                targetSessionId,
+              );
+            } catch (error) {
+              console.error("[ChatSidebar] onFinish: 等待对话创建失败:", error);
+              throw error;
+            } finally {
+              // 清理 ref
+              creatingConversationPromiseRef.current = null;
+            }
+          }
+        }
+
+        // 确保 targetSessionId 不为空（TypeScript 类型保护）
+        if (!targetSessionId) {
+          console.error("[ChatSidebar] onFinish: targetSessionId 为空");
+          return;
+        }
+
+        // 使用常量确保 TypeScript 类型推断
+        const finalSessionId: string = targetSessionId;
+
         // 将 UIMessage[] 转换为 CreateMessageInput[]
         const messagesToSave = finishedMessages.map((msg) =>
-          convertUIMessageToCreateInput(msg, targetSessionId),
+          convertUIMessageToCreateInput(msg, finalSessionId),
         );
 
         // 批量保存到存储
@@ -328,82 +370,23 @@ export default function ChatSidebar({}: ChatSidebarProps) {
         // 更新本地缓存
         setConversationMessages((prev) => ({
           ...prev,
-          [targetSessionId]: finishedMessages,
+          [finalSessionId]: finishedMessages,
         }));
 
-        // 更新对话标题（如果对话已被删除，则重新创建）
+        // 更新对话标题
         const title = generateTitle(finishedMessages);
-        try {
-          await updateConversation(targetSessionId, { title });
+        await updateConversation(finalSessionId, { title });
 
-          // 更新本地对话列表中的标题
-          setConversations((prev) =>
-            prev.map((conv) =>
-              conv.id === targetSessionId
-                ? { ...conv, title, updated_at: Date.now() }
-                : conv,
-            ),
-          );
+        // 更新本地对话列表中的标题
+        setConversations((prev) =>
+          prev.map((conv) =>
+            conv.id === finalSessionId
+              ? { ...conv, title, updated_at: Date.now() }
+              : conv,
+          ),
+        );
 
-          console.log("[ChatSidebar] 消息已保存到对话:", targetSessionId);
-        } catch (updateError) {
-          // 检查是否为"对话不存在"错误
-          const errorMessage =
-            updateError instanceof Error
-              ? updateError.message
-              : String(updateError);
-          if (errorMessage.includes("Conversation not found")) {
-            console.warn(
-              `[ChatSidebar] 对话不存在 (${targetSessionId})，尝试重新创建对话`,
-            );
-
-            // 对话已被删除，需要重新创建并保存消息
-            if (defaultXmlVersionId) {
-              try {
-                const newConv = await createConversation(
-                  defaultXmlVersionId,
-                  title,
-                );
-                console.log(
-                  `[ChatSidebar] 已创建新对话: ${newConv.id} (标题: ${title})`,
-                );
-
-                // 将消息重新映射到新对话ID
-                const remappedMessages = finishedMessages.map((msg) =>
-                  convertUIMessageToCreateInput(msg, newConv.id),
-                );
-                await addMessages(remappedMessages);
-
-                // 更新本地状态
-                setConversations((prev) => [newConv, ...prev]);
-                setActiveConversationId(newConv.id);
-                setConversationMessages((prev) => ({
-                  ...prev,
-                  [newConv.id]: finishedMessages,
-                }));
-
-                console.log(
-                  "[ChatSidebar] 消息已保存到新创建的对话:",
-                  newConv.id,
-                );
-              } catch (recreateError) {
-                console.error(
-                  "[ChatSidebar] 重新创建对话失败:",
-                  recreateError,
-                );
-                throw recreateError;
-              }
-            } else {
-              console.error(
-                "[ChatSidebar] 无法重新创建对话：缺少默认 XML 版本",
-              );
-              throw updateError;
-            }
-          } else {
-            // 其他错误直接抛出
-            throw updateError;
-          }
-        }
+        console.log("[ChatSidebar] 消息已保存到对话:", finalSessionId);
       } catch (error) {
         console.error("[ChatSidebar] 保存消息失败:", error);
       } finally {
@@ -429,11 +412,9 @@ export default function ChatSidebar({}: ChatSidebarProps) {
 
     let targetSessionId = activeConversationId;
 
-    // 防御性检查：如果没有活动会话，先创建一个
+    // 如果没有活动会话，立即启动异步创建（不阻塞消息发送）
     if (!targetSessionId) {
-      console.warn(
-        "[ChatSidebar] 检测到没有活动会话，尝试自动创建新对话",
-      );
+      console.warn("[ChatSidebar] 检测到没有活动会话，立即启动异步创建新对话");
 
       if (!defaultXmlVersionId) {
         console.error(
@@ -442,21 +423,42 @@ export default function ChatSidebar({}: ChatSidebarProps) {
         return;
       }
 
-      try {
-        const newConv = await createConversation(defaultXmlVersionId, "新对话");
-        console.log(
-          `[ChatSidebar] 已自动创建新对话: ${newConv.id} (标题: 新对话)`,
-        );
+      // 生成临时 ID 用于追踪正在创建的对话
+      const tempConversationId = `temp-${Date.now()}`;
 
-        setConversations((prev) => [newConv, ...prev]);
-        setActiveConversationId(newConv.id);
-        setConversationMessages((prev) => ({ ...prev, [newConv.id]: [] }));
+      // 立即启动异步创建对话，不等待完成
+      const createPromise = createConversation(defaultXmlVersionId, "新对话")
+        .then((newConv) => {
+          console.log(
+            `[ChatSidebar] 异步创建对话完成: ${newConv.id} (标题: 新对话)`,
+          );
 
-        targetSessionId = newConv.id;
-      } catch (error) {
-        console.error("[ChatSidebar] 创建新对话失败:", error);
-        return;
-      }
+          // 更新本地状态
+          setConversations((prev) => [newConv, ...prev]);
+          setActiveConversationId(newConv.id);
+          setConversationMessages((prev) => ({ ...prev, [newConv.id]: [] }));
+
+          return newConv;
+        })
+        .catch((error) => {
+          console.error("[ChatSidebar] 异步创建新对话失败:", error);
+          // 清理 ref
+          if (
+            creatingConversationPromiseRef.current?.conversationId ===
+            tempConversationId
+          ) {
+            creatingConversationPromiseRef.current = null;
+          }
+          throw error;
+        });
+
+      // 保存到 ref 供 onFinish 等待
+      creatingConversationPromiseRef.current = {
+        promise: createPromise,
+        conversationId: tempConversationId,
+      };
+
+      targetSessionId = tempConversationId;
     }
 
     sendingSessionIdRef.current = targetSessionId;

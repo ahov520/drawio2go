@@ -12,6 +12,7 @@ import type { UIMessage } from "ai";
 interface MessageContentProps {
   message: UIMessage;
   status?: string;
+  isCurrentStreaming?: boolean;
   expandedToolCalls: Record<string, boolean>;
   expandedThinkingBlocks: Record<string, boolean>;
   onToolCallToggle: (key: string) => void;
@@ -21,6 +22,7 @@ interface MessageContentProps {
 export default function MessageContent({
   message,
   status,
+  isCurrentStreaming,
   expandedToolCalls,
   expandedThinkingBlocks,
   onToolCallToggle,
@@ -53,7 +55,10 @@ export default function MessageContent({
           // 判断是否是最后一个文本部分
           const isLastTextPart = index === message.parts.length - 1;
           const shouldShowTypingIndicator =
-            isStreaming && isAssistantMessage && isLastTextPart;
+            isStreaming &&
+            isAssistantMessage &&
+            isLastTextPart &&
+            isCurrentStreaming;
 
           return (
             <div

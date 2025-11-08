@@ -50,7 +50,8 @@
       "Bash(npx eslint:*)",
       "Bash(pnpm rebuild:*)",
       "Bash(pnpm run format:*)",
-      "mcp__heroui-react__get_component_source_styles"
+      "mcp__heroui-react__get_component_source_styles",
+      "Bash(xargs:*)"
     ],
     "deny": [],
     "ask": []

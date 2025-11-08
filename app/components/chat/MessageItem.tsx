@@ -6,6 +6,7 @@ import type { UIMessage } from "ai";
 interface MessageItemProps {
   message: UIMessage;
   status: string;
+  isCurrentStreaming?: boolean;
   expandedToolCalls: Record<string, boolean>;
   expandedThinkingBlocks: Record<string, boolean>;
   onToolCallToggle: (key: string) => void;
@@ -15,6 +16,7 @@ interface MessageItemProps {
 export default function MessageItem({
   message,
   status,
+  isCurrentStreaming,
   expandedToolCalls,
   expandedThinkingBlocks,
   onToolCallToggle,
@@ -45,6 +47,7 @@ export default function MessageItem({
         <MessageContent
           message={message}
           status={status}
+          isCurrentStreaming={isCurrentStreaming}
           expandedToolCalls={expandedToolCalls}
           expandedThinkingBlocks={expandedThinkingBlocks}
           onToolCallToggle={onToolCallToggle}

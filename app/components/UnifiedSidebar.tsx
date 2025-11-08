@@ -46,7 +46,10 @@ export default function UnifiedSidebar({
   const finalizeResize = async () => {
     setIsResizing(false);
     try {
-      await setSetting("unifiedSidebarWidth", sidebarWidthRef.current.toString());
+      await setSetting(
+        "unifiedSidebarWidth",
+        sidebarWidthRef.current.toString(),
+      );
     } catch (e) {
       console.error("保存侧栏宽度失败:", e);
     }
