@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getStorage, DEFAULT_XML_VERSION } from "@/app/lib/storage";
+import { v4 as uuidv4 } from "uuid";
+import {
+  getStorage,
+  DEFAULT_XML_VERSION,
+  ZERO_SOURCE_VERSION_ID,
+} from "@/app/lib/storage";
 import type { Project, CreateXMLVersionInput } from "@/app/lib/storage";
 
 const CURRENT_PROJECT_KEY = "currentProjectId";
@@ -68,12 +73,16 @@ export function useCurrentProject() {
 </mxfile>`;
 
     const xmlVersion: CreateXMLVersionInput = {
+      id: uuidv4(),
       project_uuid: uuid,
       semantic_version: DEFAULT_XML_VERSION,
       name: "初始版本",
       description: "默认空白画布",
-      source_version_id: 0,
+      source_version_id: ZERO_SOURCE_VERSION_ID,
       xml_content: emptyXML,
+      is_keyframe: true,
+      diff_chain_depth: 0,
+      metadata: null,
     };
 
     const createdVersion = await storage.createXMLVersion(xmlVersion);

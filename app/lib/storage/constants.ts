@@ -47,6 +47,24 @@ export const DEFAULT_PROJECT_UUID = "default";
  */
 export const DEFAULT_XML_VERSION = "1.0.0";
 
+/**
+ * 首个版本的虚拟 UUID
+ *
+ * 用于标记关键帧的根节点（无父版本）
+ */
+export const ZERO_SOURCE_VERSION_ID = "00000000-0000-0000-0000-000000000000";
+
+/**
+ * 触发关键帧重置的差异阈值（相对于原始文档长度）
+ * diff 超过 70% 时直接存储完整关键帧
+ */
+export const DIFF_KEYFRAME_THRESHOLD = 0.7;
+
+/**
+ * 触发关键帧重置的最大差异链长度
+ */
+export const MAX_DIFF_CHAIN_LENGTH = 10;
+
 // ==================== 数据库配置 ====================
 
 /**

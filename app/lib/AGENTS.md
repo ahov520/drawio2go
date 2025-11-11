@@ -122,10 +122,15 @@ XML 版本管理表，关联项目存储历史版本
 
 ```typescript
 interface XMLVersion {
-  id?: number; // 自增主键（SQLite）/ 自动生成（IndexedDB）
+  id: string; // UUID 主键
   project_uuid: string; // 关联项目
-  semantic_version: string; // 语义化版本号（如 "v1.0.0" 或 "latest"）
-  xml_content: string; // XML 内容
+  semantic_version: string; // 当前固定为 "latest"
+  source_version_id: string; // 父版本 UUID，关键帧为 ZERO_SOURCE_VERSION_ID
+  is_keyframe: boolean; // true = 存储完整 XML，false = 存储 diff-match-patch 字符串
+  diff_chain_depth: number; // 距离最近关键帧的链长
+  xml_content: string; // 根据 is_keyframe 存储完整 XML 或 diff 字符串
+  metadata: Record<string, unknown> | null; // 预留字段（当前为空）
+  preview_image?: Blob | Buffer;
   created_at: number; // 创建时间戳
 }
 ```
@@ -138,7 +143,6 @@ interface XMLVersion {
 interface Conversation {
   id: string;
   project_uuid: string;
-  xml_version_id: number;
   title: string;
   created_at: number;
   updated_at: number;
@@ -157,6 +161,7 @@ interface Message {
   content: string;
   tool_invocations?: string; // JSON 字符串
   model_name?: string | null; // 关联的 LLM 模型
+  xml_version_id?: string; // 关联的 XML 版本 UUID
   created_at: number;
 }
 ```

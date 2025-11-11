@@ -13,6 +13,31 @@ import type {
   CreateMessageInput,
 } from "./types";
 
+function parseMetadata(value: unknown): Record<string, unknown> | null {
+  if (value == null) return null;
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value);
+    } catch (error) {
+      console.warn("[SQLiteStorage] Failed to parse metadata", error);
+      return null;
+    }
+  }
+  if (typeof value === "object") {
+    return value as Record<string, unknown>;
+  }
+  return null;
+}
+
+function normalizePreview(
+  preview: Blob | Buffer | ArrayBuffer | null | undefined,
+): Blob | undefined {
+  if (!preview) return undefined;
+  if (preview instanceof Blob) return preview;
+  const buffer = preview as ArrayBuffer;
+  return new Blob([buffer]);
+}
+
 /**
  * SQLite 存储实现（Electron 环境）
  * 通过 IPC 调用主进程的 SQLiteManager
@@ -24,6 +49,22 @@ export class SQLiteStorage implements StorageAdapter {
         "electronStorage is not available. Not in Electron environment.",
       );
     }
+  }
+
+  private normalizeVersion(
+    version:
+      | (XMLVersion & { metadata?: unknown; preview_image?: unknown })
+      | null,
+  ): XMLVersion | null {
+    if (!version) return null;
+    return {
+      ...version,
+      metadata: parseMetadata((version as { metadata?: unknown }).metadata),
+      preview_image: normalizePreview(
+        (version as { preview_image?: Blob | Buffer | ArrayBuffer | null })
+          .preview_image,
+      ),
+    };
   }
 
   async initialize(): Promise<void> {
@@ -85,15 +126,10 @@ export class SQLiteStorage implements StorageAdapter {
 
   // ==================== XMLVersions ====================
 
-  async getXMLVersion(id: number): Promise<XMLVersion | null> {
+  async getXMLVersion(id: string): Promise<XMLVersion | null> {
     await this.ensureElectron();
     const result = await window.electronStorage!.getXMLVersion(id);
-    if (result && result.preview_image) {
-      // Buffer → Blob 转换
-      const buffer = result.preview_image as unknown as ArrayBuffer;
-      result.preview_image = new Blob([buffer]);
-    }
-    return result;
+    return this.normalizeVersion(result);
   }
 
   async createXMLVersion(version: CreateXMLVersionInput): Promise<XMLVersion> {
@@ -106,27 +142,19 @@ export class SQLiteStorage implements StorageAdapter {
     }
     const result =
       await window.electronStorage!.createXMLVersion(versionToCreate);
-    if (result.preview_image) {
-      const buffer = result.preview_image as unknown as ArrayBuffer;
-      result.preview_image = new Blob([buffer]);
-    }
-    return result;
+    return this.normalizeVersion(result)!;
   }
 
   async getXMLVersionsByProject(projectUuid: string): Promise<XMLVersion[]> {
     await this.ensureElectron();
     const results =
       await window.electronStorage!.getXMLVersionsByProject(projectUuid);
-    return results.map((r) => {
-      if (r.preview_image) {
-        const buffer = r.preview_image as unknown as ArrayBuffer;
-        r.preview_image = new Blob([buffer]);
-      }
-      return r;
-    });
+    return results
+      .map((version) => this.normalizeVersion(version))
+      .filter((v): v is XMLVersion => !!v);
   }
 
-  async deleteXMLVersion(id: number): Promise<void> {
+  async deleteXMLVersion(id: string): Promise<void> {
     await this.ensureElectron();
     await window.electronStorage!.deleteXMLVersion(id);
   }
@@ -166,7 +194,7 @@ export class SQLiteStorage implements StorageAdapter {
   }
 
   async getConversationsByXMLVersion(
-    xmlVersionId: number,
+    xmlVersionId: string,
   ): Promise<Conversation[]> {
     await this.ensureElectron();
     return window.electronStorage!.getConversationsByXMLVersion(xmlVersionId);

@@ -111,7 +111,7 @@ export interface StorageAdapter {
    * @param id 版本 ID
    * @returns XML 版本实体，不存在返回 null
    */
-  getXMLVersion(id: number): Promise<XMLVersion | null>;
+  getXMLVersion(id: string): Promise<XMLVersion | null>;
 
   /**
    * 创建 XML 版本
@@ -131,7 +131,7 @@ export interface StorageAdapter {
    * 删除 XML 版本
    * @param id 版本 ID
    */
-  deleteXMLVersion(id: number): Promise<void>;
+  deleteXMLVersion(id: string): Promise<void>;
 
   // ==================== Conversations ====================
 

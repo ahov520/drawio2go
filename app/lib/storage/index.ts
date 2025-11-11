@@ -54,6 +54,9 @@ export {
   DB_NAME,
   DB_VERSION,
   SQLITE_DB_FILE,
+  ZERO_SOURCE_VERSION_ID,
+  DIFF_KEYFRAME_THRESHOLD,
+  MAX_DIFF_CHAIN_LENGTH,
 } from "./constants";
 
 // ==================== 内部实现（仅用于测试） ====================

@@ -102,10 +102,10 @@ declare global {
       getAllProjects: () => Promise<Project[]>;
 
       // XMLVersions
-      getXMLVersion: (id: number) => Promise<XMLVersion | null>;
+      getXMLVersion: (id: string) => Promise<XMLVersion | null>;
       createXMLVersion: (version: CreateXMLVersionInput) => Promise<XMLVersion>;
       getXMLVersionsByProject: (projectUuid: string) => Promise<XMLVersion[]>;
-      deleteXMLVersion: (id: number) => Promise<void>;
+      deleteXMLVersion: (id: string) => Promise<void>;
 
       // Conversations
       getConversation: (id: string) => Promise<Conversation | null>;
@@ -121,7 +121,7 @@ declare global {
         projectUuid: string,
       ) => Promise<Conversation[]>;
       getConversationsByXMLVersion: (
-        xmlVersionId: number,
+        xmlVersionId: string,
       ) => Promise<Conversation[]>;
 
       // Messages

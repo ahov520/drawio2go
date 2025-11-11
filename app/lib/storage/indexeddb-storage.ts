@@ -39,7 +39,7 @@ export class IndexedDBStorage implements StorageAdapter {
   private async _doInitialize(): Promise<void> {
     try {
       this.db = await openDB(DB_NAME, DB_VERSION, {
-        upgrade(db, oldVersion, newVersion, _transaction) {
+        upgrade: (db, oldVersion, newVersion) => {
           console.log(
             `Upgrading IndexedDB from ${oldVersion} to ${newVersion}`,
           );
@@ -58,9 +58,11 @@ export class IndexedDBStorage implements StorageAdapter {
           if (!db.objectStoreNames.contains("xml_versions")) {
             const xmlStore = db.createObjectStore("xml_versions", {
               keyPath: "id",
-              autoIncrement: true,
             });
             xmlStore.createIndex("project_uuid", "project_uuid", {
+              unique: false,
+            });
+            xmlStore.createIndex("source_version_id", "source_version_id", {
               unique: false,
             });
           }
@@ -248,7 +250,7 @@ export class IndexedDBStorage implements StorageAdapter {
 
   // ==================== XMLVersions ====================
 
-  async getXMLVersion(id: number): Promise<XMLVersion | null> {
+  async getXMLVersion(id: string): Promise<XMLVersion | null> {
     const db = await this.ensureDB();
     const version = await db.get("xml_versions", id);
     return version || null;
@@ -257,15 +259,13 @@ export class IndexedDBStorage implements StorageAdapter {
   async createXMLVersion(version: CreateXMLVersionInput): Promise<XMLVersion> {
     const db = await this.ensureDB();
     const now = Date.now();
-    const fullVersion = {
+    const fullVersion: XMLVersion = {
       ...version,
       created_at: now,
     };
 
-    const id = await db.add("xml_versions", fullVersion);
-
-    const created = await db.get("xml_versions", id);
-    return created!;
+    await db.put("xml_versions", fullVersion);
+    return fullVersion;
   }
 
   async getXMLVersionsByProject(projectUuid: string): Promise<XMLVersion[]> {
@@ -279,7 +279,7 @@ export class IndexedDBStorage implements StorageAdapter {
     return versions.sort((a, b) => b.created_at - a.created_at);
   }
 
-  async deleteXMLVersion(id: number): Promise<void> {
+  async deleteXMLVersion(id: string): Promise<void> {
     const db = await this.ensureDB();
 
     // 删除 XML 版本（消息中的 xml_version_id 会被设置为 null）

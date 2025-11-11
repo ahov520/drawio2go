@@ -1,12 +1,17 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { v4 as uuidv4 } from "uuid";
 import {
   getStorage,
   DEFAULT_PROJECT_UUID,
   DEFAULT_XML_VERSION,
 } from "@/app/lib/storage";
 import type { XMLVersion } from "@/app/lib/storage";
+import {
+  computeVersionPayload,
+  materializeVersionXml,
+} from "@/app/lib/storage/xml-version-engine";
 
 /**
  * XML 版本管理 Hook
@@ -41,14 +46,34 @@ export function useStorageXMLVersions() {
 
       try {
         const storage = await getStorage();
+        const versions = await storage.getXMLVersionsByProject(projectUuid);
+        const latestVersion = versions[0] ?? null;
+        const payload = await computeVersionPayload({
+          newXml: xml,
+          latestVersion,
+          resolveVersionById: (id) => storage.getXMLVersion(id),
+        });
+
+        if (!payload) {
+          setLoading(false);
+          if (!latestVersion) {
+            throw new Error("无法计算版本差异：缺少基础版本数据");
+          }
+          return latestVersion;
+        }
+
         const version = await storage.createXMLVersion({
+          id: uuidv4(),
           project_uuid: projectUuid,
           semantic_version: DEFAULT_XML_VERSION,
-          xml_content: xml,
+          xml_content: payload.xml_content,
           preview_image: previewImage,
           name,
           description,
-          source_version_id: 0,
+          metadata: null,
+          is_keyframe: payload.is_keyframe,
+          diff_chain_depth: payload.diff_chain_depth,
+          source_version_id: payload.source_version_id,
         });
 
         setLoading(false);
@@ -69,7 +94,9 @@ export function useStorageXMLVersions() {
    * @param projectUuid 工程 UUID（默认使用 DEFAULT_PROJECT_UUID）
    */
   const getCurrentXML = useCallback(
-    async (projectUuid: string = DEFAULT_PROJECT_UUID): Promise<string | null> => {
+    async (
+      projectUuid: string = DEFAULT_PROJECT_UUID,
+    ): Promise<string | null> => {
       setLoading(true);
       setError(null);
 
@@ -85,7 +112,10 @@ export function useStorageXMLVersions() {
         // 返回最新版本的 XML
         const latest = versions[0];
         setLoading(false);
-        return latest.xml_content;
+        const resolved = await materializeVersionXml(latest, (id) =>
+          storage.getXMLVersion(id),
+        );
+        return resolved;
       } catch (err) {
         const error = err as Error;
         setError(error);
@@ -102,7 +132,9 @@ export function useStorageXMLVersions() {
    * @param projectUuid 工程 UUID（默认使用 DEFAULT_PROJECT_UUID）
    */
   const getAllXMLVersions = useCallback(
-    async (projectUuid: string = DEFAULT_PROJECT_UUID): Promise<XMLVersion[]> => {
+    async (
+      projectUuid: string = DEFAULT_PROJECT_UUID,
+    ): Promise<XMLVersion[]> => {
       setLoading(true);
       setError(null);
 
@@ -125,7 +157,7 @@ export function useStorageXMLVersions() {
    * 获取指定版本
    */
   const getXMLVersion = useCallback(
-    async (id: number): Promise<XMLVersion | null> => {
+    async (id: string): Promise<XMLVersion | null> => {
       setLoading(true);
       setError(null);
 

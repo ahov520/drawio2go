@@ -28,10 +28,14 @@
  * try {
  *   const storage = await getStorage();
  *   await storage.createXMLVersion({
+ *     id: crypto.randomUUID(),
  *     project_uuid: 'default',
  *     semantic_version: '1.0.0',
  *     xml_content: '<diagram>...</diagram>',
- *     source_version_id: 0
+ *     source_version_id: ZERO_SOURCE_VERSION_ID,
+ *     is_keyframe: true,
+ *     diff_chain_depth: 0,
+ *     metadata: null
  *   });
  * } catch (error) {
  *   console.error('Failed to save XML:', error);

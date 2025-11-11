@@ -152,8 +152,11 @@ function ChatManager() {
   - `deleteVersion`: 删除版本
 - **版本结构**:
   - `project_uuid`: 关联项目
-  - `semantic_version`: 语义化版本号（如 "v1.0.0"）
-  - `xml_content`: XML 内容
+  - `semantic_version`: 当前固定为 `latest`
+  - `source_version_id`: 父版本 UUID，关键帧统一使用 `00000000-0000-0000-0000-000000000000`
+  - `is_keyframe` / `diff_chain_depth`: 关键帧标志与距最近关键帧的链长（>10 自动刷新关键帧）
+  - `xml_content`: 关键帧存储完整 XML，Diff 存储 `diff-match-patch` 字符串
+  - `metadata`: JSON 预留字段（当前写入 `null`，后续扩展）
   - `created_at`: 创建时间
 
 #### 使用示例

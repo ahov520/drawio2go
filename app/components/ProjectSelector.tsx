@@ -39,7 +39,10 @@ export default function ProjectSelector({
     if (!newProjectName.trim()) {
       return;
     }
-    onCreateProject(newProjectName.trim(), newProjectDescription.trim() || undefined);
+    onCreateProject(
+      newProjectName.trim(),
+      newProjectDescription.trim() || undefined,
+    );
     setShowNewProjectForm(false);
     setNewProjectName("");
     setNewProjectDescription("");
@@ -106,7 +109,7 @@ export default function ProjectSelector({
                       <p className="text-xs text-gray-400 mt-2">
                         创建于:{" "}
                         {new Date(project.created_at).toLocaleDateString(
-                          "zh-CN"
+                          "zh-CN",
                         )}
                       </p>
                     </div>

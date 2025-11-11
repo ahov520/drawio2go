@@ -202,6 +202,13 @@ pnpm format               # 使用 Prettier 格式化所有代码
 - AI 回复区域改为全宽布局，无底色覆盖整个侧边栏；用户消息仍保持气泡样式
 - 新增左上角信息条（Lucide 图标 + 模型名 + 时间戳），与工具调用卡片共用全宽布局
 
+### 2025-11 版本控制重构
+
+- `xml_versions` 表主键从自增 ID 改为 UUID，`source_version_id` 同步使用 UUID
+- 引入关键帧 + Diff 混合存储：`diff-match-patch` 字符串保存差异，差异率 >70% 或链长 >10 自动刷新关键帧
+- `metadata` JSON 预留字段已加入（当前写入 `null`，供后续扩展）
+- 首版本统一使用 `00000000-0000-0000-0000-000000000000` 作为父版本标记
+
 ### 2025-11 OpenAI Compatible 支持
 
 - 支持 OpenAI Reasoning 模型（o1/o3）

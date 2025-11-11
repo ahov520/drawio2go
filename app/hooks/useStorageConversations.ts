@@ -126,7 +126,9 @@ export function useStorageConversations() {
    * @param projectUuid 工程 UUID（默认使用 DEFAULT_PROJECT_UUID）
    */
   const getAllConversations = useCallback(
-    async (projectUuid: string = DEFAULT_PROJECT_UUID): Promise<Conversation[]> => {
+    async (
+      projectUuid: string = DEFAULT_PROJECT_UUID,
+    ): Promise<Conversation[]> => {
       setLoading(true);
       setError(null);
 

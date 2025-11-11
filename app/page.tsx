@@ -25,17 +25,14 @@ export default function Home() {
     switchProject,
   } = useCurrentProject();
 
-  const {
-    projects,
-    createProject,
-    getAllProjects,
-  } = useStorageProjects();
+  const { projects, createProject, getAllProjects } = useStorageProjects();
 
   const { saveXML } = useStorageXMLVersions();
 
   // DrawIO 编辑器 Hook
-  const { editorRef, loadProjectXml, replaceWithXml } =
-    useDrawioEditor(currentProject?.uuid);
+  const { editorRef, loadProjectXml, replaceWithXml } = useDrawioEditor(
+    currentProject?.uuid,
+  );
 
   const [diagramXml, setDiagramXml] = useState<string>("");
   const [settings, setSettings] = useState({ defaultPath: "" });
@@ -47,7 +44,8 @@ export default function Home() {
     cells: [],
   });
   const [isElectronEnv, setIsElectronEnv] = useState<boolean>(false);
-  const [showProjectSelector, setShowProjectSelector] = useState<boolean>(false);
+  const [showProjectSelector, setShowProjectSelector] =
+    useState<boolean>(false);
 
   // 初始化 Socket.IO 连接
   const { isConnected } = useDrawioSocket();

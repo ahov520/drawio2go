@@ -14,6 +14,11 @@ import type {
 } from "../types/drawio-tools";
 import { getStorage } from "./storage/storage-factory";
 import { DEFAULT_PROJECT_UUID } from "./storage/constants";
+import {
+  computeVersionPayload,
+  materializeVersionXml,
+} from "./storage/xml-version-engine";
+import { v4 as uuidv4 } from "uuid";
 
 /**
  * localStorage 中存储当前项目 ID 的键名
@@ -23,12 +28,7 @@ import { DEFAULT_PROJECT_UUID } from "./storage/constants";
 const CURRENT_PROJECT_KEY = "currentProjectId";
 
 /**
- * 固定的语义版本号（仅保存最新版）
- *
- * 当前策略：每次保存自动删除旧版本，仅保留最新版本。
- * 这避免了版本管理的复杂性，保持存储简洁。
- *
- * 见内部保存逻辑中的自动清理。
+ * 固定的语义版本号（目前仍使用单一标签）
  */
 const SEMANTIC_VERSION = "latest";
 
@@ -126,20 +126,27 @@ async function saveDrawioXMLInternal(decodedXml: string): Promise<void> {
     );
   }
 
-  // 获取现有版本
   const existingVersions = await storage.getXMLVersionsByProject(projectUuid);
+  const latestVersion = existingVersions[0] ?? null;
+  const payload = await computeVersionPayload({
+    newXml: decodedXml,
+    latestVersion,
+    resolveVersionById: (id) => storage.getXMLVersion(id),
+  });
 
-  // 删除所有旧版本（仅保留最新版策略）
-  for (const version of existingVersions) {
-    await storage.deleteXMLVersion(version.id);
+  if (!payload) {
+    return;
   }
 
-  // 创建新版本
   await storage.createXMLVersion({
+    id: uuidv4(),
     project_uuid: projectUuid,
     semantic_version: SEMANTIC_VERSION,
-    xml_content: decodedXml,
-    source_version_id: 0,
+    xml_content: payload.xml_content,
+    source_version_id: payload.source_version_id,
+    is_keyframe: payload.is_keyframe,
+    diff_chain_depth: payload.diff_chain_depth,
+    metadata: null,
   });
 }
 
@@ -200,7 +207,10 @@ export async function getDrawioXML(): Promise<GetXMLResult> {
 
     // 获取最新版本（数组已按创建时间倒序排列）
     const latestVersion = versions[0];
-    const decodedXml = decodeBase64XML(latestVersion.xml_content);
+    const resolvedXml = await materializeVersionXml(latestVersion, (id) =>
+      storage.getXMLVersion(id),
+    );
+    const decodedXml = decodeBase64XML(resolvedXml);
 
     return {
       success: true,
@@ -261,4 +271,3 @@ export async function replaceDrawioXML(
     };
   }
 }
-

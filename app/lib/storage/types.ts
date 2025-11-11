@@ -27,7 +27,7 @@ export interface Project {
   uuid: string;
   name: string;
   description?: string;
-  active_xml_version_id?: number;
+  active_xml_version_id?: string | null;
   active_conversation_id?: string;
   created_at: number;
   updated_at: number;
@@ -49,16 +49,19 @@ export type UpdateProjectInput = Partial<
 
 /**
  * XML 版本实体
- * 临时实现：所有版本固定为 semantic_version="1.0.0"
+ * 采用关键帧 + Diff 混合存储
  */
 export interface XMLVersion {
-  id: number;
+  id: string;
   project_uuid: string;
   semantic_version: string;
   name?: string;
   description?: string;
-  source_version_id: number; // 0 表示首个版本
-  xml_content: string;
+  source_version_id: string; // ZERO_SOURCE_VERSION_ID 表示关键帧
+  is_keyframe: boolean;
+  diff_chain_depth: number; // 距离最近关键帧的差异链长度
+  xml_content: string; // 关键帧: 完整 XML; Diff: diff-match-patch 字符串
+  metadata: Record<string, unknown> | null;
   preview_image?: Blob | Buffer; // 预览图（Web: Blob, Electron: Buffer）
   created_at: number;
 }
@@ -66,7 +69,7 @@ export interface XMLVersion {
 /**
  * 创建 XML 版本时的输入类型
  */
-export type CreateXMLVersionInput = Omit<XMLVersion, "id" | "created_at">;
+export type CreateXMLVersionInput = Omit<XMLVersion, "created_at">;
 
 /**
  * 预览图数据类型（用于 IPC 传输）
@@ -121,7 +124,7 @@ export interface Message {
   content: string;
   tool_invocations?: string; // JSON 序列化的工具调用记录
   model_name?: string | null; // 发送消息时使用的模型
-  xml_version_id?: number; // 关联的 XML 版本 ID
+  xml_version_id?: string; // 关联的 XML 版本 ID
   created_at: number;
 }
 
