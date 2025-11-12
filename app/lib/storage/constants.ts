@@ -48,6 +48,31 @@ export const DEFAULT_PROJECT_UUID = "default";
 export const DEFAULT_XML_VERSION = "1.0.0";
 
 /**
+ * WIP (Work In Progress) 版本号
+ *
+ * 活跃工作区使用固定的 0.0.0 版本号
+ * - 所有编辑操作直接更新此版本
+ * - 始终为关键帧（全量存储）
+ * - 每个项目只有一个 WIP 版本
+ * - 用户可以从 WIP 创建历史版本快照
+ *
+ * 设计原因：
+ * - 将活跃编辑与历史版本分离
+ * - 避免频繁创建新版本记录
+ * - 保持版本历史的整洁性
+ * - 用户明确控制何时创建快照
+ */
+export const WIP_VERSION = "0.0.0";
+
+/**
+ * 默认首版本号
+ *
+ * 当项目没有历史版本时，推荐使用此版本号
+ * 用于版本号推荐功能的起始值
+ */
+export const DEFAULT_FIRST_VERSION = "1.0.0";
+
+/**
  * 首个版本的虚拟 UUID
  *
  * 用于标记关键帧的根节点（无父版本）

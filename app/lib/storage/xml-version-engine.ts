@@ -3,6 +3,7 @@ import {
   ZERO_SOURCE_VERSION_ID,
   DIFF_KEYFRAME_THRESHOLD,
   MAX_DIFF_CHAIN_LENGTH,
+  WIP_VERSION,
 } from "./constants";
 import type { XMLVersion } from "./types";
 
@@ -26,16 +27,30 @@ const createDiffEngine = (): DiffEngine => {
 /**
  * 计算新版本的持久化策略（关键帧 vs Diff）
  * 如果与最新版本内容一致，则返回 null 表示无需创建新版本
+ * WIP 版本始终返回关键帧 payload，即使内容相同
  */
 export async function computeVersionPayload({
   newXml,
+  semanticVersion,
   latestVersion,
   resolveVersionById,
 }: {
   newXml: string;
+  semanticVersion: string;
   latestVersion: XMLVersion | null;
   resolveVersionById: VersionResolver;
 }): Promise<VersionPayloadResult | null> {
+  // WIP 版本始终为关键帧（全量存储），允许相同内容更新
+  if (semanticVersion === WIP_VERSION) {
+    return {
+      xml_content: newXml,
+      is_keyframe: true,
+      diff_chain_depth: 0,
+      source_version_id: ZERO_SOURCE_VERSION_ID,
+    };
+  }
+
+  // 历史版本：使用关键帧 + Diff 混合策略
   if (!latestVersion) {
     return {
       xml_content: newXml,

@@ -130,6 +130,7 @@ async function saveDrawioXMLInternal(decodedXml: string): Promise<void> {
   const latestVersion = existingVersions[0] ?? null;
   const payload = await computeVersionPayload({
     newXml: decodedXml,
+    semanticVersion: SEMANTIC_VERSION,
     latestVersion,
     resolveVersionById: (id) => storage.getXMLVersion(id),
   });

@@ -154,6 +154,20 @@ export class SQLiteStorage implements StorageAdapter {
       .filter((v): v is XMLVersion => !!v);
   }
 
+  async updateXMLVersion(
+    id: string,
+    updates: Partial<Omit<XMLVersion, "id" | "created_at">>,
+  ): Promise<void> {
+    await this.ensureElectron();
+    // Blob → ArrayBuffer 转换（如果有 preview_image）
+    const updatesToSend = { ...updates };
+    if (updates.preview_image instanceof Blob) {
+      updatesToSend.preview_image =
+        (await updates.preview_image.arrayBuffer()) as unknown as Blob;
+    }
+    await window.electronStorage!.updateXMLVersion(id, updatesToSend);
+  }
+
   async deleteXMLVersion(id: string): Promise<void> {
     await this.ensureElectron();
     await window.electronStorage!.deleteXMLVersion(id);

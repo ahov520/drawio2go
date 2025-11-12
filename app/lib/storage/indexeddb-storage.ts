@@ -279,6 +279,27 @@ export class IndexedDBStorage implements StorageAdapter {
     return versions.sort((a, b) => b.created_at - a.created_at);
   }
 
+  async updateXMLVersion(
+    id: string,
+    updates: Partial<Omit<XMLVersion, "id" | "created_at">>,
+  ): Promise<void> {
+    const db = await this.ensureDB();
+    const existing = await db.get("xml_versions", id);
+
+    if (!existing) {
+      throw new Error(`XML Version not found: ${id}`);
+    }
+
+    const updated: XMLVersion = {
+      ...existing,
+      ...updates,
+      id: existing.id, // 确保 id 不被覆盖
+      created_at: existing.created_at, // 确保 created_at 不被覆盖
+    };
+
+    await db.put("xml_versions", updated);
+  }
+
   async deleteXMLVersion(id: string): Promise<void> {
     const db = await this.ensureDB();
 

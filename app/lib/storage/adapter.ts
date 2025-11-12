@@ -128,6 +128,16 @@ export interface StorageAdapter {
   getXMLVersionsByProject(projectUuid: string): Promise<XMLVersion[]>;
 
   /**
+   * 更新 XML 版本
+   * @param id 版本 ID
+   * @param updates 更新的字段（Partial，排除 id 和 created_at）
+   */
+  updateXMLVersion(
+    id: string,
+    updates: Partial<Omit<XMLVersion, "id" | "created_at">>,
+  ): Promise<void>;
+
+  /**
    * 删除 XML 版本
    * @param id 版本 ID
    */
