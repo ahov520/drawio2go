@@ -6,6 +6,111 @@
 
 ## 核心组件
 
+### 0. 版本管理组件
+
+#### VersionSidebar.tsx - 版本侧边栏主组件
+
+**版本管理主界面** - 集成 WIP 指示器、版本时间线和创建版本对话框
+
+##### Props
+```typescript
+interface VersionSidebarProps {
+  projectUuid: string | null; // 项目 UUID
+  onVersionRestore?: (versionId: string) => void; // 版本回滚回调
+}
+```
+
+##### 特性
+- **现代化顶部 Header**: History 图标 + 标题 + 描述信息 + "保存版本" CTA 按钮
+- **空状态卡片**: 未选择项目时显示引导信息
+- **自动刷新**: 监听 `version-updated` 事件自动重新加载版本列表
+- **错误处理**: 加载失败时显示错误状态和重试按钮
+
+#### version/WIPIndicator.tsx - WIP 工作区指示器
+
+**当前活跃工作区信息卡片** - 显示 WIP 版本和实时保存状态
+
+##### Props
+```typescript
+interface WIPIndicatorProps {
+  projectUuid: string;
+  versions: XMLVersion[]; // 版本列表（从中查找 WIP 版本）
+}
+```
+
+##### 特性
+- **卡片式设计**: Activity 图标 + WIP 徽章 + 版本号标识
+- **三段式布局**: `wip-indicator__body/top/meta` CSS 结构
+- **元数据展示**: 最后更新时间 + 实时保存状态
+- **事件响应**: 监听 `wip-updated` 事件自动刷新
+
+#### version/VersionCard.tsx - 版本卡片（折叠式）
+
+**单个版本展示卡片** - 默认折叠，点击展开查看完整信息
+
+##### Props
+```typescript
+interface VersionCardProps {
+  version: XMLVersion;
+  isLatest?: boolean; // 是否为最新版本
+  onRestore?: (versionId: string) => void; // 回滚回调
+  defaultExpanded?: boolean; // 默认是否展开
+}
+```
+
+##### 特性
+- **折叠视图**: 显示版本号 + 徽章（最新/关键帧/Diff）+ 时间
+- **展开视图**: 显示完整信息（名称、描述、元数据、操作按钮）
+- **Disclosure 组件**: 使用 HeroUI v3 Disclosure 实现折叠展开
+- **操作按钮**: 导出 DrawIO 文件 + 回滚到此版本
+- **徽章系统**:
+  - 最新徽章（绿色）
+  - 关键帧徽章（黄色，Key 图标）
+  - Diff 徽章（紫色，GitBranch 图标 + 链深度）
+
+#### version/VersionTimeline.tsx - 版本时间线
+
+**版本历史时间线列表** - 主轴 + 节点视觉展示
+
+##### Props
+```typescript
+interface VersionTimelineProps {
+  projectUuid: string;
+  versions: XMLVersion[]; // 版本列表（WIP 已过滤）
+  onVersionRestore?: (versionId: string) => void;
+  onVersionCreated?: () => void;
+}
+```
+
+##### 特性
+- **时间线视觉**: CSS `::before` 绘制主轴，卡片节点连接
+- **WIP 过滤**: 自动过滤掉 WIP 版本（0.0.0）
+- **空状态**: 无历史版本时显示引导信息
+- **降序排列**: 最新版本在顶部
+
+#### version/CreateVersionDialog.tsx - 创建版本对话框
+
+**创建新版本的模态对话框** - 输入版本信息并保存快照
+
+##### Props
+```typescript
+interface CreateVersionDialogProps {
+  projectUuid: string;
+  isOpen: boolean;
+  onClose: () => void;
+  onVersionCreated?: () => void;
+}
+```
+
+##### 特性
+- **模态对话框**: HeroUI v3 Modal 组件
+- **表单验证**: 版本号、名称、描述输入
+- **自动版本号**: 基于现有版本自动建议下一个版本号
+- **异步保存**: 调用存储层 API 创建版本快照
+- **事件通知**: 创建成功后触发 `version-updated` 事件
+
+---
+
 ### 1. DrawioEditorNative.tsx
 
 **主要 DrawIO 编辑器** - 原生 iframe + PostMessage 实现

@@ -45,8 +45,14 @@ app/
 │   ├── UnifiedSidebar.tsx        # 统一侧边栏容器
 │   ├── SettingsSidebar.tsx       # 设置侧边栏
 │   ├── ChatSidebar.tsx           # 聊天侧边栏主组件（@ai-sdk/react）
+│   ├── VersionSidebar.tsx        # 版本侧边栏主组件
 │   ├── chat/                     # 聊天组件模块化架构（12个子组件）
-│   └── settings/                 # 设置相关子组件
+│   ├── settings/                 # 设置相关子组件
+│   └── version/                  # 版本管理子组件
+│       ├── WIPIndicator.tsx      # WIP 工作区指示器
+│       ├── VersionCard.tsx       # 版本卡片（折叠式）
+│       ├── VersionTimeline.tsx   # 版本时间线
+│       └── CreateVersionDialog.tsx # 创建版本对话框
 ├── lib/                # 工具库 [详细文档 → app/lib/AGENTS.md]
 │   ├── drawio-tools.ts          # DrawIO XML 操作工具集
 │   ├── drawio-ai-tools.ts       # DrawIO AI 工具调用接口
@@ -180,6 +186,32 @@ pnpm format               # 使用 Prettier 格式化所有代码
 
 ## 最近更新
 
+### 2025-11-13 版本管理 UI 现代化外观升级
+
+- **版本侧边栏现代化**:
+  - 新增信息描述区：History 图标 + 标题 + 副标题说明
+  - 空状态卡片优化：History 图标 + 引导文案
+  - 悬浮 CTA 按钮：Save 图标 + "保存版本" 主色按钮
+  - 顶部 Header 采用信息区 + 操作按钮分栏布局
+- **WIP 指示器卡片式升级**:
+  - 卡片式信息区：Activity 图标 + WIP 徽章 + 版本号
+  - 元数据行：实时保存状态 + 最后更新时间
+  - 三段式布局：`wip-indicator__body/top/meta` 结构
+- **历史版本时间线优化**:
+  - 主轴 + 节点视觉：CSS `::before` 绘制时间线
+  - 紧凑折叠卡片：默认折叠显示版本号+徽章+时间
+  - 版本卡片分栏：操作按钮右上排列，底部元信息展示
+  - Disclosure 折叠组件：点击展开查看完整信息
+- **文本语义化变量**:
+  - 新增 `--text-primary/secondary/tertiary` 颜色变量
+  - 统一全局文本色彩引用规范
+- **相关文件**:
+  - `app/components/VersionSidebar.tsx` - 版本侧边栏主组件
+  - `app/components/version/WIPIndicator.tsx` - WIP 指示器
+  - `app/components/version/VersionCard.tsx` - 版本卡片
+  - `app/components/version/VersionTimeline.tsx` - 版本时间线
+  - `app/styles/components/version-*.css` - 版本管理样式
+
 ### 2025-11-12 版本管理 UI Material Design 优化
 
 - **设计系统规范化**:
@@ -263,4 +295,4 @@ pnpm format               # 使用 Prettier 格式化所有代码
 
 ---
 
-_最后更新: 2025-11-07_
+_最后更新: 2025-11-13_

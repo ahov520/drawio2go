@@ -59,7 +59,8 @@
       "Bash(git -C /home/aaa/Code/drawio2go show 523b444:. --name-only)",
       "Bash(git -C /home/aaa/Code/drawio2go show 523b444 --stat)",
       "Bash(git -C /home/aaa/Code/drawio2go log --oneline --all --grep=\"milestone-1\\|里程碑 1\\|WIP\" -10)",
-      "Bash(pnpm eslint:*)"
+      "Bash(pnpm eslint:*)",
+      "Bash(git -C /home/aaa/Code/drawio2go log --oneline -5)"
     ],
     "deny": [],
     "ask": []

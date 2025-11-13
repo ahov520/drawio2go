@@ -379,28 +379,164 @@ import { Button, Card } from '@heroui/react'
 ### Q4: 如何处理版本管理组件的样式？
 
 **版本管理组件样式文件：**
-- `version-sidebar.css` - 侧边栏容器
-- `version-wip.css` - WIP 指示器
-- `version-timeline.css` - 版本卡片和徽章
+- `version-sidebar.css` - 侧边栏容器和空状态
+- `version-wip.css` - WIP 指示器卡片
+- `version-timeline.css` - 版本时间线和卡片
 - `version-dialog.css` - 创建版本对话框
 
-**2025-11-13 视觉要点：**
-- 头部信息区采用 `sidebar-header__icon + description` 组合，文本使用 `--text-secondary`，按钮使用主色 #3388BB。
-- WIP 指示器使用 `wip-indicator__body/top/meta` 三段式布局，必须带 `WIP` 徽章与“实时保存”状态。
-- 时间线使用 `timeline-list::before` 绘制主轴，`.version-card::before` 绘制节点，卡片外观需保持 `var(--background)` + `box-shadow: var(--shadow-1)`。
-- 历史卡片使用 `version-card__header/meta/actions` 语义 class，操作按钮右上排列，底部 meta 行展示 GitBranch/Clock 信息。
+**2025-11-13 视觉升级要点：**
 
-**徽章标准规范：**
+#### 侧边栏 Header（`version-sidebar.css`）
 ```css
+.sidebar-header {
+  /* 信息区 + 操作区两栏布局 */
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: var(--spacing-lg);
+}
+
+.sidebar-header__info {
+  /* History 图标 + 标题/描述垂直布局 */
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.sidebar-header__icon {
+  /* 图标容器 */
+  color: var(--primary-color); /* #3388BB */
+}
+
+.sidebar-header__description {
+  /* 副标题描述 */
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.empty-state-card {
+  /* 空状态卡片 */
+  background: var(--bg-primary);
+  border-radius: var(--radius);
+  padding: var(--spacing-xl);
+}
+```
+
+#### WIP 指示器（`version-wip.css`）
+```css
+.wip-indicator__body {
+  /* 三段式布局容器 */
+}
+
+.wip-indicator__top {
+  /* 顶部：图标 + 徽章 + 版本号 */
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.wip-badge {
+  /* WIP 徽章 */
+  background: var(--primary-color);
+  color: white;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 0.625rem;
+  font-weight: 600;
+}
+
+.wip-indicator__meta {
+  /* 底部元数据行 */
+  display: flex;
+  gap: var(--spacing-lg);
+  margin-top: var(--spacing-md);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+```
+
+#### 版本时间线（`version-timeline.css`）
+```css
+.timeline-list {
+  position: relative;
+}
+
+.timeline-list::before {
+  /* 时间线主轴 */
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--border-primary);
+}
+
+.version-card::before {
+  /* 时间线节点 */
+  content: '';
+  position: absolute;
+  left: -20px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary-color);
+}
+
+.version-card--collapsed {
+  /* 折叠状态卡片 */
+  cursor: pointer;
+}
+
+.version-card__compact-view {
+  /* 紧凑视图：左侧版本信息 + 右侧时间和箭头 */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.version-card__chevron {
+  /* 展开箭头 */
+  transition: transform var(--transition-fast);
+}
+
+.version-card__chevron.rotated {
+  transform: rotate(180deg);
+}
+```
+
+#### 徽章系统规范
+```css
+/* 通用徽章基础样式 */
 .badge {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   height: 1.25rem;              /* 20px */
   padding: 0 var(--spacing-sm); /* 0 8px */
   border-radius: var(--radius-sm);
   font-size: 0.625rem;          /* 10px */
   font-weight: 500;
   text-transform: uppercase;
+}
+
+/* 最新版本徽章 */
+.latest-badge {
+  background: var(--success-color); /* #22c55e */
+  color: white;
+}
+
+/* 关键帧徽章 */
+.keyframe-badge {
+  background: var(--warning-color); /* #f59e0b */
+  color: white;
+}
+
+/* Diff 徽章 */
+.diff-badge {
+  background: var(--info-color); /* #8b5cf6 紫色 */
+  color: white;
 }
 ```
 
@@ -415,17 +551,20 @@ import { Button, Card } from '@heroui/react'
 
 ## 更新历史
 
-- **2025-11-13**: 版本页面现代化外观升级
-  - 版本侧边栏新增信息描述、空状态卡片与悬浮 CTA。
-  - WIP 指示器升级为卡片式信息区，补充实时保存与最后更新时间元数据。
-  - 历史时间线采用主轴 + 节点视觉，卡片分栏展示操作与元信息。
-  - 增加文本语义变量 `--text-primary/secondary/tertiary`，统一色彩引用。
-- **2025-11-12**: 初始版本，完成版本管理组件 Material Design 优化
+- **2025-11-13**: 版本页面现代化外观升级（里程碑 3 完成）
+  - **版本侧边栏**：新增信息描述区（History 图标 + 副标题）、空状态卡片与悬浮 CTA 按钮
+  - **WIP 指示器**：卡片式信息区（Activity 图标 + WIP 徽章）、实时保存状态与元数据展示
+  - **历史时间线**：主轴 + 节点视觉、紧凑折叠卡片、Disclosure 展开交互
+  - **徽章系统**：统一最新徽章（绿）、关键帧徽章（黄）、Diff 徽章（紫）
+  - **文本语义化**：新增 `--text-primary/secondary/tertiary` 变量
+  - **相关组件**：`VersionSidebar.tsx`, `WIPIndicator.tsx`, `VersionCard.tsx`, `VersionTimeline.tsx`
+- **2025-11-12**: 版本管理 Material Design 规范化（里程碑 2 完成）
   - 统一圆角规范至 4px/8px/12px
   - 建立 Material Design 4 层阴影系统
   - 添加标准间距系统（4px 基准）
   - 移除干扰性动画（脉冲、浮动、上移）
   - 统一徽章样式规范
+  - 创建完整设计系统文档
 
 ---
 

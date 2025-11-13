@@ -55,10 +55,11 @@
 - 使用统一存储抽象层（Electron: SQLite, Web: IndexedDB）
 - 保存时自动解码 base64，并通过 `drawio-xml-updated` 自定义事件通知编辑器
 - 提供 `getDrawioXML()`、`replaceDrawioXML()`、`saveDrawioXML()` 三个接口
-- 当前采用单项目模式（uuid="default"）和最新版本策略（semantic_version="latest"）
-  - 单项目模式：简化用户体验，所有数据存储在 "default" 项目下
-  - 最新版本策略：每次保存自动删除旧版本，仅保留最新版本
-  - 详见 `storage/constants.ts` 中的设计说明
+- **WIP 工作区自动保存**：
+  - 编辑器变更自动保存到 WIP 版本（v0.0.0）
+  - WIP 版本不计入历史记录，仅用于实时保存
+  - 用户手动创建版本时从 WIP 复制并生成语义化版本号
+  - 详见 `storage/constants.ts` 中的 WIP_VERSION 常量
 
 ## 配置规范化工具（`config-utils.ts`）
 
@@ -271,26 +272,29 @@ const { settings, saveSettings } = useStorageSettings();
 - 添加项目创建、删除、重命名功能
 - 项目级别的配置隔离
 
-#### 最新版本策略 vs 完整版本管理
+#### 版本管理架构（已实现）
 
-**当前实现：仅保留最新版本**
+**当前实现：WIP 工作区 + 关键帧 + Diff 混合存储**
 
-- 每次保存自动删除旧版本
-- 固定使用 "latest" 语义版本号
-- 保持存储空间最小化
+- **WIP 工作区**（v0.0.0）：实时自动保存，不计入历史版本
+- **关键帧快照**：存储完整 XML 内容（`is_keyframe=true`）
+- **Diff 链**：使用 diff-match-patch 存储与父版本的差异
+- **自动刷新关键帧**：差异率 >70% 或链长 >10 时自动创建关键帧
 
-**设计原因：**
+**核心特性：**
 
-- 避免版本管理的复杂性
-- 减少存储空间占用
-- 简化版本查询逻辑
+- **语义化版本号**：支持 major.minor.patch 版本格式
+- **版本树结构**：通过 `source_version_id` 构建版本依赖关系
+- **空间优化**：Diff 存储减少空间占用，关键帧保证恢复性能
+- **版本回滚**：支持恢复到任意历史版本
+- **版本导出**：支持导出任意版本为 DrawIO 文件
 
-**未来扩展（如需要）：**
+**相关文件：**
 
-- 实现真实的语义化版本管理
-- 支持版本历史记录和回滚
-- 版本比对和差异查看
-- 自动版本号递增策略
+- `storage/xml-version-engine.ts` - 版本恢复引擎（Diff 重放）
+- `storage/constants.ts` - 版本常量（WIP_VERSION, ZERO_SOURCE_VERSION_ID）
+- `app/components/version/` - 版本管理 UI 组件
+- `app/hooks/useStorageXMLVersions.ts` - 版本管理 Hook
 
 ## 类型定义
 
