@@ -41,12 +41,13 @@
 ### 🔵 圆角系统
 
 ```css
---radius-sm: 0.25rem;   /* 4px - 小元素（徽章、标签） */
---radius: 0.5rem;       /* 8px - 标准圆角（按钮、输入框、卡片） */
---radius-lg: 0.75rem;   /* 12px - 大元素（对话框、大卡片） */
+--radius-sm: 0.25rem; /* 4px - 小元素（徽章、标签） */
+--radius: 0.5rem; /* 8px - 标准圆角（按钮、输入框、卡片） */
+--radius-lg: 0.75rem; /* 12px - 大元素（对话框、大卡片） */
 ```
 
 **使用场景：**
+
 - 徽章、标签 → `var(--radius-sm)`
 - 按钮、输入框、小卡片 → `var(--radius)`
 - 对话框、大卡片、面板 → `var(--radius-lg)`
@@ -56,14 +57,15 @@
 ### 📏 间距系统
 
 ```css
---spacing-xs: 0.25rem;  /* 4px */
---spacing-sm: 0.5rem;   /* 8px */
---spacing-md: 1rem;     /* 16px */
---spacing-lg: 1.5rem;   /* 24px */
---spacing-xl: 2rem;     /* 32px */
+--spacing-xs: 0.25rem; /* 4px */
+--spacing-sm: 0.5rem; /* 8px */
+--spacing-md: 1rem; /* 16px */
+--spacing-lg: 1.5rem; /* 24px */
+--spacing-xl: 2rem; /* 32px */
 ```
 
 **使用场景：**
+
 - 徽章内边距、图标间距 → `var(--spacing-xs)`
 - 按钮内边距、小间距 → `var(--spacing-sm)`
 - 卡片内边距、标准间距 → `var(--spacing-md)`
@@ -77,19 +79,19 @@
 #### 主题色（蓝色 #3388BB）
 
 ```css
---primary-color: #3388bb;        /* 主色调 */
---primary-hover: #2a6fa0;        /* 悬停状态 */
---primary-light: #e6f2f9;        /* 浅色背景 */
---primary-foreground: #ffffff;   /* 前景文字 */
+--primary-color: #3388bb; /* 主色调 */
+--primary-hover: #2a6fa0; /* 悬停状态 */
+--primary-light: #e6f2f9; /* 浅色背景 */
+--primary-foreground: #ffffff; /* 前景文字 */
 ```
 
 #### 语义化颜色
 
 ```css
---success-color: #22c55e;  /* 成功/最新版本徽章 */
---error-color: #ef4444;    /* 错误/危险操作 */
---warning-color: #f59e0b;  /* 警告/关键帧徽章 */
---info-color: #8b5cf6;     /* 信息/差异徽章（紫色） */
+--success-color: #22c55e; /* 成功/最新版本徽章 */
+--error-color: #ef4444; /* 错误/危险操作 */
+--warning-color: #f59e0b; /* 警告/关键帧徽章 */
+--info-color: #8b5cf6; /* 信息/差异徽章（紫色） */
 ```
 
 #### 灰度系统
@@ -120,19 +122,21 @@
 ### 🌑 Material Design 阴影层级
 
 ```css
---shadow-1: 0 1px 3px rgba(51, 136, 187, 0.12);   /* 轻微提升 */
---shadow-2: 0 2px 6px rgba(51, 136, 187, 0.16);   /* 标准提升 */
---shadow-4: 0 4px 12px rgba(51, 136, 187, 0.16);  /* 中等提升 */
---shadow-8: 0 8px 24px rgba(51, 136, 187, 0.16);  /* 高层级提升 */
+--shadow-1: 0 1px 3px rgba(51, 136, 187, 0.12); /* 轻微提升 */
+--shadow-2: 0 2px 6px rgba(51, 136, 187, 0.16); /* 标准提升 */
+--shadow-4: 0 4px 12px rgba(51, 136, 187, 0.16); /* 中等提升 */
+--shadow-8: 0 8px 24px rgba(51, 136, 187, 0.16); /* 高层级提升 */
 ```
 
 **使用场景：**
+
 - 卡片默认状态 → `var(--shadow-1)`
 - 卡片悬停状态 → `var(--shadow-2)`
 - 下拉菜单、弹出层 → `var(--shadow-4)`
 - 对话框、模态框 → `var(--shadow-8)`
 
 **兼容性映射：**
+
 ```css
 --shadow-sm: var(--shadow-1);
 --shadow-md: var(--shadow-2);
@@ -153,9 +157,9 @@
 #### 动画时长
 
 ```css
---duration-short: 150ms;   /* 快速交互（颜色变化、边框） */
---duration-medium: 200ms;  /* 标准交互（悬停、聚焦） */
---duration-long: 300ms;    /* 复杂动画（展开、滑动） */
+--duration-short: 150ms; /* 快速交互（颜色变化、边框） */
+--duration-medium: 200ms; /* 标准交互（悬停、聚焦） */
+--duration-long: 300ms; /* 复杂动画（展开、滑动） */
 ```
 
 #### 过渡动画（组合）
@@ -226,6 +230,7 @@ app/styles/
 ### ✅ 应该做的
 
 1. **使用设计令牌**
+
    ```css
    /* ✅ 正确 */
    border-radius: var(--radius);
@@ -239,6 +244,7 @@ app/styles/
    ```
 
 2. **简单的交互反馈**
+
    ```css
    /* ✅ 正确 - 只改变颜色和阴影 */
    .card:hover {
@@ -253,6 +259,7 @@ app/styles/
    ```
 
 3. **扁平化背景**
+
    ```css
    /* ✅ 正确 */
    background: var(--bg-primary);
@@ -264,9 +271,10 @@ app/styles/
 ### ❌ 不应该做的
 
 1. **硬编码颜色值**
+
    ```css
    /* ❌ 错误 */
-   color: #3388BB;
+   color: #3388bb;
    background: rgba(51, 136, 187, 0.1);
 
    /* ✅ 正确 */
@@ -275,6 +283,7 @@ app/styles/
    ```
 
 2. **干扰性动画**
+
    ```css
    /* ❌ 错误 - 脉冲动画 */
    animation: pulse 2s infinite;
@@ -284,6 +293,7 @@ app/styles/
    ```
 
 3. **不规则圆角**
+
    ```css
    /* ❌ 错误 */
    border-radius: 1rem 1rem 0.25rem 1rem;
@@ -305,17 +315,18 @@ app/styles/
 ### 配置文件
 
 **tailwind.config.js**
+
 ```javascript
 export default {
-  content: ['./app/**/*.{ts,tsx}'],
+  content: ["./app/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        primary: '#3388BB',
+        primary: "#3388BB",
       },
     },
   },
-}
+};
 ```
 
 ### 与 CSS 变量结合使用
@@ -353,6 +364,7 @@ import { Button, Card } from '@heroui/react'
 ### Q1: 什么时候使用 Tailwind，什么时候使用 CSS 变量？
 
 **建议：**
+
 - **布局和间距** → Tailwind (`flex`, `gap-4`, `p-4`)
 - **颜色、阴影、圆角** → CSS 变量 (`var(--shadow-2)`)
 - **自定义样式** → CSS 文件 + CSS 变量
@@ -360,8 +372,10 @@ import { Button, Card } from '@heroui/react'
 ### Q2: 如何确保深色模式兼容？
 
 在 `variables.css` 中覆盖变量：
+
 ```css
-[data-theme="dark"], .dark {
+[data-theme="dark"],
+.dark {
   --primary-light: #1a3d52;
   --shadow-sidebar: -2px 0 8px rgba(51, 136, 187, 0.15);
 }
@@ -370,15 +384,20 @@ import { Button, Card } from '@heroui/react'
 ### Q3: 新增组件时应该如何命名类？
 
 遵循 BEM 命名规范：
+
 ```css
-.component-name { }             /* 块 */
-.component-name__element { }    /* 元素 */
-.component-name--modifier { }   /* 修饰符 */
+.component-name {
+} /* 块 */
+.component-name__element {
+} /* 元素 */
+.component-name--modifier {
+} /* 修饰符 */
 ```
 
 ### Q4: 如何处理版本管理组件的样式？
 
 **版本管理组件样式文件：**
+
 - `version-sidebar.css` - 侧边栏容器和空状态
 - `version-wip.css` - WIP 指示器卡片
 - `version-timeline.css` - 版本时间线和卡片
@@ -387,6 +406,7 @@ import { Button, Card } from '@heroui/react'
 **2025-11-13 视觉升级要点：**
 
 #### 侧边栏 Header（`version-sidebar.css`）
+
 ```css
 .sidebar-header {
   /* 信息区 + 操作区两栏布局 */
@@ -422,6 +442,7 @@ import { Button, Card } from '@heroui/react'
 ```
 
 #### WIP 指示器（`version-wip.css`）
+
 ```css
 .wip-indicator__body {
   /* 三段式布局容器 */
@@ -454,6 +475,7 @@ import { Button, Card } from '@heroui/react'
 ```
 
 #### 版本时间线（`version-timeline.css`）
+
 ```css
 .timeline-list {
   position: relative;
@@ -461,7 +483,7 @@ import { Button, Card } from '@heroui/react'
 
 .timeline-list::before {
   /* 时间线主轴 */
-  content: '';
+  content: "";
   position: absolute;
   left: 8px;
   top: 0;
@@ -472,7 +494,7 @@ import { Button, Card } from '@heroui/react'
 
 .version-card::before {
   /* 时间线节点 */
-  content: '';
+  content: "";
   position: absolute;
   left: -20px;
   top: 50%;
@@ -507,16 +529,17 @@ import { Button, Card } from '@heroui/react'
 ```
 
 #### 徽章系统规范
+
 ```css
 /* 通用徽章基础样式 */
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  height: 1.25rem;              /* 20px */
+  height: 1.25rem; /* 20px */
   padding: 0 var(--spacing-sm); /* 0 8px */
   border-radius: var(--radius-sm);
-  font-size: 0.625rem;          /* 10px */
+  font-size: 0.625rem; /* 10px */
   font-weight: 500;
   text-transform: uppercase;
 }

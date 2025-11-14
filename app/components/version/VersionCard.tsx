@@ -2,7 +2,14 @@
 
 import React from "react";
 import { Button, Card, Disclosure } from "@heroui/react";
-import { Clock, Key, GitBranch, RotateCcw, Download, ChevronDown } from "lucide-react";
+import {
+  Clock,
+  Key,
+  GitBranch,
+  RotateCcw,
+  Download,
+  ChevronDown,
+} from "lucide-react";
 import { materializeVersionXml } from "@/app/lib/storage/xml-version-engine";
 import { useStorageXMLVersions } from "@/app/hooks/useStorageXMLVersions";
 import type { XMLVersion } from "@/app/lib/storage/types";
@@ -18,7 +25,12 @@ interface VersionCardProps {
  * 版本卡片组件 - 紧凑折叠模式
  * 默认显示折叠视图(版本号+徽章+时间),点击展开查看完整信息
  */
-export function VersionCard({ version, isLatest, onRestore, defaultExpanded = false }: VersionCardProps) {
+export function VersionCard({
+  version,
+  isLatest,
+  onRestore,
+  defaultExpanded = false,
+}: VersionCardProps) {
   const [isExporting, setIsExporting] = React.useState(false);
   const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
   const { getXMLVersion } = useStorageXMLVersions();
@@ -115,7 +127,9 @@ export function VersionCard({ version, isLatest, onRestore, defaultExpanded = fa
                     <Clock className="w-3 h-3" />
                     {createdAt}
                   </span>
-                  <ChevronDown className={`version-card__chevron${isExpanded ? " rotated" : ""}`} />
+                  <ChevronDown
+                    className={`version-card__chevron${isExpanded ? " rotated" : ""}`}
+                  />
                 </div>
               </div>
             </button>

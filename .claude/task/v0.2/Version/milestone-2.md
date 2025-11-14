@@ -254,7 +254,11 @@ interface VersionCardProps {
   onRestore?: (versionId: string) => void;
 }
 
-export function VersionCard({ version, isLatest, onRestore }: VersionCardProps) {
+export function VersionCard({
+  version,
+  isLatest,
+  onRestore,
+}: VersionCardProps) {
   const createdAt = new Date(version.created_at).toLocaleString("zh-CN");
 
   return (
@@ -401,10 +405,7 @@ export function CreateVersionDialog({
 
   return (
     <div className="dialog-overlay" onClick={onClose}>
-      <div
-        className="dialog-container"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="dialog-container" onClick={(e) => e.stopPropagation()}>
         {/* 对话框头部 */}
         <div className="dialog-header">
           <h3 className="text-lg font-semibold">创建新版本</h3>
@@ -688,7 +689,8 @@ export { CreateVersionDialog } from "./CreateVersionDialog";
 .dialog-container {
   background: var(--bg-primary);
   border-radius: 1rem;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
     0 10px 10px -5px rgba(0, 0, 0, 0.04);
   width: 90%;
   max-width: 500px;

@@ -65,7 +65,7 @@ export function CreateVersionDialog({
       await createHistoricalVersion(
         projectUuid,
         versionNumber.trim(),
-        description.trim() || undefined
+        description.trim() || undefined,
       );
 
       // 触发版本更新事件
@@ -189,10 +189,7 @@ export function CreateVersionDialog({
 
   return (
     <div className="dialog-overlay" onClick={onClose}>
-      <div
-        className="dialog-container"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="dialog-container" onClick={(e) => e.stopPropagation()}>
         {/* 对话框头部 */}
         <div className="dialog-header">
           <h3 className="text-lg font-semibold">创建新版本</h3>
@@ -277,11 +274,7 @@ export function CreateVersionDialog({
 
         {/* 对话框底部 */}
         <div className="dialog-footer">
-          <Button
-            variant="secondary"
-            onPress={onClose}
-            isDisabled={isCreating}
-          >
+          <Button variant="secondary" onPress={onClose} isDisabled={isCreating}>
             取消
           </Button>
           <Button

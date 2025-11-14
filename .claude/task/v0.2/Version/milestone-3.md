@@ -108,9 +108,7 @@ export function UnifiedSidebar({
 
       {/* 侧边栏内容 */}
       <div className="sidebar-container">
-        {activeSidebar === "settings" && (
-          <SettingsSidebar onClose={onClose} />
-        )}
+        {activeSidebar === "settings" && <SettingsSidebar onClose={onClose} />}
         {activeSidebar === "chat" && <ChatSidebar onClose={onClose} />}
         {/* 新增：版本侧边栏 */}
         {activeSidebar === "version" && (
@@ -464,6 +462,7 @@ Storage Adapter (SQLite/IndexedDB)
 ## 兼容性处理
 
 如果现有代码有直接调用 `saveXML` 并指定版本号的地方，需要修改为：
+
 - 普通保存 → 使用 `saveXML()`（保存到 WIP）
 - 创建历史版本 → 使用 `createHistoricalVersion()`
 

@@ -58,7 +58,8 @@ export function VersionSidebar({
     };
 
     window.addEventListener("version-updated", handleVersionUpdate);
-    return () => window.removeEventListener("version-updated", handleVersionUpdate);
+    return () =>
+      window.removeEventListener("version-updated", handleVersionUpdate);
   }, [loadVersions]);
 
   // 版本创建后重新加载列表

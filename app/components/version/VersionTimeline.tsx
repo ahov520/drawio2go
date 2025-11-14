@@ -41,7 +41,8 @@ export function VersionTimeline({
   }, [versions]);
 
   // 是否启用虚拟滚动
-  const enableVirtualScroll = historicalVersions.length > VIRTUAL_SCROLL_THRESHOLD;
+  const enableVirtualScroll =
+    historicalVersions.length > VIRTUAL_SCROLL_THRESHOLD;
 
   // 配置虚拟滚动器
   const virtualizer = useVirtualizer({
@@ -76,15 +77,15 @@ export function VersionTimeline({
         ref={parentRef}
         className="timeline-list"
         style={{
-          height: '100%',
-          overflow: 'auto',
+          height: "100%",
+          overflow: "auto",
         }}
       >
         <div
           style={{
             height: `${virtualizer.getTotalSize()}px`,
-            width: '100%',
-            position: 'relative',
+            width: "100%",
+            position: "relative",
           }}
         >
           {virtualItems.map((virtualItem) => {
@@ -93,10 +94,10 @@ export function VersionTimeline({
               <div
                 key={version.id}
                 style={{
-                  position: 'absolute',
+                  position: "absolute",
                   top: 0,
                   left: 0,
-                  width: '100%',
+                  width: "100%",
                   transform: `translateY(${virtualItem.start}px)`,
                 }}
               >

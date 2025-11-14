@@ -13,6 +13,7 @@
 ### 1. 添加 WIP 版本常量
 
 - [x] 在 `app/lib/storage/constants.ts` 中添加 WIP 版本标识：
+
   ```typescript
   /**
    * WIP (Work In Progress) 版本号
@@ -31,8 +32,9 @@
 ### 2. 修改 xml-version-engine.ts 支持 WIP 模式
 
 - [x] 在 `app/lib/storage/xml-version-engine.ts` 中修改 `computeVersionPayload()`：
+
   ```typescript
-  import { WIP_VERSION, ZERO_SOURCE_VERSION_ID } from './constants';
+  import { WIP_VERSION, ZERO_SOURCE_VERSION_ID } from "./constants";
 
   export async function computeVersionPayload(
     newXml: string,
@@ -40,15 +42,15 @@
     projectUuid: string,
     getVersionById: (id: string) => Promise<XMLVersion | undefined>,
     name?: string,
-    description?: string
-  ): Promise<Omit<XMLVersion, 'id' | 'created_at'>> {
+    description?: string,
+  ): Promise<Omit<XMLVersion, "id" | "created_at">> {
     // WIP 版本始终为关键帧（全量存储）
     if (semanticVersion === WIP_VERSION) {
       return {
         project_uuid: projectUuid,
         semantic_version: WIP_VERSION,
-        name: name || 'WIP',
-        description: description || '活跃工作区',
+        name: name || "WIP",
+        description: description || "活跃工作区",
         source_version_id: ZERO_SOURCE_VERSION_ID,
         is_keyframe: true,
         diff_chain_depth: 0,
@@ -69,7 +71,7 @@
 #### 3.1 区分 WIP 和历史版本的保存逻辑
 
 ```typescript
-import { WIP_VERSION } from '@/lib/storage/constants';
+import { WIP_VERSION } from "@/lib/storage/constants";
 
 // 修改现有的 saveXML 方法，确保只更新 WIP 版本
 const saveXML = useCallback(
@@ -77,7 +79,7 @@ const saveXML = useCallback(
     projectUuid: string,
     xmlContent: string,
     name?: string,
-    description?: string
+    description?: string,
   ): Promise<string> => {
     const adapter = await getAdapter();
 
@@ -88,12 +90,14 @@ const saveXML = useCallback(
       projectUuid,
       async (id) => adapter.getXMLVersion(id),
       name,
-      description
+      description,
     );
 
     // 检查 WIP 版本是否已存在
     const existingVersions = await adapter.getXMLVersionsByProject(projectUuid);
-    const wipVersion = existingVersions.find(v => v.semantic_version === WIP_VERSION);
+    const wipVersion = existingVersions.find(
+      (v) => v.semantic_version === WIP_VERSION,
+    );
 
     if (wipVersion) {
       // 更新现有 WIP 版本
@@ -104,7 +108,7 @@ const saveXML = useCallback(
       return await adapter.saveXMLVersion(versionPayload);
     }
   },
-  []
+  [],
 );
 ```
 
@@ -122,16 +126,16 @@ const createHistoricalVersion = useCallback(
   async (
     projectUuid: string,
     semanticVersion: string,
-    description?: string
+    description?: string,
   ): Promise<string> => {
     const adapter = await getAdapter();
 
     // 获取当前 WIP 版本的内容
     const versions = await adapter.getXMLVersionsByProject(projectUuid);
-    const wipVersion = versions.find(v => v.semantic_version === WIP_VERSION);
+    const wipVersion = versions.find((v) => v.semantic_version === WIP_VERSION);
 
     if (!wipVersion) {
-      throw new Error('WIP 版本不存在，无法创建快照');
+      throw new Error("WIP 版本不存在，无法创建快照");
     }
 
     // 恢复 WIP 的完整 XML（如果是 Diff 则需要 materialize，但 WIP 始终是关键帧）
@@ -139,7 +143,7 @@ const createHistoricalVersion = useCallback(
 
     // 获取最后一个历史版本作为 source_version
     const historicalVersions = versions
-      .filter(v => v.semantic_version !== WIP_VERSION)
+      .filter((v) => v.semantic_version !== WIP_VERSION)
       .sort((a, b) => b.created_at - a.created_at);
     const lastHistoricalVersion = historicalVersions[0];
 
@@ -150,7 +154,7 @@ const createHistoricalVersion = useCallback(
       projectUuid,
       async (id) => adapter.getXMLVersion(id),
       semanticVersion, // name 使用版本号
-      description
+      description,
     );
 
     // 如果有历史版本，设置正确的 source_version_id
@@ -161,7 +165,7 @@ const createHistoricalVersion = useCallback(
     // 保存新历史版本
     return await adapter.saveXMLVersion(versionPayload);
   },
-  []
+  [],
 );
 ```
 
@@ -176,33 +180,29 @@ const createHistoricalVersion = useCallback(
  * @returns WIP 版本的 ID
  */
 const rollbackToVersion = useCallback(
-  async (
-    projectUuid: string,
-    versionId: string
-  ): Promise<string> => {
+  async (projectUuid: string, versionId: string): Promise<string> => {
     const adapter = await getAdapter();
 
     // 获取目标版本
     const targetVersion = await adapter.getXMLVersion(versionId);
     if (!targetVersion) {
-      throw new Error('目标版本不存在');
+      throw new Error("目标版本不存在");
     }
 
     // 恢复目标版本的完整 XML
-    const targetXml = await materializeVersionXml(
-      targetVersion,
-      async (id) => adapter.getXMLVersion(id)
+    const targetXml = await materializeVersionXml(targetVersion, async (id) =>
+      adapter.getXMLVersion(id),
     );
 
     // 将目标版本的内容写入 WIP
     return await saveXML(
       projectUuid,
       targetXml,
-      'WIP',
-      `回滚自版本 ${targetVersion.semantic_version}`
+      "WIP",
+      `回滚自版本 ${targetVersion.semantic_version}`,
     );
   },
-  [saveXML]
+  [saveXML],
 );
 ```
 
@@ -221,12 +221,12 @@ const getRecommendedVersion = useCallback(
     // 获取所有历史版本（排除 WIP）
     const versions = await adapter.getXMLVersionsByProject(projectUuid);
     const historicalVersions = versions
-      .filter(v => v.semantic_version !== WIP_VERSION)
-      .map(v => v.semantic_version)
+      .filter((v) => v.semantic_version !== WIP_VERSION)
+      .map((v) => v.semantic_version)
       .sort((a, b) => {
         // 语义化版本排序
-        const aParts = a.split('.').map(Number);
-        const bParts = b.split('.').map(Number);
+        const aParts = a.split(".").map(Number);
+        const bParts = b.split(".").map(Number);
         for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
           const aNum = aParts[i] || 0;
           const bNum = bParts[i] || 0;
@@ -242,22 +242,22 @@ const getRecommendedVersion = useCallback(
 
     // 获取最大版本号并递增 patch 版本
     const latestVersion = historicalVersions[0];
-    const parts = latestVersion.split('.').map(Number);
+    const parts = latestVersion.split(".").map(Number);
 
     if (parts.length === 3) {
       // x.y.z 格式：递增 z
       parts[2] += 1;
-      return parts.join('.');
+      return parts.join(".");
     } else if (parts.length === 4) {
       // x.y.z.h 格式：递增 h
       parts[3] += 1;
-      return parts.join('.');
+      return parts.join(".");
     } else {
       // 异常情况，返回默认值
       return DEFAULT_FIRST_VERSION;
     }
   },
-  []
+  [],
 );
 ```
 
@@ -276,7 +276,7 @@ const validateVersion = useCallback(
     if (!versionRegex.test(version)) {
       return {
         valid: false,
-        error: '版本号格式错误，应为 x.y.z 或 x.y.z.h 格式'
+        error: "版本号格式错误，应为 x.y.z 或 x.y.z.h 格式",
       };
     }
 
@@ -284,13 +284,13 @@ const validateVersion = useCallback(
     if (version === WIP_VERSION) {
       return {
         valid: false,
-        error: '0.0.0 是系统保留版本号，请使用其他版本号'
+        error: "0.0.0 是系统保留版本号，请使用其他版本号",
       };
     }
 
     return { valid: true };
   },
-  []
+  [],
 );
 
 /**
@@ -303,9 +303,9 @@ const isVersionExists = useCallback(
   async (projectUuid: string, version: string): Promise<boolean> => {
     const adapter = await getAdapter();
     const versions = await adapter.getXMLVersionsByProject(projectUuid);
-    return versions.some(v => v.semantic_version === version);
+    return versions.some((v) => v.semantic_version === version);
   },
-  []
+  [],
 );
 ```
 
@@ -344,25 +344,28 @@ const isVersionExists = useCallback(
 ## 测试步骤
 
 1. **测试 WIP 版本保存**
+
    ```typescript
    // 在浏览器控制台测试
    const { saveXML } = useStorageXMLVersions();
-   await saveXML(projectUuid, '<mxGraphModel>...</mxGraphModel>');
+   await saveXML(projectUuid, "<mxGraphModel>...</mxGraphModel>");
    // 验证：查看数据库中 semantic_version 为 "0.0.0" 的记录
    ```
 
 2. **测试创建历史版本**
+
    ```typescript
    const { createHistoricalVersion } = useStorageXMLVersions();
    const versionId = await createHistoricalVersion(
      projectUuid,
-     '1.0.0',
-     '首个正式版本'
+     "1.0.0",
+     "首个正式版本",
    );
    // 验证：查看数据库中新增的 "1.0.0" 版本
    ```
 
 3. **测试版本回滚**
+
    ```typescript
    const { rollbackToVersion } = useStorageXMLVersions();
    await rollbackToVersion(projectUuid, historicalVersionId);
@@ -370,6 +373,7 @@ const isVersionExists = useCallback(
    ```
 
 4. **测试智能版本号推荐**
+
    ```typescript
    const { getRecommendedVersion } = useStorageXMLVersions();
    const recommended = await getRecommendedVersion(projectUuid);
@@ -377,13 +381,14 @@ const isVersionExists = useCallback(
    ```
 
 5. **测试版本号验证**
+
    ```typescript
    const { validateVersion, isVersionExists } = useStorageXMLVersions();
-   console.log(validateVersion('1.0.0')); // { valid: true }
-   console.log(validateVersion('0.0.0')); // { valid: false, error: '...' }
-   console.log(validateVersion('abc')); // { valid: false, error: '...' }
+   console.log(validateVersion("1.0.0")); // { valid: true }
+   console.log(validateVersion("0.0.0")); // { valid: false, error: '...' }
+   console.log(validateVersion("abc")); // { valid: false, error: '...' }
 
-   const exists = await isVersionExists(projectUuid, '1.0.0');
+   const exists = await isVersionExists(projectUuid, "1.0.0");
    console.log(exists); // true or false
    ```
 
@@ -440,16 +445,18 @@ const isVersionExists = useCallback(
 const ensureWIPVersion = async (projectUuid: string) => {
   const adapter = await getAdapter();
   const versions = await adapter.getXMLVersionsByProject(projectUuid);
-  const wipVersion = versions.find(v => v.semantic_version === WIP_VERSION);
+  const wipVersion = versions.find((v) => v.semantic_version === WIP_VERSION);
 
   if (!wipVersion) {
     // 获取最后一个版本的内容作为 WIP 初始内容
     const lastVersion = versions.sort((a, b) => b.created_at - a.created_at)[0];
     const xmlContent = lastVersion
-      ? await materializeVersionXml(lastVersion, (id) => adapter.getXMLVersion(id))
+      ? await materializeVersionXml(lastVersion, (id) =>
+          adapter.getXMLVersion(id),
+        )
       : '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/></root></mxGraphModel>';
 
-    await saveXML(projectUuid, xmlContent, 'WIP', '活跃工作区');
+    await saveXML(projectUuid, xmlContent, "WIP", "活跃工作区");
   }
 };
 ```

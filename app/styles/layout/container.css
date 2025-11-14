@@ -5,6 +5,12 @@
   flex-direction: column;
   position: relative;
   overflow: hidden;
+  box-sizing: border-box;
+  transition: padding-right var(--transition-normal);
+}
+
+.main-container.sidebar-open {
+  padding-right: var(--sidebar-width);
 }
 
 /* DrawIO 编辑器容器 */
@@ -13,12 +19,8 @@
   overflow: hidden;
   transition: width 0.3s ease;
   width: 100%;
-  height: calc(100vh - 48px); /* 减去底栏高度 */
+  height: calc(100vh - var(--top-bar-height));
   position: relative;
-}
-
-.editor-container.sidebar-open {
-  width: calc(100% - var(--sidebar-width));
 }
 
 /* DrawIO 容器样式 */
@@ -34,24 +36,59 @@
   height: 100%;
 }
 
-/* 底栏布局 */
-.bottom-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 48px;
-  background: var(--background, #ffffff);
-  border-top: 1px solid var(--border, #e5e7eb);
+/* 顶栏布局 */
+.top-bar {
+  height: var(--top-bar-height);
+  min-height: var(--top-bar-height);
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  padding: 0 1rem;
-  gap: 0.75rem;
-  z-index: 50;
+  gap: var(--spacing-compact-md);
+  padding: 0 var(--spacing-lg);
+  border-bottom: 1px solid var(--border-light);
+  background: var(--background, #ffffff);
+  position: sticky;
+  top: 0;
+  z-index: 60;
 }
 
-.dark .bottom-bar {
-  background: var(--background, #1a1a1a);
-  border-top-color: var(--border, #333);
+.dark .top-bar {
+  background: var(--background, #101418);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.top-bar-selection {
+  font-size: var(--font-size-compact-sm);
+  color: var(--text-secondary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 0.125rem 0.5rem;
+  max-width: 240px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dark .top-bar-selection {
+  background: rgba(51, 136, 187, 0.2);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.top-bar-project {
+  flex: 1;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  max-width: 640px;
+}
+
+.top-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-compact-sm);
+}
+
+.top-bar-button {
+  gap: 0.35rem;
+  min-width: auto;
 }

@@ -98,7 +98,7 @@ const handleCreate = async () => {
     await createHistoricalVersion(
       projectUuid,
       versionNumber.trim(),
-      description.trim() || undefined
+      description.trim() || undefined,
     );
 
     // 成功回调
@@ -164,27 +164,25 @@ const handleConfirmRestore = () => {
 const [isExpanded, setIsExpanded] = React.useState(false);
 
 // 在卡片中添加展开按钮
-<Button
-  size="sm"
-  variant="ghost"
-  onPress={() => setIsExpanded(!isExpanded)}
->
+<Button size="sm" variant="ghost" onPress={() => setIsExpanded(!isExpanded)}>
   {isExpanded ? <ChevronUp /> : <ChevronDown />}
-</Button>
+</Button>;
 
 // 展开时显示更多信息
-{isExpanded && (
-  <div className="expanded-info">
-    <p className="text-xs text-gray-600">
-      XML 大小: {(version.xml_content.length / 1024).toFixed(2)} KB
-    </p>
-    {version.metadata && (
+{
+  isExpanded && (
+    <div className="expanded-info">
       <p className="text-xs text-gray-600">
-        元数据: {JSON.stringify(version.metadata)}
+        XML 大小: {(version.xml_content.length / 1024).toFixed(2)} KB
       </p>
-    )}
-  </div>
-)}
+      {version.metadata && (
+        <p className="text-xs text-gray-600">
+          元数据: {JSON.stringify(version.metadata)}
+        </p>
+      )}
+    </div>
+  );
+}
 ```
 
 ### 3. 实现版本时间线实时更新
@@ -219,7 +217,8 @@ React.useEffect(() => {
   };
 
   window.addEventListener("version-updated", handleVersionUpdate);
-  return () => window.removeEventListener("version-updated", handleVersionUpdate);
+  return () =>
+    window.removeEventListener("version-updated", handleVersionUpdate);
 }, [projectUuid, getAllXMLVersions]);
 ```
 
@@ -251,16 +250,16 @@ const handleVersionRestore = async (versionId: string) => {
     window.dispatchEvent(new Event("version-updated"));
 
     // 可选：显示成功提示
-    console.log(
-      `已回滚到版本 ${version?.semantic_version || versionId}`
-    );
+    console.log(`已回滚到版本 ${version?.semantic_version || versionId}`);
 
     // 可选：自动关闭版本侧边栏
     // setActiveSidebar("none");
   } catch (error) {
     console.error("版本回滚失败:", error);
     // 可选：显示错误提示
-    alert("版本回滚失败：" + (error instanceof Error ? error.message : "未知错误"));
+    alert(
+      "版本回滚失败：" + (error instanceof Error ? error.message : "未知错误"),
+    );
   }
 };
 ```
@@ -332,9 +331,7 @@ React.useEffect(() => {
       const allVersions = await getAllXMLVersions(projectUuid);
       setVersions(allVersions);
     } catch (error) {
-      setLoadError(
-        error instanceof Error ? error.message : "加载版本列表失败"
-      );
+      setLoadError(error instanceof Error ? error.message : "加载版本列表失败");
     } finally {
       setIsLoading(false);
     }
@@ -385,9 +382,8 @@ const handleExport = async () => {
   try {
     // 恢复完整 XML
     const { getXMLVersion, materializeVersionXml } = useStorageXMLVersions();
-    const fullXml = await materializeVersionXml(
-      version,
-      (id) => getXMLVersion(id)
+    const fullXml = await materializeVersionXml(version, (id) =>
+      getXMLVersion(id),
     );
 
     // 创建下载

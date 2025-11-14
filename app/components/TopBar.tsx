@@ -1,0 +1,111 @@
+"use client";
+
+import { Button } from "@heroui/react";
+import { FolderOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
+
+interface TopBarProps {
+  selectionLabel?: string;
+  currentProjectName?: string;
+  onOpenProjectSelector?: () => void;
+  onLoad?: () => void;
+  onSave?: () => void;
+  isSidebarOpen: boolean;
+  onToggleSidebar: () => void;
+}
+
+export default function TopBar({
+  selectionLabel,
+  currentProjectName = "New Project",
+  onOpenProjectSelector,
+  onLoad,
+  onSave,
+  isSidebarOpen,
+  onToggleSidebar,
+}: TopBarProps) {
+  return (
+    <div className="top-bar">
+      <div className="top-bar-selection" title={selectionLabel}>
+        {selectionLabel || "暂无选区信息"}
+      </div>
+
+      {onOpenProjectSelector && (
+        <Button
+          variant="secondary"
+          size="sm"
+          className="top-bar-project button-secondary"
+          onPress={onOpenProjectSelector}
+        >
+          <FolderOpen size={16} />
+          <span className="truncate">{currentProjectName}</span>
+        </Button>
+      )}
+
+      <div className="top-bar-actions">
+        {onLoad && (
+          <Button
+            variant="secondary"
+            size="sm"
+            className="top-bar-button"
+            onPress={onLoad}
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+              />
+            </svg>
+            加载
+          </Button>
+        )}
+
+        {onSave && (
+          <Button
+            variant="primary"
+            size="sm"
+            className="top-bar-button button-primary"
+            onPress={onSave}
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+              />
+            </svg>
+            保存
+          </Button>
+        )}
+
+        <Button
+          isIconOnly
+          variant="ghost"
+          size="sm"
+          className="top-bar-button"
+          aria-label={isSidebarOpen ? "收起侧栏" : "展开侧栏"}
+          onPress={onToggleSidebar}
+        >
+          {isSidebarOpen ? (
+            <PanelRightClose size={18} />
+          ) : (
+            <PanelRightOpen size={18} />
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}

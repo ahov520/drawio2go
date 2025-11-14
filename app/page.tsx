@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 // import DrawioEditor from "./components/DrawioEditor";
 import DrawioEditorNative from "./components/DrawioEditorNative"; // 使用原生 iframe 实现
-import BottomBar from "./components/BottomBar";
-import UnifiedSidebar from "./components/UnifiedSidebar";
+import TopBar from "./components/TopBar";
+import UnifiedSidebar, { type SidebarTab } from "./components/UnifiedSidebar";
 import ProjectSelector from "./components/ProjectSelector";
 import { useDrawioSocket } from "./hooks/useDrawioSocket";
 import { DrawioSelectionInfo } from "./types/drawio-tools";
@@ -38,9 +38,8 @@ export default function Home() {
 
   const [diagramXml, setDiagramXml] = useState<string>("");
   const [settings, setSettings] = useState({ defaultPath: "" });
-  const [activeSidebar, setActiveSidebar] = useState<
-    "none" | "settings" | "chat" | "version"
-  >("none");
+  const [sidebarTab, setSidebarTab] = useState<SidebarTab>("chat");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectionInfo, setSelectionInfo] = useState<DrawioSelectionInfo>({
     count: 0,
     cells: [],
@@ -231,19 +230,15 @@ export default function Home() {
     setSettings(newSettings);
   };
 
-  // 切换设置侧栏
-  const handleToggleSettings = () => {
-    setActiveSidebar((prev) => (prev === "settings" ? "none" : "settings"));
+  const handleToggleSidebarVisibility = () => {
+    setIsSidebarOpen((prev) => !prev);
   };
 
-  // 切换聊天侧栏
-  const handleToggleChat = () => {
-    setActiveSidebar((prev) => (prev === "chat" ? "none" : "chat"));
-  };
-
-  // 切换版本侧栏
-  const handleToggleVersion = () => {
-    setActiveSidebar((prev) => (prev === "version" ? "none" : "version"));
+  const handleSidebarTabChange = (tab: SidebarTab) => {
+    setSidebarTab(tab);
+    if (!isSidebarOpen) {
+      setIsSidebarOpen(true);
+    }
   };
 
   // 版本回滚处理
@@ -300,8 +295,19 @@ export default function Home() {
     }
   };
 
+  const selectionLabelText = isElectronEnv
+    ? `选中了${selectionInfo.count}个对象${
+        selectionInfo.cells.length > 0
+          ? ` (IDs: ${selectionInfo.cells
+              .map((c) => c.id)
+              .slice(0, 3)
+              .join(", ")}${selectionInfo.cells.length > 3 ? "..." : ""})`
+          : ""
+      }`
+    : "网页无法使用该功能";
+
   return (
-    <main className="main-container">
+    <main className={`main-container ${isSidebarOpen ? "sidebar-open" : ""}`}>
       {/* Socket.IO 连接状态指示器 */}
       {!isConnected && (
         <div
@@ -322,9 +328,19 @@ export default function Home() {
         </div>
       )}
 
+      <TopBar
+        selectionLabel={selectionLabelText}
+        currentProjectName={currentProject?.name}
+        onOpenProjectSelector={handleOpenProjectSelector}
+        onLoad={handleLoad}
+        onSave={handleManualSave}
+        isSidebarOpen={isSidebarOpen}
+        onToggleSidebar={handleToggleSidebarVisibility}
+      />
+
       {/* DrawIO 编辑器区域 */}
       <div
-        className={`editor-container ${activeSidebar !== "none" ? "sidebar-open" : ""}`}
+        className={`editor-container ${isSidebarOpen ? "sidebar-open" : ""}`}
       >
         <DrawioEditorNative
           ref={editorRef}
@@ -336,39 +352,14 @@ export default function Home() {
 
       {/* 统一侧拉栏 */}
       <UnifiedSidebar
-        isOpen={activeSidebar !== "none"}
-        activeSidebar={activeSidebar}
-        onClose={() => setActiveSidebar("none")}
+        isOpen={isSidebarOpen}
+        activeTab={sidebarTab}
+        onClose={() => setIsSidebarOpen(false)}
+        onTabChange={handleSidebarTabChange}
         onSettingsChange={handleSettingsChange}
         currentProjectId={currentProject?.uuid}
         projectUuid={currentProject?.uuid}
         onVersionRestore={handleVersionRestore}
-      />
-
-      {/* 底部工具栏 */}
-      <BottomBar
-        onToggleSettings={handleToggleSettings}
-        onToggleChat={handleToggleChat}
-        onToggleVersion={handleToggleVersion}
-        onSave={handleManualSave}
-        onLoad={handleLoad}
-        activeSidebar={activeSidebar}
-        currentProjectName={currentProject?.name}
-        onOpenProjectSelector={handleOpenProjectSelector}
-        selectionLabel={
-          isElectronEnv
-            ? `选中了${selectionInfo.count}个对象${
-                selectionInfo.cells.length > 0
-                  ? ` (IDs: ${selectionInfo.cells
-                      .map((c) => c.id)
-                      .slice(0, 3)
-                      .join(
-                        ", ",
-                      )}${selectionInfo.cells.length > 3 ? "..." : ""})`
-                  : ""
-              }`
-            : "网页无法使用该功能"
-        }
       />
 
       {/* 工程选择器 */}

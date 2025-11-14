@@ -24,12 +24,14 @@
 > 详细文档请参考 `app/styles/AGENTS.md`
 
 **设计令牌（Design Tokens）**:
+
 - **圆角**: 4px (小) / 8px (标准) / 12px (大)
 - **间距**: 4px 基准（4/8/16/24/32px）
 - **阴影**: Material Design 4 层阴影系统
 - **动画**: 150ms (快) / 200ms (标准) / 300ms (慢)
 
 **核心原则**:
+
 - ✅ 使用 CSS 变量 (`var(--radius)`, `var(--shadow-2)`)
 - ✅ 扁平化设计，避免渐变和复杂效果
 - ✅ 简单交互反馈，避免干扰性动画（脉冲、浮动）
@@ -41,7 +43,7 @@
 app/
 ├── components/         # React 组件库 [详细文档 → app/components/AGENTS.md]
 │   ├── DrawioEditorNative.tsx    # DrawIO 编辑器（原生 iframe + PostMessage）
-│   ├── BottomBar.tsx             # 底部工具栏
+│   ├── TopBar.tsx                # 顶栏组件
 │   ├── UnifiedSidebar.tsx        # 统一侧边栏容器
 │   ├── SettingsSidebar.tsx       # 设置侧边栏
 │   ├── ChatSidebar.tsx           # 聊天侧边栏主组件（@ai-sdk/react）
@@ -175,16 +177,34 @@ pnpm format               # 使用 Prettier 格式化所有代码
 
 ## 子包文档导航
 
-| 模块            | 路径                       | 主要内容                              |
-| --------------- | -------------------------- | ------------------------------------- |
-| **React 组件**  | `app/components/AGENTS.md` | 所有 UI 组件的详细 API 和使用规范     |
-| **React Hooks** | `app/hooks/AGENTS.md`      | 统一存储 Hooks 与 Socket.IO 通讯 Hook |
+| 模块            | 路径                       | 主要内容                                 |
+| --------------- | -------------------------- | ---------------------------------------- |
+| **React 组件**  | `app/components/AGENTS.md` | 所有 UI 组件的详细 API 和使用规范        |
+| **React Hooks** | `app/hooks/AGENTS.md`      | 统一存储 Hooks 与 Socket.IO 通讯 Hook    |
 | **样式系统**    | `app/styles/AGENTS.md`     | 设计令牌、Material Design 规范、最佳实践 |
-| **XML 工具集**  | `app/lib/AGENTS.md`        | DrawIO XML 操作、存储层架构完整文档   |
-| **类型定义**    | `app/types/AGENTS.md`      | TypeScript 类型的完整说明             |
-| **桌面应用**    | `electron/AGENTS.md`       | Electron 配置、安全策略和调试指南     |
+| **XML 工具集**  | `app/lib/AGENTS.md`        | DrawIO XML 操作、存储层架构完整文档      |
+| **类型定义**    | `app/types/AGENTS.md`      | TypeScript 类型的完整说明                |
+| **桌面应用**    | `electron/AGENTS.md`       | Electron 配置、安全策略和调试指南        |
 
 ## 最近更新
+
+### 2025-11-13 顶栏与侧栏交互重构
+
+- **顶栏统一操作区**:
+  - 选区指示器移至最左侧，实时展示对象数量
+  - 工程切换按钮置于中间并支持全宽点击区域
+  - 加载/保存按钮靠右，新增图标按钮可一键收起/展开侧栏
+- **统一侧栏多 Tab 化**:
+  - 聊天/设置/版本切换采用紧凑 Tab，固定在侧栏顶部
+  - 侧栏宽度记忆与拖拽逻辑保持不变，可在 Tabs 间即时切换
+- **布局同步**:
+  - 左侧工作区在侧栏展开时自动预留宽度，顶栏与编辑器对齐
+  - 相关样式迁移到 `top-bar` 与 `sidebar-tabs` 新类，移除底栏布局
+- **相关文件**:
+  - `app/components/TopBar.tsx`
+  - `app/components/UnifiedSidebar.tsx`
+  - `app/page.tsx`
+  - `app/styles/layout/container.css`, `app/styles/layout/sidebar.css`
 
 ### 2025-11-13 版本管理 UI 现代化外观升级
 
@@ -253,14 +273,14 @@ pnpm format               # 使用 Prettier 格式化所有代码
   - `app/lib/tool-executor.ts` - 工具路由
   - `app/hooks/useDrawioSocket.ts` - 前端 Hook
 
-### 2025-11 底部选区状态显示
+### 2025-11 顶栏选区状态显示
 
-- **Electron**: 主进程向 DrawIO iframe 注入监听器，实时通过 postMessage 回传选中对象数量，底部工具栏在 GitHub 按钮右侧展示为 `选中了X个对象`
-- **Web**: 受浏览器沙箱限制，底部状态文案显示 `网页无法使用该功能`
+- **Electron**: 主进程向 DrawIO iframe 注入监听器，实时通过 postMessage 回传选中对象数量，顶栏左侧状态区域展示为 `选中了X个对象`
+- **Web**: 受浏览器沙箱限制，顶栏状态文案显示 `网页无法使用该功能`
 - **相关文件**:
   - `electron/main.js`、`electron/preload.js` - 注入与 IPC 通道
   - `app/components/DrawioEditorNative.tsx` - 处理选区消息
-  - `app/components/BottomBar.tsx` - 显示状态文案
+  - `app/components/TopBar.tsx` - 显示状态文案
   - `app/page.tsx` - 组合状态数据
 
 ### 2025-11 聊天组件模块化架构

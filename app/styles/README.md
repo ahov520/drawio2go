@@ -49,7 +49,7 @@ app/styles/
 @import "./styles/base/reset.css";
 @import "./styles/base/globals.css";
 
-/* 3. 布局组件 - 容器、侧边栏、底栏 */
+/* 3. 布局组件 - 容器、侧边栏、顶栏 */
 @import "./styles/layout/container.css";
 @import "./styles/layout/sidebar.css";
 
