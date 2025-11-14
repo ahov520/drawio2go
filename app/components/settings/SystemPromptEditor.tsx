@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Popover, Label, Description, TextArea } from "@heroui/react";
+import {
+  Button,
+  Popover,
+  Label,
+  Description,
+  TextArea,
+  TextField,
+} from "@heroui/react";
 import { DEFAULT_SYSTEM_PROMPT } from "@/app/lib/config-utils";
 
 interface SystemPromptEditorProps {
@@ -57,13 +64,16 @@ export default function SystemPromptEditor({
           <Popover.Heading className="modal-title">
             编辑系统提示词
           </Popover.Heading>
-          <TextArea
-            value={tempValue}
-            onChange={(e) => setTempValue(e.target.value)}
-            placeholder="输入系统提示词..."
-            className="prompt-textarea"
-            rows={15}
-          />
+          <TextField className="w-full">
+            <Label>系统提示词内容</Label>
+            <TextArea
+              value={tempValue}
+              onChange={(e) => setTempValue(e.target.value)}
+              placeholder="输入系统提示词..."
+              className="prompt-textarea"
+              rows={15}
+            />
+          </TextField>
           <div className="modal-actions">
             <Button
               variant="ghost"

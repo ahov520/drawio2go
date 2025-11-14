@@ -14,7 +14,6 @@ app/styles/
 │   └── sidebar.css        # 侧边栏相关样式
 ├── components/            # 组件样式模块
 │   ├── chat.css           # 聊天相关组件样式
-│   ├── forms.css          # 表单控件样式
 │   ├── modal.css          # 弹窗组件样式
 │   ├── sessions.css       # 会话管理样式
 │   └── version-*.css      # 版本管理子模块
@@ -57,7 +56,6 @@ app/styles/
 @import "./styles/layout/container.css" layer(components);
 @import "./styles/layout/sidebar.css" layer(components);
 @import "./styles/components/chat.css" layer(components);
-@import "./styles/components/forms.css" layer(components);
 @import "./styles/components/modal.css" layer(components);
 @import "./styles/components/sessions.css" layer(components);
 @import "./styles/components/version-*.css" layer(components);

@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, Button, Input, Label } from "@heroui/react";
+import {
+  Card,
+  Button,
+  Input,
+  Label,
+  TextField,
+  Description,
+} from "@heroui/react";
 import { FolderOpen, Plus, Check } from "lucide-react";
 import type { Project } from "../lib/storage/types";
 
@@ -126,26 +133,28 @@ export default function ProjectSelector({
             <h3 className="text-md font-semibold text-[#3388BB] mb-3">
               新建工程
             </h3>
-            <div className="flex flex-col gap-3">
-              <div>
-                <Label>工程名称 *</Label>
+            <div className="flex flex-col gap-4">
+              <TextField className="w-full" isRequired>
+                <Label>工程名称</Label>
                 <Input
                   value={newProjectName}
-                  onChange={(e) => setNewProjectName(e.target.value)}
+                  onChange={(event) => setNewProjectName(event.target.value)}
                   placeholder="输入工程名称"
-                  className="mt-1"
                   autoFocus
                 />
-              </div>
-              <div>
+                <Description>创建工程时必填</Description>
+              </TextField>
+              <TextField className="w-full">
                 <Label>工程描述</Label>
                 <Input
                   value={newProjectDescription}
-                  onChange={(e) => setNewProjectDescription(e.target.value)}
+                  onChange={(event) =>
+                    setNewProjectDescription(event.target.value)
+                  }
                   placeholder="输入工程描述（可选）"
-                  className="mt-1"
                 />
-              </div>
+                <Description>可选，用于标注工程背景</Description>
+              </TextField>
               <div className="flex gap-2 justify-end">
                 <Button
                   variant="ghost"

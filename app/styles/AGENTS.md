@@ -182,7 +182,6 @@ app/styles/
 │   └── globals.css
 ├── components/          # 业务组件样式
 │   ├── chat.css
-│   ├── forms.css
 │   ├── modal.css
 │   ├── sessions.css
 │   ├── version-animations.css
@@ -224,7 +223,6 @@ app/styles/
 @import "./styles/layout/container.css" layer(components);
 @import "./styles/layout/sidebar.css" layer(components);
 @import "./styles/components/chat.css" layer(components);
-@import "./styles/components/forms.css" layer(components);
 @import "./styles/components/modal.css" layer(components);
 @import "./styles/components/sessions.css" layer(components);
 @import "./styles/components/version-*.css" layer(components);
