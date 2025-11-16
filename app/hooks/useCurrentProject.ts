@@ -7,15 +7,17 @@ import {
   DEFAULT_XML_VERSION,
   ZERO_SOURCE_VERSION_ID,
 } from "@/app/lib/storage";
+import {
+  getStoredCurrentProjectId,
+  persistCurrentProjectId,
+} from "@/app/lib/storage/current-project";
 import type { Project, CreateXMLVersionInput } from "@/app/lib/storage";
-
-const CURRENT_PROJECT_KEY = "currentProjectId";
 
 /**
  * 当前工程管理 Hook
  *
  * 功能：
- * - 从 localStorage 读取/写入当前工程 ID
+ * - 通过统一存储层读取/写入当前工程 ID（仅统一存储，不再使用 localStorage）
  * - 从统一存储层加载工程信息
  * - 如无工程，自动创建默认工程 "New Project"
  * - 提供工程切换功能
@@ -24,22 +26,6 @@ export function useCurrentProject() {
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-
-  /**
-   * 从 localStorage 获取当前工程 ID
-   */
-  const getCurrentProjectId = useCallback((): string | null => {
-    if (typeof window === "undefined") return null;
-    return localStorage.getItem(CURRENT_PROJECT_KEY);
-  }, []);
-
-  /**
-   * 保存当前工程 ID 到 localStorage
-   */
-  const saveCurrentProjectId = useCallback((projectId: string) => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(CURRENT_PROJECT_KEY, projectId);
-  }, []);
 
   /**
    * 创建默认工程 "New Project"
@@ -103,8 +89,8 @@ export function useCurrentProject() {
       setLoading(true);
       const storage = await getStorage();
 
-      // 1. 检查 localStorage 中的当前工程 ID
-      let projectId = getCurrentProjectId();
+      // 1. 检查统一存储层中的当前工程 ID
+      let projectId = await getStoredCurrentProjectId(storage);
 
       // 2. 如果没有，检查是否有任何工程
       if (!projectId) {
@@ -113,14 +99,14 @@ export function useCurrentProject() {
           // 3. 没有任何工程，创建默认工程
           const defaultProject = await createDefaultProject();
           projectId = defaultProject.uuid;
-          saveCurrentProjectId(projectId);
+          await persistCurrentProjectId(projectId, storage);
           setCurrentProject(defaultProject);
           setLoading(false);
           return defaultProject;
         } else {
           // 4. 有工程，使用第一个
           projectId = allProjects[0].uuid;
-          saveCurrentProjectId(projectId);
+          await persistCurrentProjectId(projectId, storage);
         }
       }
 
@@ -129,7 +115,7 @@ export function useCurrentProject() {
       if (!project) {
         // 工程不存在，创建默认工程
         const defaultProject = await createDefaultProject();
-        saveCurrentProjectId(defaultProject.uuid);
+        await persistCurrentProjectId(defaultProject.uuid, storage);
         setCurrentProject(defaultProject);
         setLoading(false);
         return defaultProject;
@@ -144,7 +130,7 @@ export function useCurrentProject() {
       setLoading(false);
       throw error;
     }
-  }, [getCurrentProjectId, saveCurrentProjectId, createDefaultProject]);
+  }, [createDefaultProject]);
 
   /**
    * 切换工程
@@ -158,7 +144,7 @@ export function useCurrentProject() {
           throw new Error(`工程不存在: ${projectId}`);
         }
 
-        saveCurrentProjectId(projectId);
+        await persistCurrentProjectId(projectId, storage);
         setCurrentProject(project);
         return project;
       } catch (err) {
@@ -167,7 +153,7 @@ export function useCurrentProject() {
         throw error;
       }
     },
-    [saveCurrentProjectId],
+    [],
   );
 
   /**

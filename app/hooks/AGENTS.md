@@ -94,7 +94,40 @@ function ProjectManager() {
 }
 ```
 
-### 3. useStorageConversations
+### 3. useCurrentProject
+
+**当前工程 Hook** - 管理当前激活工程的加载、切换与持久化
+
+#### 特性
+
+- **统一持久化**: currentProjectId 永远保存在统一存储层的 `settings` 表，不再触达 localStorage
+- **自动兜底**: 如不存在任何工程，会即时创建 "New Project" + 空白 XML 版本并写入 currentProjectId
+- **状态接口**:
+  - `currentProject` / `loading` / `error`
+  - `loadCurrentProject()`: 重新拉取并返回最新工程
+  - `switchProject(projectId)`: 切换工程并同步存储
+  - `refreshCurrentProject()`: 仅刷新当前工程的元数据
+
+#### 使用示例
+
+```typescript
+import { useCurrentProject } from "@/app/hooks/useCurrentProject";
+
+function ProjectAwareSidebar() {
+  const { currentProject, loading, switchProject } = useCurrentProject();
+
+  if (loading) return <Skeleton />;
+
+  return (
+    <ProjectSelector
+      currentProjectId={currentProject?.uuid ?? null}
+      onSelect={(uuid) => switchProject(uuid)}
+    />
+  );
+}
+```
+
+### 4. useStorageConversations
 
 **聊天会话管理 Hook** - 管理 AI 聊天会话的持久化
 
@@ -138,7 +171,7 @@ function ChatManager() {
 }
 ```
 
-### 4. useStorageXMLVersions
+### 5. useStorageXMLVersions
 
 **XML 版本管理 Hook** - 管理 DrawIO XML 的版本历史
 
@@ -179,7 +212,7 @@ function VersionControl() {
 }
 ```
 
-### 5. useDrawioSocket
+### 6. useDrawioSocket
 
 **Socket.IO 通讯 Hook** - 管理前端与后端的 Socket.IO 双向通讯
 

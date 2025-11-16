@@ -13,35 +13,13 @@ import type {
   XMLValidationResult,
 } from "../types/drawio-tools";
 import { getStorage } from "./storage/storage-factory";
-import { DEFAULT_PROJECT_UUID, WIP_VERSION } from "./storage/constants";
+import { WIP_VERSION } from "./storage/constants";
 import {
   computeVersionPayload,
   materializeVersionXml,
 } from "./storage/xml-version-engine";
 import { v4 as uuidv4 } from "uuid";
-
-/**
- * localStorage 中存储当前项目 ID 的键名
- *
- * 与 useCurrentProject.ts 中的 CURRENT_PROJECT_KEY 保持一致
- */
-const CURRENT_PROJECT_KEY = "currentProjectId";
-
-/**
- * 获取当前活跃项目的 UUID
- *
- * 从 localStorage 读取当前项目 ID，如果未设置则返回默认项目 UUID。
- * 与 useCurrentProject.ts 的逻辑保持一致。
- *
- * @returns 当前项目的 UUID，如果无法获取则返回 "default"
- */
-function getCurrentProjectUuid(): string {
-  if (typeof window === "undefined") {
-    return DEFAULT_PROJECT_UUID;
-  }
-  const stored = localStorage.getItem(CURRENT_PROJECT_KEY);
-  return stored || DEFAULT_PROJECT_UUID;
-}
+import { resolveCurrentProjectUuid } from "./storage/current-project";
 
 /**
  * 验证 XML 格式是否合法
@@ -111,7 +89,7 @@ function decodeBase64XML(xml: string): string {
  */
 async function saveDrawioXMLInternal(decodedXml: string): Promise<void> {
   const storage = await getStorage();
-  const projectUuid = getCurrentProjectUuid();
+  const projectUuid = await resolveCurrentProjectUuid(storage);
 
   // 检查项目是否存在
   const project = await storage.getProject(projectUuid);
@@ -197,7 +175,7 @@ export async function getDrawioXML(): Promise<GetXMLResult> {
 
   try {
     const storage = await getStorage();
-    const projectUuid = getCurrentProjectUuid();
+    const projectUuid = await resolveCurrentProjectUuid(storage);
 
     // 检查项目是否存在
     const project = await storage.getProject(projectUuid);
