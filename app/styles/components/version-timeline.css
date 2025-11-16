@@ -263,6 +263,201 @@
   gap: var(--spacing-compact-sm);
 }
 
+/* ================================
+   SVG 预览区域
+   ================================ */
+
+.version-card__media {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-compact-sm);
+}
+
+.version-preview {
+  width: 100%;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-light);
+  background: var(--background, #ffffff);
+  padding: var(--spacing-compact-sm);
+  box-shadow: inset 0 0 0 1px rgba(51, 136, 187, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  aspect-ratio: 16 / 10;
+}
+
+.version-preview__image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: calc(var(--radius) - 0.25rem);
+}
+
+.version-preview--placeholder {
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.version-preview__placeholder-icon {
+  width: 1.75rem;
+  height: 1.75rem;
+  color: var(--text-tertiary);
+}
+
+.version-preview__placeholder-title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.version-preview__placeholder-text {
+  font-size: var(--font-size-compact-xs);
+  color: var(--text-secondary);
+}
+
+.version-preview__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--spacing-compact-sm);
+}
+
+.version-preview__badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-compact-xs);
+}
+
+.version-page-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 1.5rem;
+  padding: 0 var(--spacing-compact-sm);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-primary);
+  background: var(--bg-secondary);
+  font-size: var(--font-size-compact-xs);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.version-preview__hint {
+  font-size: var(--font-size-compact-xs);
+  color: var(--text-tertiary);
+}
+
+.version-preview__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-compact-xs);
+  margin-left: auto;
+}
+
+.version-preview__actions .heroui-button {
+  box-shadow: none;
+}
+
+/* ================================
+   多页面栅格
+   ================================ */
+
+.version-pages-grid {
+  border-radius: var(--radius);
+  border: 1px dashed var(--border-light);
+  background: var(--bg-secondary);
+  padding: var(--spacing-compact-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-compact-sm);
+}
+
+.version-pages-grid__status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--font-size-compact-sm);
+  color: var(--text-secondary);
+}
+
+.version-pages-grid__status--error {
+  color: var(--error-color);
+}
+
+.version-pages-grid__status--empty {
+  color: var(--text-secondary);
+}
+
+.version-pages-grid__spinner {
+  width: 1rem;
+  height: 1rem;
+  animation: spin 1s linear infinite;
+}
+
+.version-pages-grid__status-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.version-pages-grid__inner {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--spacing-compact-sm);
+}
+
+.version-pages-grid__item {
+  border-radius: var(--radius);
+  border: 1px solid var(--border-light);
+  background: var(--background, #ffffff);
+  box-shadow: var(--shadow-1);
+  padding: var(--spacing-compact-xs);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-compact-xs);
+}
+
+.version-pages-grid__thumb {
+  border-radius: calc(var(--radius) - 0.25rem);
+  background: var(--bg-primary);
+  padding: 0.25rem;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.version-pages-grid__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.version-pages-grid__label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: var(--font-size-compact-xs);
+  color: var(--text-secondary);
+}
+
+.version-pages-grid__label-index {
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.version-pages-grid__label-name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .version-card__name {
   margin: 0;
   font-size: var(--font-size-compact-md);

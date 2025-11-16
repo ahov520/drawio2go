@@ -71,6 +71,9 @@ interface VersionCardProps {
 - **展开视图**: 显示完整信息（名称、描述、元数据、操作按钮）
 - **Disclosure 组件**: 使用 HeroUI v3 Disclosure 实现折叠展开
 - **操作按钮**: 导出 DrawIO 文件 + 回滚到此版本
+- **SVG 预览**: 将 `preview_svg` 转为 ObjectURL，展示 16:10 缩略图；缺失数据时显示占位提示
+- **页面信息**: 解析 `page_count`/`page_names`，展示“共 X 页”徽章并提供 Tooltip 列出页面名称
+- **多页入口**: 在展开视图内通过 “查看所有页面” 按钮懒加载 `pages_svg`，渲染页面缩略图栅格，下一里程碑可直接复用
 - **徽章系统**:
   - 最新徽章（绿色）
   - 关键帧徽章（黄色，Key 图标）
