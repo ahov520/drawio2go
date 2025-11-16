@@ -64,7 +64,9 @@
       "mcp__heroui-react__get_theme_info",
       "mcp__heroui-react__get_docs",
       "Bash(find:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(du:*)",
+      "Bash(git check-ignore:*)"
     ],
     "deny": [],
     "ask": []
