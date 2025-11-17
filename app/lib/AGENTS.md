@@ -11,6 +11,7 @@
 - **drawio-ai-tools.ts**: AI 工具定义（`drawio_read` / `drawio_edit_batch`）
 - **tool-executor.ts**: 工具执行路由器，通过 Socket.IO 与前端通讯
 - **svg-export-utils.ts**: DrawIO 多页面 SVG 导出工具（页面拆分、单页 XML 重建、结果序列化）
+- **compression-utils.ts**: Web/Node 共享的 `CompressionStream` / `DecompressionStream` deflate-raw 压缩工具
 - **svg-smart-diff.ts**: SVG 智能差异对比引擎（基于 data-cell-id 的元素级匹配与视觉高亮）
 - **config-utils.ts**: LLM 配置规范化工具（默认值、类型校验、URL 规范化）
 
@@ -19,7 +20,13 @@
 - `parsePages(xml)`: 解析 `<diagram>` 列表，返回 `{ id, name, index, xmlContent, element }`
 - `createSinglePageXml(diagram)`: 复制 diagram 并生成完整 mxfile 字符串，保持 host/agent 等元数据
 - `exportAllPagesSVG(editor, fullXml, options)`: 顺序执行 `loadDiagram → exportSVG` 并可接收 `onProgress`，结束后自动恢复原始 XML
-- `serializeSVGsToBlob` / `deserializeSVGsFromBlob`: 用 JSON Blob 存储/读取多页 SVG 结果
+- `serializeSVGsToBlob` / `deserializeSVGsFromBlob`: **异步** 工具，内部使用 `compression-utils` 将 JSON 结果以 `deflate-raw` 压缩后写入 Blob，再在读取时自动解压
+
+### compression-utils.ts
+
+- `compressBlob(blob)`：使用原生 `CompressionStream("deflate-raw")` 压缩 Blob（Node.js v17+ 和现代浏览器均支持）
+- `decompressBlob(blob)`：配套解压实现，使用原生 `DecompressionStream`
+- 该模块是 svg 存储和 preview_svg 压缩的唯一入口，避免重复实现
 
 ### svg-smart-diff.ts
 

@@ -21,6 +21,7 @@ import {
   serializeSVGsToBlob,
   type SvgExportProgress,
 } from "@/app/lib/svg-export-utils";
+import { compressBlob } from "@/app/lib/compression-utils";
 
 /**
  * XML 版本管理 Hook
@@ -322,10 +323,11 @@ export function useStorageXMLVersions() {
             );
 
             if (svgPages.length > 0) {
-              previewSvg = new Blob([svgPages[0].svg], {
+              const previewSource = new Blob([svgPages[0].svg], {
                 type: "image/svg+xml",
               });
-              pagesSvgBlob = serializeSVGsToBlob(svgPages);
+              previewSvg = await compressBlob(previewSource);
+              pagesSvgBlob = await serializeSVGsToBlob(svgPages);
               svgPageNames = svgPages.map((p) => p.name);
             }
           } catch (err) {
