@@ -24,6 +24,7 @@ import {
   CheckSquare,
   Square,
   Activity,
+  ZoomIn,
 } from "lucide-react";
 import { materializeVersionXml } from "@/app/lib/storage/xml-version-engine";
 import { useStorageXMLVersions } from "@/app/hooks/useStorageXMLVersions";
@@ -149,9 +150,8 @@ export function VersionCard({
   }, []);
 
   const handlePreviewActivate = React.useCallback(() => {
-    if (!hasMultiplePages) return;
     openViewer(0);
-  }, [hasMultiplePages, openViewer]);
+  }, [openViewer]);
 
   const handleThumbnailActivate = React.useCallback(
     (pageIndex: number) => {
@@ -551,27 +551,21 @@ export function VersionCard({
               <div className="version-card__media">
                 {previewUrl ? (
                   <div
-                    className={`version-preview${hasMultiplePages ? " version-preview--interactive" : ""}`}
-                    role={hasMultiplePages ? "button" : undefined}
-                    tabIndex={hasMultiplePages ? 0 : undefined}
+                    className="version-preview version-preview--interactive"
+                    role="button"
+                    tabIndex={0}
                     aria-label={
                       hasMultiplePages
-                        ? `打开多页 SVG 查看器，当前共 ${version.page_count} 页`
-                        : undefined
+                        ? `打开全屏查看器，当前共 ${version.page_count} 页`
+                        : `全屏查看 ${versionLabel} 预览图`
                     }
-                    onClick={
-                      hasMultiplePages ? handlePreviewActivate : undefined
-                    }
-                    onKeyDown={
-                      hasMultiplePages
-                        ? (event) => {
-                            if (event.key === "Enter" || event.key === " ") {
-                              event.preventDefault();
-                              handlePreviewActivate();
-                            }
-                          }
-                        : undefined
-                    }
+                    onClick={handlePreviewActivate}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        handlePreviewActivate();
+                      }
+                    }}
                   >
                     <img
                       src={previewUrl}
@@ -579,6 +573,12 @@ export function VersionCard({
                       className="version-preview__image"
                       loading="lazy"
                     />
+                    <div className="version-preview__overlay">
+                      <ZoomIn className="version-preview__zoom-icon" />
+                      <span className="version-preview__zoom-text">
+                        点击查看大图
+                      </span>
+                    </div>
                   </div>
                 ) : (
                   <div className="version-preview version-preview--placeholder">

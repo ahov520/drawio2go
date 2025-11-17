@@ -54,8 +54,9 @@ interface VersionCardProps {
 - **Disclosure 组件**: 使用 HeroUI v3 Disclosure 实现折叠展开
 - **操作按钮**: 导出 DrawIO 文件 + 回滚到此版本，WIP 卡片禁用这些操作
 - **SVG 预览**: `preview_svg` 现为 deflate-raw 压缩二进制，组件内部会先解压再转为 ObjectURL，展示 16:10 缩略图；缺失数据时显示占位提示
-- **页面信息**: 解析 `page_count`/`page_names`，展示“共 X 页”徽章并提供 Tooltip 列出页面名称
-- **多页入口**: 展开视图内可展开缩略图栅格，点击缩略图或“全屏浏览”按钮唤起 PageSVGViewer
+- **全屏查看**: 所有版本（单页/多页）的缩略图均可点击打开全屏查看器（PageSVGViewer），悬停时显示放大图标提示
+- **页面信息**: 解析 `page_count`/`page_names`，展示"共 X 页"徽章并提供 Tooltip 列出页面名称
+- **多页入口**: 展开视图内可展开缩略图栅格，点击缩略图或"全屏浏览"按钮唤起 PageSVGViewer
 - **徽章系统**:
   - 最新徽章（绿色）
   - 关键帧徽章（黄色，Key 图标）

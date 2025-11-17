@@ -230,6 +230,7 @@ pnpm format               # 使用 Prettier 格式化所有代码
 
 - 存储扩展：`page_count`、`page_names`、`preview_svg`、`pages_svg` 字段
 - 全屏查看器：懒加载、键盘快捷键、滚轮缩放、拖拽平移
+- 缩略图全屏查看：所有版本（单页/多页）的缩略图均可点击放大，悬停显示放大图标
 - 可访问性：`role="button"`、键盘 Enter/Space 支持
 
 **版本对比可视化**

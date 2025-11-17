@@ -396,7 +396,11 @@ export function generateSmartDiffSvg(
     return `<g class="smart-diff__cell smart-diff__cell--match" data-cell-id="${entry.id}">${markup}</g>`;
   });
   svgParts.push(
-    wrapCells(neutralEntries, baseTransform.transform, "smart-diff__layer--base"),
+    wrapCells(
+      neutralEntries,
+      baseTransform.transform,
+      "smart-diff__layer--base",
+    ),
   );
   svgParts.push(
     wrapCells(
