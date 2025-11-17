@@ -234,6 +234,20 @@
   background: var(--bg-secondary);
 }
 
+.version-card--wip {
+  border-style: dashed;
+  background: var(--bg-primary);
+  cursor: default;
+}
+
+.version-card--wip .version-card__trigger {
+  cursor: default;
+}
+
+.version-card--wip::before {
+  border-style: dashed;
+}
+
 .version-card__select-chip {
   display: inline-flex;
   align-items: center;

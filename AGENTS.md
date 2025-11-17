@@ -51,7 +51,6 @@ app/
 │   ├── chat/                     # 聊天组件模块化架构（12个子组件）
 │   ├── settings/                 # 设置相关子组件
 │   └── version/                  # 版本管理子组件
-│       ├── WIPIndicator.tsx      # WIP 工作区指示器
 │       ├── VersionCard.tsx       # 版本卡片（折叠式）
 │       ├── VersionTimeline.tsx   # 版本时间线
 │       ├── CreateVersionDialog.tsx # 创建版本对话框

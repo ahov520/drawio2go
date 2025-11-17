@@ -187,8 +187,7 @@ app/styles/
 │   ├── version-animations.css
 │   ├── version-dialog.css
 │   ├── version-sidebar.css
-│   ├── version-timeline.css
-│   └── version-wip.css
+│   └── version-timeline.css
 ├── layout/              # 布局相关
 │   ├── container.css
 │   └── sidebar.css
@@ -431,8 +430,7 @@ import { Button, Card } from '@heroui/react'
 **版本管理组件样式文件：**
 
 - `version-sidebar.css` - 侧边栏容器和空状态
-- `version-wip.css` - WIP 指示器卡片
-- `version-timeline.css` - 版本时间线和卡片
+- `version-timeline.css` - 版本时间线、WIP 节点和卡片
 - `version-dialog.css` - 创建版本对话框
 
 **2025-11-13 视觉升级要点：**
@@ -473,36 +471,22 @@ import { Button, Card } from '@heroui/react'
 }
 ```
 
-#### WIP 指示器（`version-wip.css`）
+#### 时间线 WIP 节点（`version-timeline.css`）
 
 ```css
-.wip-indicator__body {
-  /* 三段式布局容器 */
+.version-card--wip {
+  border-style: dashed;
+  background: var(--bg-primary);
+  cursor: default;
 }
 
-.wip-indicator__top {
-  /* 顶部：图标 + 徽章 + 版本号 */
-  display: flex;
-  gap: var(--spacing-md);
+.version-card--wip::before {
+  /* 左侧圆点使用虚线边框，突出实时草稿 */
+  border-style: dashed;
 }
 
-.wip-badge {
-  /* WIP 徽章 */
-  background: var(--primary-color);
-  color: white;
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  font-size: 0.625rem;
-  font-weight: 600;
-}
-
-.wip-indicator__meta {
-  /* 底部元数据行 */
-  display: flex;
-  gap: var(--spacing-lg);
-  margin-top: var(--spacing-md);
-  font-size: 0.75rem;
-  color: var(--text-secondary);
+.version-card--wip .version-card__trigger {
+  cursor: default;
 }
 ```
 

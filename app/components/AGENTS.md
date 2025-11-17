@@ -10,7 +10,7 @@
 
 #### VersionSidebar.tsx - 版本侧边栏主组件
 
-**版本管理主界面** - 集成 WIP 指示器、版本时间线和创建版本对话框
+**版本管理主界面** - 集成版本时间线和创建版本对话框（WIP 已并入时间轴）
 
 ##### Props
 
@@ -27,28 +27,9 @@ interface VersionSidebarProps {
 - **现代化顶部 Header**: History 图标 + 标题 + 描述信息 + "保存版本" CTA 按钮
 - **空状态卡片**: 未选择项目时显示引导信息
 - **自动刷新**: 监听 `version-updated` 事件自动重新加载版本列表
+- **WIP 集成**: 同时监听 `wip-updated` 事件，时间轴首位渲染实时草稿（WIP）
 - **错误处理**: 加载失败时显示错误状态和重试按钮
 - **版本反馈**: 成功创建版本后显示 HeroUI `Alert`，提示页数与 SVG 导出结果（4 秒自动消失）
-
-#### version/WIPIndicator.tsx - WIP 工作区指示器
-
-**当前活跃工作区信息卡片** - 显示 WIP 版本和实时保存状态
-
-##### Props
-
-```typescript
-interface WIPIndicatorProps {
-  projectUuid: string;
-  versions: XMLVersion[]; // 版本列表（从中查找 WIP 版本）
-}
-```
-
-##### 特性
-
-- **卡片式设计**: Activity 图标 + WIP 徽章 + 版本号标识
-- **三段式布局**: `wip-indicator__body/top/meta` CSS 结构
-- **元数据展示**: 最后更新时间 + 实时保存状态
-- **事件响应**: 监听 `wip-updated` 事件自动刷新
 
 #### version/VersionCard.tsx - 版本卡片（折叠式）
 
@@ -60,6 +41,7 @@ interface WIPIndicatorProps {
 interface VersionCardProps {
   version: XMLVersion;
   isLatest?: boolean; // 是否为最新版本
+  isWIP?: boolean; // 是否为 WIP 草稿（强制折叠）
   onRestore?: (versionId: string) => void; // 回滚回调
   defaultExpanded?: boolean; // 默认是否展开
 }
@@ -67,10 +49,10 @@ interface VersionCardProps {
 
 ##### 特性
 
-- **折叠视图**: 显示版本号 + 徽章（最新/关键帧/Diff）+ 时间
+- **折叠视图**: 显示版本号 + 徽章（最新/关键帧/Diff）+ 时间；WIP 卡片固定显示 `WIP` 及“当前画布内容”文案
 - **展开视图**: 显示完整信息（名称、描述、元数据、操作按钮）
 - **Disclosure 组件**: 使用 HeroUI v3 Disclosure 实现折叠展开
-- **操作按钮**: 导出 DrawIO 文件 + 回滚到此版本
+- **操作按钮**: 导出 DrawIO 文件 + 回滚到此版本，WIP 卡片禁用这些操作
 - **SVG 预览**: `preview_svg` 现为 deflate-raw 压缩二进制，组件内部会先解压再转为 ObjectURL，展示 16:10 缩略图；缺失数据时显示占位提示
 - **页面信息**: 解析 `page_count`/`page_names`，展示“共 X 页”徽章并提供 Tooltip 列出页面名称
 - **多页入口**: 展开视图内可展开缩略图栅格，点击缩略图或“全屏浏览”按钮唤起 PageSVGViewer
@@ -78,6 +60,7 @@ interface VersionCardProps {
   - 最新徽章（绿色）
   - 关键帧徽章（黄色，Key 图标）
   - Diff 徽章（紫色，GitBranch 图标 + 链深度）
+  - WIP 草稿：虚线节点 + Activity 图标的“实时草稿”标签，固定折叠
 
 #### version/VersionTimeline.tsx - 版本时间线
 
@@ -88,7 +71,7 @@ interface VersionCardProps {
 ```typescript
 interface VersionTimelineProps {
   projectUuid: string;
-  versions: XMLVersion[]; // 版本列表（WIP 已过滤）
+  versions: XMLVersion[]; // 完整版本列表（含 WIP 草稿）
   onVersionRestore?: (versionId: string) => void;
   onVersionCreated?: () => void;
 }
@@ -96,8 +79,8 @@ interface VersionTimelineProps {
 
 ##### 特性
 
-- **时间线视觉**: CSS `::before` 绘制主轴，卡片节点连接
-- **WIP 过滤**: 自动过滤掉 WIP 版本（0.0.0）
+- **时间线视觉**: CSS `::before` 绘制主轴，卡片节点连接；WIP 使用虚线节点
+- **WIP 集成**: 时间轴首位展示 WIP 草稿（0.0.0），并维持按时间倒序
 - **空状态**: 无历史版本时显示引导信息
 - **降序排列**: 最新版本在顶部
 

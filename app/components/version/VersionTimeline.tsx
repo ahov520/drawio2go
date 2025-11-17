@@ -53,25 +53,40 @@ export function VersionTimeline({
     [compareMode, selectedIds],
   );
 
-  // 过滤出历史版本（排除 WIP）并按时间倒序排列
-  const historicalVersions = React.useMemo(() => {
+  // 拆分 WIP 与历史版本，确保只保留最新的 WIP 并放在列表首位
+  const { timelineVersions, historicalVersions, hasWip } = React.useMemo(() => {
     try {
-      return versions
-        .filter((v) => v.semantic_version !== WIP_VERSION)
+      const wipCandidates = versions
+        .filter((version) => version.semantic_version === WIP_VERSION)
         .sort((a, b) => b.created_at - a.created_at);
+      const wip = wipCandidates[0] ?? null;
+
+      const historical = versions
+        .filter((version) => version.semantic_version !== WIP_VERSION)
+        .sort((a, b) => b.created_at - a.created_at);
+
+      const combined = wip ? [wip, ...historical] : historical;
+
+      return {
+        timelineVersions: combined,
+        historicalVersions: historical,
+        hasWip: Boolean(wip),
+      };
     } catch (error) {
       console.error("版本排序失败:", error);
-      return [];
+      return { timelineVersions: [], historicalVersions: [], hasWip: false };
     }
   }, [versions]);
 
+  const historicalCount = historicalVersions.length;
+
   // 是否启用虚拟滚动
   const enableVirtualScroll =
-    !isLoading && historicalVersions.length > VIRTUAL_SCROLL_THRESHOLD;
+    !isLoading && timelineVersions.length > VIRTUAL_SCROLL_THRESHOLD;
 
   // 配置虚拟滚动器
   const virtualizer = useVirtualizer({
-    count: historicalVersions.length,
+    count: timelineVersions.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => 70,
     overscan: 5,
@@ -101,7 +116,7 @@ export function VersionTimeline({
   }
 
   // 如果没有历史版本，显示空状态
-  if (historicalVersions.length === 0) {
+  if (timelineVersions.length === 0) {
     return (
       <div className="version-timeline-empty">
         <div className="empty-state-small">
@@ -136,7 +151,11 @@ export function VersionTimeline({
           }}
         >
           {virtualItems.map((virtualItem) => {
-            const version = historicalVersions[virtualItem.index];
+            const version = timelineVersions[virtualItem.index];
+            const isWipEntry = version.semantic_version === WIP_VERSION;
+            const isLatestEntry = hasWip
+              ? virtualItem.index === 1
+              : virtualItem.index === 0;
             return (
               <div
                 key={version.id}
@@ -150,15 +169,22 @@ export function VersionTimeline({
               >
                 <VersionCard
                   version={version}
-                  isLatest={virtualItem.index === 0}
+                  isLatest={!isWipEntry && isLatestEntry}
+                  isWIP={isWipEntry}
                   onRestore={onVersionRestore}
                   compareMode={compareMode}
-                  selected={selectedIdSet.has(version.id)}
-                  compareOrder={getCompareOrder(version.id)}
-                  onToggleSelect={onToggleSelect}
+                  selected={!isWipEntry && selectedIdSet.has(version.id)}
+                  compareOrder={isWipEntry ? null : getCompareOrder(version.id)}
+                  onToggleSelect={isWipEntry ? undefined : onToggleSelect}
                   onQuickCompare={(() => {
-                    const previous = historicalVersions[virtualItem.index + 1];
-                    if (!previous || !onQuickCompare) return undefined;
+                    if (isWipEntry) return undefined;
+                    const previous = timelineVersions[virtualItem.index + 1];
+                    if (
+                      !previous ||
+                      previous.semantic_version === WIP_VERSION ||
+                      !onQuickCompare
+                    )
+                      return undefined;
                     return () => {
                       const [older, newer] =
                         previous.created_at <= version.created_at
@@ -179,29 +205,40 @@ export function VersionTimeline({
   // 渲染普通列表（无虚拟滚动）
   const renderNormalList = () => (
     <div className="timeline-list">
-      {historicalVersions.map((version, index) => (
-        <VersionCard
-          key={version.id}
-          version={version}
-          isLatest={index === 0}
-          onRestore={onVersionRestore}
-          compareMode={compareMode}
-          selected={selectedIdSet.has(version.id)}
-          compareOrder={getCompareOrder(version.id)}
-          onToggleSelect={onToggleSelect}
-          onQuickCompare={(() => {
-            const previous = historicalVersions[index + 1];
-            if (!previous || !onQuickCompare) return undefined;
-            return () => {
-              const [older, newer] =
-                previous.created_at <= version.created_at
-                  ? [previous, version]
-                  : [version, previous];
-              onQuickCompare({ versionA: older, versionB: newer });
-            };
-          })()}
-        />
-      ))}
+      {timelineVersions.map((version, index) => {
+        const isWipEntry = version.semantic_version === WIP_VERSION;
+        const isLatestEntry = hasWip ? index === 1 : index === 0;
+        return (
+          <VersionCard
+            key={version.id}
+            version={version}
+            isLatest={!isWipEntry && isLatestEntry}
+            isWIP={isWipEntry}
+            onRestore={onVersionRestore}
+            compareMode={compareMode}
+            selected={!isWipEntry && selectedIdSet.has(version.id)}
+            compareOrder={isWipEntry ? null : getCompareOrder(version.id)}
+            onToggleSelect={isWipEntry ? undefined : onToggleSelect}
+            onQuickCompare={(() => {
+              if (isWipEntry) return undefined;
+              const previous = timelineVersions[index + 1];
+              if (
+                !previous ||
+                previous.semantic_version === WIP_VERSION ||
+                !onQuickCompare
+              )
+                return undefined;
+              return () => {
+                const [older, newer] =
+                  previous.created_at <= version.created_at
+                    ? [previous, version]
+                    : [version, previous];
+                onQuickCompare({ versionA: older, versionB: newer });
+              };
+            })()}
+          />
+        );
+      })}
     </div>
   );
 
@@ -219,7 +256,7 @@ export function VersionTimeline({
         </div>
         <div className="timeline-header__actions">
           <span className="timeline-chip">
-            {historicalVersions.length} 个快照
+            历史快照 {historicalCount} 个{hasWip ? " + WIP" : ""}
           </span>
           {compareMode && historicalVersions.length >= 2 && (
             <Button

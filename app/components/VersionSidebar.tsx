@@ -2,7 +2,6 @@
 
 import React from "react";
 import { Alert, Button, Skeleton } from "@heroui/react";
-import { WIPIndicator } from "./version/WIPIndicator";
 import { VersionTimeline } from "./version/VersionTimeline";
 import { CreateVersionDialog } from "./version/CreateVersionDialog";
 import { VersionCompare } from "./version/VersionCompare";
@@ -110,8 +109,11 @@ export function VersionSidebar({
     };
 
     window.addEventListener("version-updated", handleVersionUpdate);
-    return () =>
+    window.addEventListener("wip-updated", handleVersionUpdate);
+    return () => {
       window.removeEventListener("version-updated", handleVersionUpdate);
+      window.removeEventListener("wip-updated", handleVersionUpdate);
+    };
   }, [loadVersions]);
 
   React.useEffect(() => {
@@ -302,7 +304,6 @@ export function VersionSidebar({
                 </div>
               </div>
             )}
-            <WIPIndicator projectUuid={projectUuid} versions={versions} />
             <VersionTimeline
               projectUuid={projectUuid}
               versions={versions}
