@@ -330,6 +330,7 @@ export function VersionSidebar({
         <VersionCompare
           versionA={activePair.versionA}
           versionB={activePair.versionB}
+          versions={versions}
           isOpen={isDialogOpen}
           onClose={closeDialog}
         />

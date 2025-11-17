@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import {
   Button,
   Card,
+  Label,
   ListBox,
   Select,
   Spinner,
@@ -15,6 +16,7 @@ import {
 } from "@heroui/react";
 import {
   AlertTriangle,
+  ArrowLeftRight,
   Columns,
   Loader2,
   RotateCcw,
@@ -36,6 +38,7 @@ import {
 interface VersionCompareProps {
   versionA: XMLVersion;
   versionB: XMLVersion;
+  versions: XMLVersion[];
   isOpen: boolean;
   onClose: () => void;
 }
@@ -73,18 +76,34 @@ function formatVersionMeta(version: XMLVersion) {
   })}`;
 }
 
+function formatVersionLabel(version: XMLVersion) {
+  return `${version.semantic_version} (${new Date(
+    version.created_at,
+  ).toLocaleString("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  })})`;
+}
+
 function createSvgUrl(svg?: string) {
   if (!svg) return null;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
 export function VersionCompare({
-  versionA,
-  versionB,
+  versionA: initialVersionA,
+  versionB: initialVersionB,
+  versions,
   isOpen,
   onClose,
 }: VersionCompareProps) {
   const [isPortalReady, setIsPortalReady] = React.useState(false);
+  const [currentVersionA, setCurrentVersionA] =
+    React.useState<XMLVersion>(initialVersionA);
+  const [currentVersionB, setCurrentVersionB] =
+    React.useState<XMLVersion>(initialVersionB);
   const [pagePairs, setPagePairs] = React.useState<PagePair[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -106,6 +125,12 @@ export function VersionCompare({
     setIsPortalReady(true);
     return () => setIsPortalReady(false);
   }, []);
+
+  // 当 props 中的版本变化时，重置内部状态
+  React.useEffect(() => {
+    setCurrentVersionA(initialVersionA);
+    setCurrentVersionB(initialVersionB);
+  }, [initialVersionA, initialVersionB]);
 
   const currentPair = React.useMemo(() => {
     if (!pagePairs.length) return null;
@@ -167,8 +192,8 @@ export function VersionCompare({
         };
 
         const [pagesA, pagesB] = await Promise.all([
-          loadPages(versionA),
-          loadPages(versionB),
+          loadPages(currentVersionA),
+          loadPages(currentVersionB),
         ]);
 
         if (cancelled) return;
@@ -196,10 +221,10 @@ export function VersionCompare({
         });
 
         const warnings: string[] = [];
-        if (!versionA.pages_svg) {
+        if (!currentVersionA.pages_svg) {
           warnings.push("版本 A 缺少多页 SVG 数据");
         }
-        if (!versionB.pages_svg) {
+        if (!currentVersionB.pages_svg) {
           warnings.push("版本 B 缺少多页 SVG 数据");
         }
         if (pagesA.length !== pagesB.length) {
@@ -242,7 +267,7 @@ export function VersionCompare({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, versionA, versionB]);
+  }, [isOpen, currentVersionA, currentVersionB]);
 
   const currentName = React.useMemo(() => {
     if (!currentPair) return "-";
@@ -268,7 +293,6 @@ export function VersionCompare({
 
   const handleWheel = React.useCallback(
     (event: React.WheelEvent<HTMLDivElement>) => {
-      if (!event.ctrlKey && !event.metaKey) return;
       event.preventDefault();
       if (event.deltaY < 0) {
         zoomIn();
@@ -280,7 +304,6 @@ export function VersionCompare({
   );
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (scale <= 1) return;
     setIsPanning(true);
     event.currentTarget.setPointerCapture(event.pointerId);
     pointerStart.current = {
@@ -323,6 +346,36 @@ export function VersionCompare({
     if (next === "smart") {
       setScale(1);
     }
+  };
+
+  // 处理版本选择
+  const handleVersionChange = (
+    target: "A" | "B",
+    versionId: React.Key | null,
+  ) => {
+    if (versionId === null) return;
+    const selectedVersion = versions.find((v) => v.id === String(versionId));
+    if (!selectedVersion) return;
+
+    if (target === "A") {
+      setCurrentVersionA(selectedVersion);
+    } else {
+      setCurrentVersionB(selectedVersion);
+    }
+
+    // 重置视图状态
+    setOffset({ x: 0, y: 0 });
+    setCurrentIndex(0);
+  };
+
+  // 交换版本 A 和版本 B
+  const handleSwapVersions = () => {
+    const tempA = currentVersionA;
+    setCurrentVersionA(currentVersionB);
+    setCurrentVersionB(tempA);
+    // 重置视图状态
+    setOffset({ x: 0, y: 0 });
+    setCurrentIndex(0);
   };
 
   // 键盘操作
@@ -373,38 +426,87 @@ export function VersionCompare({
       className="version-compare__overlay"
       role="dialog"
       aria-modal="true"
-      aria-label={`版本对比：${formatVersionMeta(versionA)} 对比 ${formatVersionMeta(versionB)}`}
+      aria-label={`版本对比：${formatVersionMeta(currentVersionA)} 对比 ${formatVersionMeta(currentVersionB)}`}
       onClick={onClose}
     >
       <Card.Root
         className="version-compare__container"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* 关闭按钮 - 独立定位在右上角 */}
+        <Button
+          className="version-compare__close-button"
+          variant="ghost"
+          isIconOnly
+          aria-label="关闭对比"
+          onPress={onClose}
+        >
+          <X className="w-4 h-4" />
+        </Button>
+
         <Card.Header className="version-compare__header">
-          <div className="version-compare__title-group">
-            <div>
-              <p className="version-compare__eyebrow">版本对比</p>
-              <h2>并排查看两个版本</h2>
-            </div>
-            <div className="version-compare__meta">
-              <div>
-                <span className="version-compare__label">版本 A</span>
-                <p>{formatVersionMeta(versionA)}</p>
-              </div>
-              <div>
-                <span className="version-compare__label">版本 B</span>
-                <p>{formatVersionMeta(versionB)}</p>
-              </div>
-            </div>
-          </div>
+          {/* 版本 A 选择器 */}
+          <Select
+            value={currentVersionA.id}
+            onChange={(key) => handleVersionChange("A", key)}
+            className="version-compare__version-select"
+          >
+            <Label>版本 A</Label>
+            <Select.Trigger>
+              <Select.Value />
+              <Select.Indicator />
+            </Select.Trigger>
+            <Select.Content>
+              <ListBox>
+                {versions.map((v) => (
+                  <ListBox.Item
+                    key={v.id}
+                    id={v.id}
+                    textValue={formatVersionLabel(v)}
+                  >
+                    {formatVersionLabel(v)}
+                  </ListBox.Item>
+                ))}
+              </ListBox>
+            </Select.Content>
+          </Select>
+
+          {/* 交换按钮 */}
           <Button
             variant="ghost"
             isIconOnly
-            aria-label="关闭对比"
-            onPress={onClose}
+            onPress={handleSwapVersions}
+            aria-label="交换版本"
+            className="version-compare__swap-button"
           >
-            <X className="w-4 h-4" />
+            <ArrowLeftRight className="w-5 h-5" />
           </Button>
+
+          {/* 版本 B 选择器 */}
+          <Select
+            value={currentVersionB.id}
+            onChange={(key) => handleVersionChange("B", key)}
+            className="version-compare__version-select"
+          >
+            <Label>版本 B</Label>
+            <Select.Trigger>
+              <Select.Value />
+              <Select.Indicator />
+            </Select.Trigger>
+            <Select.Content>
+              <ListBox>
+                {versions.map((v) => (
+                  <ListBox.Item
+                    key={v.id}
+                    id={v.id}
+                    textValue={formatVersionLabel(v)}
+                  >
+                    {formatVersionLabel(v)}
+                  </ListBox.Item>
+                ))}
+              </ListBox>
+            </Select.Content>
+          </Select>
         </Card.Header>
 
         {warning && (
@@ -810,8 +912,8 @@ export function VersionCompare({
 
           <div className="version-compare__summary">
             <p>
-              {versionA.semantic_version} vs {versionB.semantic_version} · 共{" "}
-              {pagePairs.length} 页
+              {currentVersionA.semantic_version} vs{" "}
+              {currentVersionB.semantic_version} · 共 {pagePairs.length} 页
             </p>
             <div className="version-compare__summary-pills">
               {layout === "smart" && currentSmartStats && (
