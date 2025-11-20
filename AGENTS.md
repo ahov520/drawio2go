@@ -167,15 +167,15 @@ Accordion, Alert, Avatar, Button, Card, Checkbox, CheckboxGroup, Chip, CloseButt
 
 #### HeroUI v3 vs v2 对比
 
-| 方面 | v2 | v3 |
-|------|----|----|
-| **动画** | Framer Motion | CSS + GPU 加速 |
-| **组件模式** | 单组件 + 多 props | 复合组件 |
-| **Variants** | 视觉化（solid, bordered, flat）| 语义化（primary, secondary, tertiary）|
-| **样式** | 部分支持 Tailwind v4 | 完全支持 Tailwind v4 |
-| **可访问性** | 优秀（React Aria）| 优秀（React Aria）|
-| **包体积** | 较大（Bundle）| 更小（树摇优化）|
-| **自定义难度** | 中等（基于 Props）| 简单（复合组件 + 原生 CSS）|
+| 方面           | v2                              | v3                                     |
+| -------------- | ------------------------------- | -------------------------------------- |
+| **动画**       | Framer Motion                   | CSS + GPU 加速                         |
+| **组件模式**   | 单组件 + 多 props               | 复合组件                               |
+| **Variants**   | 视觉化（solid, bordered, flat） | 语义化（primary, secondary, tertiary） |
+| **样式**       | 部分支持 Tailwind v4            | 完全支持 Tailwind v4                   |
+| **可访问性**   | 优秀（React Aria）              | 优秀（React Aria）                     |
+| **包体积**     | 较大（Bundle）                  | 更小（树摇优化）                       |
+| **自定义难度** | 中等（基于 Props）              | 简单（复合组件 + 原生 CSS）            |
 
 ### 2. Tailwind CSS v4 配置
 

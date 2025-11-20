@@ -296,12 +296,12 @@ abstract class StorageAdapter {
 
   // XMLVersions 表操作
   abstract getXMLVersion(
-    project_uuid: string,
-    version: string,
+    id: string,
+    projectUuid?: string,
   ): Promise<XMLVersion | null>;
   abstract getLatestXML(project_uuid: string): Promise<XMLVersion | null>;
   abstract saveXMLVersion(version: XMLVersion): Promise<void>;
-  abstract deleteXMLVersion(id: number): Promise<void>;
+  abstract deleteXMLVersion(id: string, projectUuid?: string): Promise<void>;
 
   // Conversations 表操作
   abstract getConversation(id: string): Promise<Conversation | null>;

@@ -75,6 +75,7 @@ export interface XMLVersion {
  */
 export interface XMLVersionSVGData {
   id: string;
+  project_uuid?: string;
   preview_svg?: Blob | Buffer | null;
   pages_svg?: Blob | Buffer | null;
 }

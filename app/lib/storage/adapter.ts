@@ -112,7 +112,7 @@ export interface StorageAdapter {
    * @param id 版本 ID
    * @returns XML 版本实体，不存在返回 null
    */
-  getXMLVersion(id: string): Promise<XMLVersion | null>;
+  getXMLVersion(id: string, projectUuid?: string): Promise<XMLVersion | null>;
 
   /**
    * 创建 XML 版本
@@ -132,7 +132,10 @@ export interface StorageAdapter {
    * 获取指定 XML 版本的 SVG 大字段
    * @param id 版本 ID
    */
-  getXMLVersionSVGData(id: string): Promise<XMLVersionSVGData | null>;
+  getXMLVersionSVGData(
+    id: string,
+    projectUuid?: string,
+  ): Promise<XMLVersionSVGData | null>;
 
   /**
    * 更新 XML 版本
@@ -148,7 +151,7 @@ export interface StorageAdapter {
    * 删除 XML 版本
    * @param id 版本 ID
    */
-  deleteXMLVersion(id: string): Promise<void>;
+  deleteXMLVersion(id: string, projectUuid?: string): Promise<void>;
 
   // ==================== Conversations ====================
 

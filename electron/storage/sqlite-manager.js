@@ -3,9 +3,17 @@ const { app } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { runSQLiteMigrations } = require("./migrations");
+const { v4: uuidv4 } = require("uuid");
+const {
+  createDefaultDiagramXml,
+} = require("../../app/lib/storage/default-diagram-xml");
+const {
+  DEFAULT_PROJECT_UUID,
+  WIP_VERSION,
+  ZERO_SOURCE_VERSION_ID,
+} = require("../../app/lib/storage/constants-shared");
 
 const SQLITE_DB_FILE = "drawio2go.db";
-const DEFAULT_PROJECT_UUID = "default";
 
 class SQLiteManager {
   constructor() {
@@ -35,6 +43,7 @@ class SQLiteManager {
 
       // 创建默认工程
       this._ensureDefaultProject();
+      this._ensureDefaultWipVersion();
 
       console.log("SQLite database initialized at:", dbPath);
     } catch (error) {
@@ -64,6 +73,52 @@ class SQLiteManager {
 
       console.log("Created default project");
     }
+  }
+
+  /**
+   * 确保默认 WIP 版本存在，避免首次连接时 AI 工具无可用版本
+   */
+  _ensureDefaultWipVersion() {
+    const countRow = this.db
+      .prepare("SELECT COUNT(1) as count FROM xml_versions")
+      .get();
+
+    if (countRow?.count > 0) {
+      return;
+    }
+
+    const defaultXml = createDefaultDiagramXml();
+    const now = Date.now();
+    const pageNamesJson = JSON.stringify(["Page-1"]);
+
+    this.db
+      .prepare(
+        `
+        INSERT INTO xml_versions
+        (id, project_uuid, semantic_version, name, description, source_version_id, is_keyframe, diff_chain_depth, xml_content, metadata, page_count, page_names, preview_svg, pages_svg, preview_image, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      )
+      .run(
+        uuidv4(),
+        DEFAULT_PROJECT_UUID,
+        WIP_VERSION,
+        null,
+        "默认工作版本",
+        ZERO_SOURCE_VERSION_ID,
+        1,
+        0,
+        defaultXml,
+        null,
+        1,
+        pageNamesJson,
+        null,
+        null,
+        null,
+        now,
+      );
+
+    console.log("Created default WIP XML version");
   }
 
   // ==================== Settings ====================
@@ -160,10 +215,35 @@ class SQLiteManager {
 
   // ==================== XMLVersions ====================
 
-  getXMLVersion(id) {
-    return (
-      this.db.prepare("SELECT * FROM xml_versions WHERE id = ?").get(id) || null
-    );
+  getXMLVersion(id, projectUuid) {
+    const stmt = projectUuid
+      ? this.db.prepare(
+          "SELECT * FROM xml_versions WHERE id = ? AND project_uuid = ?",
+        )
+      : this.db.prepare("SELECT * FROM xml_versions WHERE id = ?");
+
+    const version = projectUuid
+      ? stmt.get(id, projectUuid) || null
+      : stmt.get(id) || null;
+
+    if (!version && projectUuid) {
+      const existing = this.db
+        .prepare("SELECT project_uuid FROM xml_versions WHERE id = ?")
+        .get(id);
+      if (existing && existing.project_uuid !== projectUuid) {
+        const message =
+          `安全错误：版本 ${id} 不属于项目 ${projectUuid}，` +
+          `实际归属 ${existing.project_uuid}。`;
+        console.error("[SQLiteManager] 拒绝跨项目访问", {
+          versionId: id,
+          requestedProject: projectUuid,
+          versionProject: existing.project_uuid,
+        });
+        throw new Error(message);
+      }
+    }
+
+    return version || null;
   }
 
   createXMLVersion(version) {
@@ -234,14 +314,37 @@ class SQLiteManager {
       .all(projectUuid);
   }
 
-  getXMLVersionSVGData(id) {
-    return (
-      this.db
-        .prepare(
-          `SELECT id, preview_svg, pages_svg FROM xml_versions WHERE id = ?`,
+  getXMLVersionSVGData(id, projectUuid) {
+    const stmt = projectUuid
+      ? this.db.prepare(
+          `SELECT id, project_uuid, preview_svg, pages_svg FROM xml_versions WHERE id = ? AND project_uuid = ?`,
         )
-        .get(id) || null
-    );
+      : this.db.prepare(
+          `SELECT id, project_uuid, preview_svg, pages_svg FROM xml_versions WHERE id = ?`,
+        );
+
+    const result = projectUuid
+      ? stmt.get(id, projectUuid) || null
+      : stmt.get(id) || null;
+
+    if (!result && projectUuid) {
+      const existing = this.db
+        .prepare("SELECT project_uuid FROM xml_versions WHERE id = ?")
+        .get(id);
+      if (existing && existing.project_uuid !== projectUuid) {
+        const message =
+          `安全错误：版本 ${id} 的 SVG 数据属于项目 ${existing.project_uuid}，` +
+          `请求项目为 ${projectUuid}。`;
+        console.error("[SQLiteManager] 拒绝跨项目 SVG 访问", {
+          versionId: id,
+          requestedProject: projectUuid,
+          versionProject: existing.project_uuid,
+        });
+        throw new Error(message);
+      }
+    }
+
+    return result || null;
   }
 
   updateXMLVersion(id, updates = {}) {
@@ -335,8 +438,31 @@ class SQLiteManager {
       .run(...values, id);
   }
 
-  deleteXMLVersion(id) {
-    this.db.prepare("DELETE FROM xml_versions WHERE id = ?").run(id);
+  deleteXMLVersion(id, projectUuid) {
+    const version = this.getXMLVersion(id);
+    if (!version) return;
+
+    if (projectUuid && version.project_uuid !== projectUuid) {
+      const message = `安全错误：删除版本 ${id} 被拒绝，目标项目 ${projectUuid} 与版本归属 ${version.project_uuid} 不一致。`;
+      console.error("[SQLiteManager] 拒绝跨项目删除", {
+        versionId: id,
+        requestedProject: projectUuid,
+        versionProject: version.project_uuid,
+      });
+      throw new Error(message);
+    }
+
+    const stmt = projectUuid
+      ? this.db.prepare(
+          "DELETE FROM xml_versions WHERE id = ? AND project_uuid = ?",
+        )
+      : this.db.prepare("DELETE FROM xml_versions WHERE id = ?");
+
+    if (projectUuid) {
+      stmt.run(id, projectUuid);
+    } else {
+      stmt.run(id);
+    }
   }
 
   // ==================== Conversations ====================

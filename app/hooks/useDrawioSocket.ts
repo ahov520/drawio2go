@@ -21,7 +21,7 @@ import { useStorageXMLVersions } from "./useStorageXMLVersions";
 import { useCurrentProject } from "./useCurrentProject";
 import { useStorageSettings } from "./useStorageSettings";
 import { getNextSubVersion, isSubVersion } from "@/lib/version-utils";
-import { WIP_VERSION } from "@/app/lib/storage";
+import { DEFAULT_FIRST_VERSION, WIP_VERSION } from "@/app/lib/storage";
 
 /**
  * DrawIO Socket.IO Hook
@@ -67,13 +67,68 @@ export function useDrawioSocket(
             !isSubVersion(version.semantic_version) &&
             version.semantic_version !== WIP_VERSION,
         );
-        const latestMainVersion = mainVersions[0]?.semantic_version || "1.0.0";
-        const nextSubVersion = getNextSubVersion(versions, latestMainVersion);
-
         const timestamp = new Date().toLocaleString("zh-CN");
         const aiDescription = request.description || "AI 自动编辑";
         const sourceDescription = originalToolName ?? request.toolName;
         const versionDescription = `${sourceDescription} - ${aiDescription} (${timestamp})`;
+
+        let versionsForSub = versions;
+        let latestMainVersion = mainVersions[0]?.semantic_version;
+
+        // 没有主版本时，先创建首个主版本（关键帧），再创建子版本
+        if (!latestMainVersion) {
+          console.info(
+            "[自动版本] 未检测到主版本，正在创建首个主版本:",
+            DEFAULT_FIRST_VERSION,
+          );
+
+          await createHistoricalVersion(
+            project.uuid,
+            DEFAULT_FIRST_VERSION,
+            "AI 自动创建的首个主版本",
+            editorRef,
+            { onExportProgress: undefined },
+          );
+
+          const refreshedVersions = await getAllXMLVersions(project.uuid);
+          const refreshedMainVersions = refreshedVersions.filter(
+            (version) =>
+              !isSubVersion(version.semantic_version) &&
+              version.semantic_version !== WIP_VERSION,
+          );
+
+          if (refreshedMainVersions.length === 0) {
+            throw new Error(
+              "[自动版本] 首个主版本创建失败，无法生成子版本。请重试或手动创建主版本。",
+            );
+          }
+
+          versionsForSub = refreshedVersions;
+          latestMainVersion = refreshedMainVersions[0].semantic_version;
+          console.info(
+            "[自动版本] 首个主版本创建成功，准备创建子版本，父版本:",
+            latestMainVersion,
+          );
+        }
+
+        // 确保父版本实体存在
+        const hasParent = versionsForSub.some(
+          (v) => v.semantic_version === latestMainVersion,
+        );
+        if (!hasParent || !latestMainVersion) {
+          throw new Error(
+            "[自动版本] 找不到可用的父版本，无法生成子版本。请刷新版本列表或重试。",
+          );
+        }
+
+        const nextSubVersion = getNextSubVersion(
+          versionsForSub,
+          latestMainVersion,
+        );
+
+        console.info(
+          `[自动版本] 准备创建子版本: parent=${latestMainVersion}, next=${nextSubVersion}`,
+        );
 
         await createHistoricalVersion(
           project.uuid,

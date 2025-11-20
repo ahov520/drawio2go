@@ -19,12 +19,15 @@ import {
   DB_VERSION,
   DEFAULT_PROJECT_UUID,
   WIP_VERSION,
+  ZERO_SOURCE_VERSION_ID,
 } from "./constants";
 import {
   assertValidSvgBinary,
   resolvePageMetadataFromXml,
 } from "./page-metadata-validators";
 import { runIndexedDbMigrations } from "./migrations/indexeddb";
+import { v4 as uuidv4 } from "uuid";
+import { createDefaultDiagramXml } from "./default-diagram-xml";
 
 /**
  * IndexedDB 存储实现（Web 环境）
@@ -60,6 +63,7 @@ export class IndexedDBStorage implements StorageAdapter {
 
       // 确保默认工程存在
       await this._ensureDefaultProject();
+      await this._ensureDefaultWipVersion();
 
       console.log("IndexedDB initialized");
     } catch (error) {
@@ -98,6 +102,39 @@ export class IndexedDBStorage implements StorageAdapter {
       await db.put("projects", defaultProject);
       console.log("Created default project");
     }
+  }
+
+  /**
+   * 确保默认 WIP 版本存在（避免首次访问空库触发 AI 工具失败）
+   */
+  private async _ensureDefaultWipVersion(): Promise<void> {
+    const versions = await this.getXMLVersionsByProject(DEFAULT_PROJECT_UUID);
+    if (versions.length > 0) {
+      return;
+    }
+
+    const defaultXml = createDefaultDiagramXml();
+    const { pageCount, pageNamesJson } = resolvePageMetadataFromXml({
+      xmlContent: defaultXml,
+    });
+
+    await this.createXMLVersion({
+      id: uuidv4(),
+      project_uuid: DEFAULT_PROJECT_UUID,
+      semantic_version: WIP_VERSION,
+      source_version_id: ZERO_SOURCE_VERSION_ID,
+      is_keyframe: true,
+      diff_chain_depth: 0,
+      xml_content: defaultXml,
+      metadata: null,
+      page_count: pageCount,
+      page_names: pageNamesJson,
+      preview_svg: undefined,
+      pages_svg: undefined,
+      preview_image: undefined,
+      description: "默认工作版本",
+      name: undefined,
+    });
   }
 
   // ==================== Settings ====================
@@ -216,10 +253,30 @@ export class IndexedDBStorage implements StorageAdapter {
 
   // ==================== XMLVersions ====================
 
-  async getXMLVersion(id: string): Promise<XMLVersion | null> {
+  async getXMLVersion(
+    id: string,
+    projectUuid?: string,
+  ): Promise<XMLVersion | null> {
     const db = await this.ensureDB();
     const version = await db.get("xml_versions", id);
-    return version || null;
+
+    if (!version) {
+      return null;
+    }
+
+    if (projectUuid && version.project_uuid !== projectUuid) {
+      const message =
+        `安全错误：版本 ${id} 不属于当前项目 ${projectUuid}。` +
+        `该版本属于项目 ${version.project_uuid}，已拒绝访问。`;
+      console.error("[IndexedDBStorage] 拒绝跨项目访问", {
+        versionId: id,
+        requestedProject: projectUuid,
+        versionProject: version.project_uuid,
+      });
+      throw new Error(message);
+    }
+
+    return version;
   }
 
   async createXMLVersion(version: CreateXMLVersionInput): Promise<XMLVersion> {
@@ -266,15 +323,31 @@ export class IndexedDBStorage implements StorageAdapter {
       .sort((a, b) => b.created_at - a.created_at);
   }
 
-  async getXMLVersionSVGData(id: string): Promise<XMLVersionSVGData | null> {
+  async getXMLVersionSVGData(
+    id: string,
+    projectUuid?: string,
+  ): Promise<XMLVersionSVGData | null> {
     const db = await this.ensureDB();
     const version = await db.get("xml_versions", id);
     if (!version) {
       return null;
     }
 
+    if (projectUuid && version.project_uuid !== projectUuid) {
+      const message =
+        `安全错误：版本 ${id} 不属于当前项目 ${projectUuid}。` +
+        `该版本属于项目 ${version.project_uuid}，已拒绝访问 SVG 数据。`;
+      console.error("[IndexedDBStorage] 拒绝跨项目 SVG 访问", {
+        versionId: id,
+        requestedProject: projectUuid,
+        versionProject: version.project_uuid,
+      });
+      throw new Error(message);
+    }
+
     return {
       id: version.id,
+      project_uuid: version.project_uuid,
       preview_svg: version.preview_svg ?? null,
       pages_svg: version.pages_svg ?? null,
     };
@@ -320,8 +393,23 @@ export class IndexedDBStorage implements StorageAdapter {
     await db.put("xml_versions", updated);
   }
 
-  async deleteXMLVersion(id: string): Promise<void> {
+  async deleteXMLVersion(id: string, projectUuid?: string): Promise<void> {
     const db = await this.ensureDB();
+
+    const existing = await db.get("xml_versions", id);
+    if (!existing) {
+      return;
+    }
+
+    if (projectUuid && existing.project_uuid !== projectUuid) {
+      const message = `安全错误：删除版本 ${id} 被拒绝，目标项目 ${projectUuid} 与版本归属 ${existing.project_uuid} 不一致。`;
+      console.error("[IndexedDBStorage] 拒绝跨项目删除", {
+        versionId: id,
+        requestedProject: projectUuid,
+        versionProject: existing.project_uuid,
+      });
+      throw new Error(message);
+    }
 
     // 删除 XML 版本（消息中的 xml_version_id 会被设置为 null）
     const tx = db.transaction(["xml_versions", "messages"], "readwrite");
