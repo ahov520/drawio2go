@@ -412,6 +412,9 @@ export function useStorageXMLVersions() {
           );
         }
 
+        // 归一化（含 base64 解码与压缩内容解压），确保版本链使用统一形态
+        const normalizedWipXml = normalizeDiagramXml(wipXml);
+
         // 获取最后一个历史版本作为 source_version
         const historicalVersions = versions
           .filter((v) => v.semantic_version !== WIP_VERSION)
@@ -439,7 +442,7 @@ export function useStorageXMLVersions() {
 
         // 计算新版本的存储策略（关键帧 or Diff）
         const payload = await computeVersionPayload({
-          newXml: wipXml,
+          newXml: normalizedWipXml,
           semanticVersion,
           baseVersion,
           resolveVersionById: (id) => storage.getXMLVersion(id, projectUuid),
@@ -450,7 +453,7 @@ export function useStorageXMLVersions() {
         }
 
         // 默认的页面元数据（从 XML 解析）
-        const pageMetadata = buildPageMetadataFromXml(wipXml);
+        const pageMetadata = buildPageMetadataFromXml(normalizedWipXml);
 
         // 导出 SVG（可选，失败则降级为仅 XML 存储）
         let previewSvg: Blob | undefined;
@@ -462,7 +465,7 @@ export function useStorageXMLVersions() {
           try {
             const svgPages = await exportAllPagesSVG(
               editorRef.current,
-              wipXml,
+              normalizedWipXml,
               {
                 onProgress: options?.onExportProgress,
               },

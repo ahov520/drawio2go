@@ -6,6 +6,7 @@ import {
   WIP_VERSION,
 } from "./constants";
 import type { XMLVersion } from "./types";
+import { normalizeDiagramXml } from "../drawio-xml-utils";
 
 type DiffEngine = InstanceType<typeof diff_match_patch>;
 
@@ -134,8 +135,9 @@ async function resolveMaterializedXml(
   }
 
   if (version.is_keyframe) {
-    cache.set(version.id, version.xml_content);
-    return version.xml_content;
+    const normalized = normalizeDiagramXml(version.xml_content);
+    cache.set(version.id, normalized);
+    return normalized;
   }
 
   if (version.source_version_id === ZERO_SOURCE_VERSION_ID) {
@@ -180,6 +182,7 @@ async function resolveMaterializedXml(
     });
   }
 
-  cache.set(version.id, result);
-  return result;
+  const normalized = normalizeDiagramXml(result);
+  cache.set(version.id, normalized);
+  return normalized;
 }

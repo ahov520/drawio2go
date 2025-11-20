@@ -1,9 +1,20 @@
 import { describe, expect, it } from "vitest";
+import { deflateRaw } from "pako";
 import { normalizeDiagramXml } from "../drawio-xml-utils";
 
 const SAMPLE_XML = `<mxfile><diagram id="1">Hello</diagram></mxfile>`;
 const BASE64_XML = Buffer.from(SAMPLE_XML, "utf-8").toString("base64");
 const DATA_URI_XML = `data:image/svg+xml;base64,${BASE64_XML}`;
+const GRAPH_MODEL_XML =
+  '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/></root></mxGraphModel>';
+
+const COMPRESSED_DIAGRAM_XML = (() => {
+  const compressed = deflateRaw(encodeURIComponent(GRAPH_MODEL_XML), {
+    to: "uint8array",
+  });
+  const base64 = Buffer.from(compressed).toString("base64");
+  return `<mxfile><diagram id="demo" name="Page-1" compressed="true">${base64}</diagram></mxfile>`;
+})();
 
 describe("normalizeDiagramXml", () => {
   it("直接返回纯 XML", () => {
@@ -26,5 +37,11 @@ describe("normalizeDiagramXml", () => {
     expect(() => normalizeDiagramXml("not-xml-or-base64")).toThrow(
       "无法识别的 XML 格式",
     );
+  });
+
+  it("解压 DrawIO 压缩的 diagram 内容并移除 compressed 属性", () => {
+    const result = normalizeDiagramXml(COMPRESSED_DIAGRAM_XML);
+    expect(result).toContain(GRAPH_MODEL_XML);
+    expect(result).not.toMatch(/compressed=/i);
   });
 });
