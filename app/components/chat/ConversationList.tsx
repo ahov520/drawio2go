@@ -5,6 +5,7 @@ import { Eye, MessagesSquare } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import type { Conversation } from "@/app/lib/storage";
+import { formatConversationDate } from "@/app/lib/format-utils";
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -88,9 +89,7 @@ export default function ConversationList({
                   <span className="history-card__dot" aria-hidden>
                     •
                   </span>
-                  <span>
-                    创建 {new Date(conv.created_at).toLocaleDateString()}
-                  </span>
+                  <span>创建 {formatConversationDate(conv.created_at, "date")}</span>
                 </div>
               </div>
             </div>
