@@ -8,6 +8,7 @@ import type {
   Message,
   CreateMessageInput,
 } from "@/app/lib/storage";
+import { runStorageTask } from "@/app/lib/utils";
 
 /**
  * 对话管理 Hook
@@ -30,25 +31,18 @@ export function useStorageConversations() {
       title: string = "New Chat",
       projectUuid: string = DEFAULT_PROJECT_UUID,
     ): Promise<Conversation> => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const storage = await getStorage();
-        const conversation = await storage.createConversation({
-          id: uuidv4(),
-          project_uuid: projectUuid,
-          title,
-        });
-
-        setLoading(false);
-        return conversation;
-      } catch (err) {
-        const error = err as Error;
-        setError(error);
-        setLoading(false);
-        throw error;
-      }
+      return runStorageTask(
+        async () => {
+          const storage = await getStorage();
+          const conversation = await storage.createConversation({
+            id: uuidv4(),
+            project_uuid: projectUuid,
+            title,
+          });
+          return conversation;
+        },
+        { setLoading, setError },
+      );
     },
     [],
   );
@@ -58,20 +52,14 @@ export function useStorageConversations() {
    */
   const getConversation = useCallback(
     async (id: string): Promise<Conversation | null> => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const storage = await getStorage();
-        const conversation = await storage.getConversation(id);
-        setLoading(false);
-        return conversation;
-      } catch (err) {
-        const error = err as Error;
-        setError(error);
-        setLoading(false);
-        throw error;
-      }
+      return runStorageTask(
+        async () => {
+          const storage = await getStorage();
+          const conversation = await storage.getConversation(id);
+          return conversation;
+        },
+        { setLoading, setError },
+      );
     },
     [],
   );
@@ -84,19 +72,13 @@ export function useStorageConversations() {
       id: string,
       updates: Partial<Pick<Conversation, "title">>,
     ): Promise<void> => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const storage = await getStorage();
-        await storage.updateConversation(id, updates);
-        setLoading(false);
-      } catch (err) {
-        const error = err as Error;
-        setError(error);
-        setLoading(false);
-        throw error;
-      }
+      await runStorageTask(
+        async () => {
+          const storage = await getStorage();
+          await storage.updateConversation(id, updates);
+        },
+        { setLoading, setError },
+      );
     },
     [],
   );
@@ -105,19 +87,13 @@ export function useStorageConversations() {
    * 删除对话
    */
   const deleteConversation = useCallback(async (id: string): Promise<void> => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const storage = await getStorage();
-      await storage.deleteConversation(id);
-      setLoading(false);
-    } catch (err) {
-      const error = err as Error;
-      setError(error);
-      setLoading(false);
-      throw error;
-    }
+    await runStorageTask(
+      async () => {
+        const storage = await getStorage();
+        await storage.deleteConversation(id);
+      },
+      { setLoading, setError },
+    );
   }, []);
 
   /**
@@ -126,19 +102,13 @@ export function useStorageConversations() {
   const batchDeleteConversations = useCallback(
     async (ids: string[]): Promise<void> => {
       if (!ids || ids.length === 0) return;
-      setLoading(true);
-      setError(null);
-
-      try {
-        const storage = await getStorage();
-        await storage.batchDeleteConversations(ids);
-        setLoading(false);
-      } catch (err) {
-        const error = err as Error;
-        setError(error);
-        setLoading(false);
-        throw error;
-      }
+      await runStorageTask(
+        async () => {
+          const storage = await getStorage();
+          await storage.batchDeleteConversations(ids);
+        },
+        { setLoading, setError },
+      );
     },
     [],
   );
@@ -152,21 +122,15 @@ export function useStorageConversations() {
     async (
       projectUuid: string = DEFAULT_PROJECT_UUID,
     ): Promise<Conversation[]> => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const storage = await getStorage();
-        const conversations =
-          await storage.getConversationsByProject(projectUuid);
-        setLoading(false);
-        return conversations;
-      } catch (err) {
-        const error = err as Error;
-        setError(error);
-        setLoading(false);
-        throw error;
-      }
+      return runStorageTask(
+        async () => {
+          const storage = await getStorage();
+          const conversations =
+            await storage.getConversationsByProject(projectUuid);
+          return conversations;
+        },
+        { setLoading, setError },
+      );
     },
     [],
   );
@@ -176,21 +140,15 @@ export function useStorageConversations() {
    */
   const getMessages = useCallback(
     async (conversationId: string): Promise<Message[]> => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const storage = await getStorage();
-        const messages =
-          await storage.getMessagesByConversation(conversationId);
-        setLoading(false);
-        return messages;
-      } catch (err) {
-        const error = err as Error;
-        setError(error);
-        setLoading(false);
-        throw error;
-      }
+      return runStorageTask(
+        async () => {
+          const storage = await getStorage();
+          const messages =
+            await storage.getMessagesByConversation(conversationId);
+          return messages;
+        },
+        { setLoading, setError },
+      );
     },
     [],
   );
@@ -206,30 +164,24 @@ export function useStorageConversations() {
       toolInvocations?: unknown,
       modelName?: string | null,
     ): Promise<Message> => {
-      setLoading(true);
-      setError(null);
+      return runStorageTask(
+        async () => {
+          const storage = await getStorage();
+          const message = await storage.createMessage({
+            id: uuidv4(),
+            conversation_id: conversationId,
+            role,
+            content,
+            tool_invocations: toolInvocations
+              ? JSON.stringify(toolInvocations)
+              : undefined,
+            model_name: modelName ?? null,
+          });
 
-      try {
-        const storage = await getStorage();
-        const message = await storage.createMessage({
-          id: uuidv4(),
-          conversation_id: conversationId,
-          role,
-          content,
-          tool_invocations: toolInvocations
-            ? JSON.stringify(toolInvocations)
-            : undefined,
-          model_name: modelName ?? null,
-        });
-
-        setLoading(false);
-        return message;
-      } catch (err) {
-        const error = err as Error;
-        setError(error);
-        setLoading(false);
-        throw error;
-      }
+          return message;
+        },
+        { setLoading, setError },
+      );
     },
     [],
   );
@@ -239,20 +191,14 @@ export function useStorageConversations() {
    */
   const addMessages = useCallback(
     async (messages: CreateMessageInput[]): Promise<Message[]> => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const storage = await getStorage();
-        const created = await storage.createMessages(messages);
-        setLoading(false);
-        return created;
-      } catch (err) {
-        const error = err as Error;
-        setError(error);
-        setLoading(false);
-        throw error;
-      }
+      return runStorageTask(
+        async () => {
+          const storage = await getStorage();
+          const created = await storage.createMessages(messages);
+          return created;
+        },
+        { setLoading, setError },
+      );
     },
     [],
   );
@@ -262,20 +208,14 @@ export function useStorageConversations() {
    */
   const exportConversations = useCallback(
     async (ids: string[]): Promise<Blob> => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const storage = await getStorage();
-        const blob = await storage.exportConversations(ids);
-        setLoading(false);
-        return blob;
-      } catch (err) {
-        const error = err as Error;
-        setError(error);
-        setLoading(false);
-        throw error;
-      }
+      return runStorageTask(
+        async () => {
+          const storage = await getStorage();
+          const blob = await storage.exportConversations(ids);
+          return blob;
+        },
+        { setLoading, setError },
+      );
     },
     [],
   );

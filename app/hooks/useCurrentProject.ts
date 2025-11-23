@@ -13,27 +13,7 @@ import {
   persistCurrentProjectId,
 } from "@/app/lib/storage/current-project";
 import type { Project, CreateXMLVersionInput } from "@/app/lib/storage";
-
-/**
- * 为 Promise 添加超时保护
- * @param promise 原始 Promise
- * @param timeoutMs 超时时间（毫秒）
- * @param timeoutMessage 超时错误消息
- */
-function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  timeoutMessage: string,
-): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) => {
-      setTimeout(() => {
-        reject(new Error(timeoutMessage));
-      }, timeoutMs);
-    }),
-  ]);
-}
+import { withTimeout } from "@/app/lib/utils";
 
 /**
  * 当前工程管理 Hook
