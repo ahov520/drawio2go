@@ -20,12 +20,14 @@
 **文件**: `app/components/TopBar.tsx`
 
 **需要提取的文本** (~15 条):
+
 - 选区信息相关文本
 - 加载/保存按钮文本
 - 侧边栏展开/折叠 Aria 标签
 - 其他提示文本
 
 **提取方法**:
+
 1. 阅读 `TopBar.tsx` 组件代码
 2. 识别所有硬编码的中文字符串
 3. 为每个字符串设计合理的翻译键名
@@ -33,10 +35,12 @@
 ### 3.2 创建翻译资源
 
 **更新文件**:
+
 - `locales/zh-CN/topbar.json`
 - `locales/en-US/topbar.json`
 
 **翻译结构示例**:
+
 ```json
 {
   "selectionLabel": {
@@ -55,6 +59,7 @@
 ```
 
 **命名规范**:
+
 - 使用 camelCase
 - 按功能分组（selectionLabel, buttons, aria）
 - 嵌套层级不超过 3 层
@@ -65,25 +70,29 @@
 **改造步骤**:
 
 1. 添加客户端组件标记（如果没有）:
+
 ```tsx
 "use client";
 ```
 
 2. 导入 Hook:
+
 ```tsx
 import { useTranslation } from "@/app/i18n/hooks";
 ```
 
 3. 在组件内使用 Hook:
+
 ```tsx
 export default function TopBar() {
-  const { t } = useTranslation('topbar');
+  const { t } = useTranslation("topbar");
 
   // ...
 }
 ```
 
 4. 替换硬编码文本:
+
 ```tsx
 // 改造前
 <p>暂无选区信息</p>
@@ -93,6 +102,7 @@ export default function TopBar() {
 ```
 
 5. 处理插值变量:
+
 ```tsx
 // 改造前
 <p>已选择 {count} 个对象</p>
@@ -102,6 +112,7 @@ export default function TopBar() {
 ```
 
 6. 更新 Aria 标签:
+
 ```tsx
 // 改造前
 <Button aria-label="折叠侧边栏">
@@ -113,6 +124,7 @@ export default function TopBar() {
 ### 3.4 验证功能
 
 **测试场景**:
+
 1. 启动应用 (`pnpm run dev`)
 2. 打开 TopBar 组件
 3. 切换语言（通过 M2 创建的语言切换器）
@@ -127,6 +139,7 @@ export default function TopBar() {
 ## 翻译资源完整示例
 
 **`locales/zh-CN/topbar.json`**:
+
 ```json
 {
   "selectionLabel": {
@@ -153,6 +166,7 @@ export default function TopBar() {
 ```
 
 **`locales/en-US/topbar.json`**:
+
 ```json
 {
   "selectionLabel": {
@@ -198,13 +212,21 @@ export default function TopBar() {
 
 **Q: 如何处理动态内容（如文件名）？**
 A: 动态内容不翻译，只翻译周围的文本：
+
 ```tsx
 // 正确
-{t('fileLoaded', { fileName: file.name })}
+{
+  t("fileLoaded", { fileName: file.name });
+}
 // 翻译: "已加载文件 {{fileName}}"
 
 // 错误
-{file.name} {t('loaded')}
+{
+  file.name;
+}
+{
+  t("loaded");
+}
 ```
 
 **Q: Aria 标签应该放在哪个命名空间？**

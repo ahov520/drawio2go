@@ -19,6 +19,7 @@
 ### 7.1 提取中文文本
 
 **涉及文件**:
+
 - `app/components/VersionSidebar.tsx`
 - `app/components/version/VersionCard.tsx`
 - `app/components/version/VersionTimeline.tsx`
@@ -27,6 +28,7 @@
 - `app/components/version/PageSVGViewer.tsx`
 
 **需要提取的文本** (~80 条):
+
 - 版本信息标签：版本号、创建时间、描述等
 - 操作按钮：恢复、删除、导出、对比等
 - 时间线标签：今天、昨天、本周、更早等
@@ -37,12 +39,14 @@
 ### 7.2 创建翻译资源
 
 **更新文件**:
+
 - `locales/zh-CN/version.json`
 - `locales/en-US/version.json`
 - `locales/zh-CN/validation.json`（版本验证部分）
 - `locales/en-US/validation.json`
 
 **翻译结构示例**:
+
 ```json
 {
   "sidebar": {
@@ -165,6 +169,7 @@
 ```
 
 **`validation.json` 版本验证部分**:
+
 ```json
 {
   "version": {
@@ -187,17 +192,19 @@
 **改造要点**:
 
 1. 导入 Hook 和格式化工具:
+
 ```tsx
 import { useTranslation } from "@/app/i18n/hooks";
 import { formatVersionTimestamp } from "@/app/lib/format-utils";
 
 export default function VersionCard({ version }) {
-  const { t, i18n } = useTranslation('version');
+  const { t, i18n } = useTranslation("version");
   // ...
 }
 ```
 
 2. 替换版本信息显示:
+
 ```tsx
 <h4>{t('card.version', { number: version.number })}</h4>
 <p>{t('card.createdAt')}: {formatVersionTimestamp(version.timestamp, 'full', i18n.language)}</p>
@@ -205,16 +212,18 @@ export default function VersionCard({ version }) {
 ```
 
 3. 替换按钮:
+
 ```tsx
 <Button onPress={handleRestore}>
-  {isRestoring ? t('card.actions.restoring') : t('card.buttons.restore')}
+  {isRestoring ? t("card.actions.restoring") : t("card.buttons.restore")}
 </Button>
 ```
 
 4. 确认对话框:
+
 ```tsx
 const handleDelete = () => {
-  if (confirm(t('card.confirmDelete', { number: version.number }))) {
+  if (confirm(t("card.confirmDelete", { number: version.number }))) {
     deleteVersion(version.id);
   }
 };
@@ -227,26 +236,28 @@ const handleDelete = () => {
 **改造要点**:
 
 1. 时间分组逻辑:
+
 ```tsx
-const { t } = useTranslation('version');
+const { t } = useTranslation("version");
 
 const getTimeGroup = (timestamp: number): string => {
   const now = Date.now();
   const diff = now - timestamp;
   const day = 24 * 60 * 60 * 1000;
 
-  if (diff < day) return t('timeline.groups.today');
-  if (diff < 2 * day) return t('timeline.groups.yesterday');
-  if (diff < 7 * day) return t('timeline.groups.thisWeek');
-  if (diff < 14 * day) return t('timeline.groups.lastWeek');
-  if (diff < 30 * day) return t('timeline.groups.thisMonth');
-  return t('timeline.groups.older');
+  if (diff < day) return t("timeline.groups.today");
+  if (diff < 2 * day) return t("timeline.groups.yesterday");
+  if (diff < 7 * day) return t("timeline.groups.thisWeek");
+  if (diff < 14 * day) return t("timeline.groups.lastWeek");
+  if (diff < 30 * day) return t("timeline.groups.thisMonth");
+  return t("timeline.groups.older");
 };
 ```
 
 2. 总数显示:
+
 ```tsx
-<p>{t('timeline.total', { count: versions.length })}</p>
+<p>{t("timeline.total", { count: versions.length })}</p>
 ```
 
 ### 7.5 改造 VersionCompare
@@ -256,28 +267,34 @@ const getTimeGroup = (timestamp: number): string => {
 **改造要点**:
 
 1. 布局切换:
+
 ```tsx
-const { t } = useTranslation('version');
+const { t } = useTranslation("version");
 
 <Select
-  label={t('compare.layout.label')}
+  label={t("compare.layout.label")}
   selectedKey={layout}
   onSelectionChange={setLayout}
 >
-  <SelectItem key="side-by-side">{t('compare.layout.sideBySide')}</SelectItem>
-  <SelectItem key="overlay">{t('compare.layout.overlay')}</SelectItem>
-  <SelectItem key="swipe">{t('compare.layout.swipe')}</SelectItem>
-</Select>
+  <SelectItem key="side-by-side">{t("compare.layout.sideBySide")}</SelectItem>
+  <SelectItem key="overlay">{t("compare.layout.overlay")}</SelectItem>
+  <SelectItem key="swipe">{t("compare.layout.swipe")}</SelectItem>
+</Select>;
 ```
 
 2. 差异统计:
+
 ```tsx
 <div>
-  <h4>{t('compare.diff.title')}</h4>
-  {diff.added > 0 && <p>{t('compare.diff.added', { count: diff.added })}</p>}
-  {diff.removed > 0 && <p>{t('compare.diff.removed', { count: diff.removed })}</p>}
-  {diff.modified > 0 && <p>{t('compare.diff.modified', { count: diff.modified })}</p>}
-  {diff.total === 0 && <p>{t('compare.diff.noDiff')}</p>}
+  <h4>{t("compare.diff.title")}</h4>
+  {diff.added > 0 && <p>{t("compare.diff.added", { count: diff.added })}</p>}
+  {diff.removed > 0 && (
+    <p>{t("compare.diff.removed", { count: diff.removed })}</p>
+  )}
+  {diff.modified > 0 && (
+    <p>{t("compare.diff.modified", { count: diff.modified })}</p>
+  )}
+  {diff.total === 0 && <p>{t("compare.diff.noDiff")}</p>}
 </div>
 ```
 
@@ -288,37 +305,40 @@ const { t } = useTranslation('version');
 **改造要点**:
 
 1. 表单标签:
+
 ```tsx
-const { t } = useTranslation('version');
-const { t: tValidation } = useTranslation('validation');
+const { t } = useTranslation("version");
+const { t: tValidation } = useTranslation("validation");
 
 <TextField>
-  <Label>{t('createDialog.form.versionNumber.label')}</Label>
-  <Input placeholder={t('createDialog.form.versionNumber.placeholder')} />
-  <Description>{t('createDialog.form.versionNumber.description')}</Description>
-</TextField>
+  <Label>{t("createDialog.form.versionNumber.label")}</Label>
+  <Input placeholder={t("createDialog.form.versionNumber.placeholder")} />
+  <Description>{t("createDialog.form.versionNumber.description")}</Description>
+</TextField>;
 ```
 
 2. 验证消息:
+
 ```tsx
 const validateVersionNumber = (value: string) => {
   if (!value) {
-    return tValidation('version.numberRequired');
+    return tValidation("version.numberRequired");
   }
   if (!/^\d+\.\d+\.\d+(\.\d+)?$/.test(value)) {
-    return tValidation('version.formatInvalid');
+    return tValidation("version.formatInvalid");
   }
   return null;
 };
 ```
 
 3. 成功/错误提示:
+
 ```tsx
 try {
   await createVersion(versionData);
-  toast.success(t('createDialog.success', { version: versionData.number }));
+  toast.success(t("createDialog.success", { version: versionData.number }));
 } catch (error) {
-  toast.error(t('createDialog.error', { message: error.message }));
+  toast.error(t("createDialog.error", { message: error.message }));
 }
 ```
 
@@ -333,10 +353,10 @@ try {
  * 获取当前界面语言
  */
 function getCurrentLocale(): string {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('drawio2go-language') || 'en-US';
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("drawio2go-language") || "en-US";
   }
-  return 'en-US';
+  return "en-US";
 }
 
 /**
@@ -351,9 +371,16 @@ export function formatVersionTimestamp(
   locale?: string,
 ): string {
   const formatLocale = locale || getCurrentLocale();
-  const options: Intl.DateTimeFormatOptions = mode === "full"
-    ? { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }
-    : { year: 'numeric', month: '2-digit', day: '2-digit' };
+  const options: Intl.DateTimeFormatOptions =
+    mode === "full"
+      ? {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        }
+      : { year: "numeric", month: "2-digit", day: "2-digit" };
 
   return new Date(timestamp).toLocaleString(formatLocale, options);
 }
@@ -362,6 +389,7 @@ export function formatVersionTimestamp(
 ### 7.8 验证功能
 
 **测试场景**:
+
 1. 打开版本管理侧边栏
 2. 切换到英语
 3. 验证：
@@ -387,6 +415,7 @@ export function formatVersionTimestamp(
 详见上述 7.2 节的完整 JSON 示例。
 
 英文版本对应翻译（部分）：
+
 ```json
 {
   "card": {

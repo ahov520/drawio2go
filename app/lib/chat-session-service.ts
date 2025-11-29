@@ -309,10 +309,10 @@ function extractToolFields(part: Record<string, unknown>): {
     (source as { rawInput?: unknown }).rawInput ??
     (source !== part
       ? (part.input ??
-          (part as { args?: unknown }).args ??
-          (part as { parameters?: unknown }).parameters ??
-          (part as { input_arguments?: unknown }).input_arguments ??
-          (part as { rawInput?: unknown }).rawInput)
+        (part as { args?: unknown }).args ??
+        (part as { parameters?: unknown }).parameters ??
+        (part as { input_arguments?: unknown }).input_arguments ??
+        (part as { rawInput?: unknown }).rawInput)
       : undefined);
 
   const output =
@@ -321,8 +321,8 @@ function extractToolFields(part: Record<string, unknown>): {
     (source as { data?: unknown }).data ??
     (source !== part
       ? (part.output ??
-          (part as { result?: unknown }).result ??
-          (part as { data?: unknown }).data)
+        (part as { result?: unknown }).result ??
+        (part as { data?: unknown }).data)
       : undefined);
 
   const errorTextCandidates: unknown[] = [
@@ -362,8 +362,8 @@ function extractToolFields(part: Record<string, unknown>): {
     (source as { callProviderMetadata?: unknown }).callProviderMetadata ??
     (source as { metadata?: unknown }).metadata ??
     (source !== part
-      ? (part as { callProviderMetadata?: unknown }).callProviderMetadata ??
-        (part as { metadata?: unknown }).metadata
+      ? ((part as { callProviderMetadata?: unknown }).callProviderMetadata ??
+        (part as { metadata?: unknown }).metadata)
       : undefined);
 
   const preliminary =

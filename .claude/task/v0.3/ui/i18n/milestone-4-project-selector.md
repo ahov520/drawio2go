@@ -21,6 +21,7 @@
 **文件**: `app/components/ProjectSelector.tsx`
 
 **需要提取的文本** (~30 条):
+
 - 表单标签（项目名称、描述等）
 - 按钮文本（创建、取消、选择等）
 - 占位符文本
@@ -29,6 +30,7 @@
 - 帮助文本
 
 **文本分类**:
+
 1. **表单相关**: 标签、占位符、描述
 2. **按钮操作**: 创建、取消、选择、删除
 3. **空状态**: 无项目提示
@@ -37,6 +39,7 @@
 ### 4.2 创建翻译资源
 
 **更新文件**:
+
 - `locales/zh-CN/project.json`
 - `locales/en-US/project.json`
 - `locales/zh-CN/validation.json`（验证消息）
@@ -45,6 +48,7 @@
 **翻译结构示例**:
 
 **`project.json`**:
+
 ```json
 {
   "selector": {
@@ -83,6 +87,7 @@
 ```
 
 **`validation.json`** (项目验证部分):
+
 ```json
 {
   "project": {
@@ -100,21 +105,23 @@
 **改造步骤**:
 
 1. 导入多个命名空间的 Hook:
+
 ```tsx
 import { useTranslation } from "@/app/i18n/hooks";
 
 export default function ProjectSelector() {
-  const { t: tProject } = useTranslation('project');
-  const { t: tValidation } = useTranslation('validation');
+  const { t: tProject } = useTranslation("project");
+  const { t: tValidation } = useTranslation("validation");
 
   // 或者使用单个 Hook 引用多个命名空间
-  const { t } = useTranslation('project');
+  const { t } = useTranslation("project");
 
   // 引用其他命名空间: t('validation:project.nameRequired')
 }
 ```
 
 2. 替换表单标签:
+
 ```tsx
 // 改造前
 <Label>项目名称</Label>
@@ -128,6 +135,7 @@ export default function ProjectSelector() {
 ```
 
 3. 替换按钮文本:
+
 ```tsx
 // 改造前
 <Button>{isCreating ? '正在创建...' : '创建'}</Button>
@@ -137,6 +145,7 @@ export default function ProjectSelector() {
 ```
 
 4. 替换验证消息:
+
 ```tsx
 // 改造前
 if (!name) {
@@ -145,11 +154,12 @@ if (!name) {
 
 // 改造后
 if (!name) {
-  return t('validation:project.nameRequired');
+  return t("validation:project.nameRequired");
 }
 ```
 
 5. 替换空状态:
+
 ```tsx
 // 改造前
 <div>
@@ -172,15 +182,19 @@ if (!name) {
 
 ```tsx
 // 示例：使用 Zod
-import { z } from 'zod';
+import { z } from "zod";
 
 const projectSchema = z.object({
-  name: z.string()
-    .min(1, { message: t('validation:project.nameRequired') })
-    .min(3, { message: t('validation:project.nameMinLength', { min: 3 }) })
-    .max(50, { message: t('validation:project.nameMaxLength', { max: 50 }) }),
-  description: z.string()
-    .max(200, { message: t('validation:project.descriptionMaxLength', { max: 200 }) })
+  name: z
+    .string()
+    .min(1, { message: t("validation:project.nameRequired") })
+    .min(3, { message: t("validation:project.nameMinLength", { min: 3 }) })
+    .max(50, { message: t("validation:project.nameMaxLength", { max: 50 }) }),
+  description: z
+    .string()
+    .max(200, {
+      message: t("validation:project.descriptionMaxLength", { max: 200 }),
+    })
     .optional(),
 });
 ```
@@ -188,6 +202,7 @@ const projectSchema = z.object({
 ### 4.5 验证功能
 
 **测试场景**:
+
 1. 打开项目选择器
 2. 切换到英语
 3. 验证：
@@ -208,6 +223,7 @@ const projectSchema = z.object({
 ## 翻译资源完整示例
 
 **`locales/zh-CN/project.json`**:
+
 ```json
 {
   "selector": {
@@ -255,6 +271,7 @@ const projectSchema = z.object({
 ```
 
 **`locales/en-US/project.json`**:
+
 ```json
 {
   "selector": {
@@ -302,6 +319,7 @@ const projectSchema = z.object({
 ```
 
 **`locales/zh-CN/validation.json`**:
+
 ```json
 {
   "project": {
@@ -316,6 +334,7 @@ const projectSchema = z.object({
 ```
 
 **`locales/en-US/validation.json`**:
+
 ```json
 {
   "project": {

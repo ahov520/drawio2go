@@ -22,6 +22,7 @@
 **任务**: 修改验证函数，使用 i18n 错误消息
 
 **改造前**:
+
 ```typescript
 export function ensurePageCount(value?: number): number {
   if (typeof value !== "number" || Number.isNaN(value) || value < 1) {
@@ -32,24 +33,27 @@ export function ensurePageCount(value?: number): number {
 ```
 
 **改造后**:
+
 ```typescript
-import i18n from '@/app/i18n/client';
+import i18n from "@/app/i18n/client";
 
 export function ensurePageCount(value?: number): number {
   if (typeof value !== "number" || Number.isNaN(value) || value < 1) {
-    throw new Error(i18n.t('errors:storage.invalidPageCount'));
+    throw new Error(i18n.t("errors:storage.invalidPageCount"));
   }
   return Math.floor(value);
 }
 ```
 
 **改造函数列表**:
+
 - `ensurePageCount()`
 - `parsePageNamesJson()`
 - `ensureValidSVG()`（如存在）
 - 其他验证函数
 
 **翻译键值** (`errors.json`):
+
 ```json
 {
   "storage": {
@@ -69,6 +73,7 @@ export function ensurePageCount(value?: number): number {
 **任务**: 修改 API 错误响应，使用 i18n
 
 **改造前**:
+
 ```typescript
 export async function POST(req: NextRequest) {
   try {
@@ -77,22 +82,20 @@ export async function POST(req: NextRequest) {
     if (!messages || !llmConfig) {
       return NextResponse.json(
         { error: "缺少必要参数：messages 或 llmConfig" },
-        { status: 400 }
+        { status: 400 },
       );
     }
     // ...
   } catch (error) {
-    return NextResponse.json(
-      { error: "无法发送请求" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "无法发送请求" }, { status: 500 });
   }
 }
 ```
 
 **改造后**:
+
 ```typescript
-import i18n from '@/app/i18n/client';
+import i18n from "@/app/i18n/client";
 
 export async function POST(req: NextRequest) {
   try {
@@ -100,21 +103,22 @@ export async function POST(req: NextRequest) {
 
     if (!messages || !llmConfig) {
       return NextResponse.json(
-        { error: i18n.t('errors:chat.missingParams') },
-        { status: 400 }
+        { error: i18n.t("errors:chat.missingParams") },
+        { status: 400 },
       );
     }
     // ...
   } catch (error) {
     return NextResponse.json(
-      { error: i18n.t('errors:chat.sendFailed') },
-      { status: 500 }
+      { error: i18n.t("errors:chat.sendFailed") },
+      { status: 500 },
     );
   }
 }
 ```
 
 **翻译键值** (`errors.json`):
+
 ```json
 {
   "chat": {
@@ -130,12 +134,14 @@ export async function POST(req: NextRequest) {
 ### 9.3 版本管理错误国际化
 
 **文件**:
+
 - `app/lib/storage/xml-version-engine.ts`
 - `app/components/version/*.tsx`
 
 **任务**: 修改版本相关错误消息
 
 **翻译键值** (`errors.json`):
+
 ```json
 {
   "version": {
@@ -153,11 +159,13 @@ export async function POST(req: NextRequest) {
 ### 9.4 表单验证消息国际化
 
 **涉及组件**:
+
 - `app/components/ProjectSelector.tsx`
 - `app/components/version/CreateVersionDialog.tsx`
 - `app/components/settings/LLMSettingsPanel.tsx`
 
 **翻译键值** (`validation.json`):
+
 ```json
 {
   "project": {
@@ -186,6 +194,7 @@ export async function POST(req: NextRequest) {
 ### 9.5 Hook 错误国际化
 
 **文件**:
+
 - `app/hooks/useStorageXMLVersions.ts`
 - `app/hooks/useStorageProjects.ts`
 - `app/hooks/useStorageConversations.ts`
@@ -193,6 +202,7 @@ export async function POST(req: NextRequest) {
 **任务**: 修改 Hook 中的错误处理
 
 **改造示例**:
+
 ```typescript
 import i18n from '@/app/i18n/client';
 
@@ -221,7 +231,7 @@ export function useStorageXMLVersions(projectUuid: string | null) {
 **文件**: `app/lib/error-handler.ts`
 
 ```typescript
-import i18n from '@/app/i18n/client';
+import i18n from "@/app/i18n/client";
 
 export class AppError extends Error {
   constructor(
@@ -229,7 +239,7 @@ export class AppError extends Error {
     public params?: Record<string, any>,
   ) {
     super(i18n.t(i18nKey, params));
-    this.name = 'AppError';
+    this.name = "AppError";
   }
 }
 
@@ -242,16 +252,17 @@ export function handleError(error: unknown): string {
     return error.message;
   }
 
-  return i18n.t('errors:common.unknownError');
+  return i18n.t("errors:common.unknownError");
 }
 ```
 
 **使用示例**:
+
 ```typescript
-import { AppError, handleError } from '@/app/lib/error-handler';
+import { AppError, handleError } from "@/app/lib/error-handler";
 
 try {
-  throw new AppError('errors:version.parentNotFound', { parent: '1.0.0' });
+  throw new AppError("errors:version.parentNotFound", { parent: "1.0.0" });
 } catch (error) {
   const errorMessage = handleError(error);
   console.error(errorMessage);
@@ -261,6 +272,7 @@ try {
 ## 翻译资源完整示例
 
 **`locales/en-US/errors.json`**:
+
 ```json
 {
   "common": {
@@ -288,6 +300,7 @@ try {
 ```
 
 **`locales/zh-CN/errors.json`**:
+
 ```json
 {
   "common": {
@@ -329,15 +342,18 @@ try {
 ## 测试场景
 
 **场景 1: 存储层验证错误**
+
 - 尝试创建无效的版本数据
 - 切换到英语，查看错误消息为英文
 - 切换到中文，查看错误消息为中文
 
 **场景 2: 表单验证错误**
+
 - 在创建版本对话框中输入无效数据
 - 验证错误消息根据语言显示
 
 **场景 3: API 错误**
+
 - 发送聊天请求时缺少参数
 - 验证错误响应根据语言返回
 
@@ -346,9 +362,10 @@ try {
 ### 1. 服务端错误处理
 
 API 路由和服务端代码无法使用 `useTranslation` Hook，必须直接导入 i18n 实例：
+
 ```typescript
-import i18n from '@/app/i18n/client';
-const message = i18n.t('errors:chat.sendFailed');
+import i18n from "@/app/i18n/client";
+const message = i18n.t("errors:chat.sendFailed");
 ```
 
 ### 2. 错误边界
@@ -358,6 +375,7 @@ const message = i18n.t('errors:chat.sendFailed');
 ### 3. 插值变量一致性
 
 确保中英文翻译中使用相同的插值变量名：
+
 ```json
 // 正确
 { "message": "文件 {{fileName}} 已保存" }

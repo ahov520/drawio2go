@@ -19,6 +19,7 @@
 **创建 `app/components/LanguageSwitcher.tsx`**:
 
 **功能需求**:
+
 - 使用 HeroUI `Select` 组件
 - 显示当前选中语言
 - 支持切换到 en-US 或 zh-CN
@@ -27,15 +28,18 @@
 - 自动持久化到 localStorage（由 i18next-browser-languagedetector 处理）
 
 **UI 要求**:
+
 - 使用 `Languages` 图标（lucide-react）
 - Label：显示"语言"（i18n）
 - Description：说明语言切换立即生效（i18n）
 - 下拉选项显示语言原生名称（English / 简体中文）
 
 **组件标记**:
+
 - 客户端组件（`"use client"`）
 
 **翻译键值**（`settings.json`）:
+
 ```json
 {
   "general": {
@@ -52,11 +56,13 @@
 **创建 `app/components/settings/GeneralSettingsPanel.tsx`**:
 
 **功能需求**:
+
 - 整合现有的文件默认路径设置
 - 嵌入 `LanguageSwitcher` 组件
 - 使用 `useTranslation` Hook（`settings` 命名空间）
 
 **包含设置项**:
+
 1. **语言切换**（LanguageSwitcher 组件）
 2. **默认文件路径**:
    - TextField 组件
@@ -64,6 +70,7 @@
    - 使用 Electron API `window.electron.selectDirectory()`（仅 Electron 环境）
 
 **UI 结构**:
+
 ```tsx
 <div className="settings-panel">
   <h3>{t('general.title')}</h3>
@@ -86,6 +93,7 @@
 ```
 
 **Props**:
+
 ```typescript
 interface GeneralSettingsPanelProps {
   defaultPath: string;
@@ -94,6 +102,7 @@ interface GeneralSettingsPanelProps {
 ```
 
 **翻译键值**（`settings.json`）:
+
 ```json
 {
   "general": {
@@ -115,6 +124,7 @@ interface GeneralSettingsPanelProps {
 **修改 `app/components/settings/SettingsNav.tsx`**:
 
 **任务**:
+
 1. 新增 "general" 标签页
 2. 更新 `SettingsTab` 类型定义：
    ```typescript
@@ -124,6 +134,7 @@ interface GeneralSettingsPanelProps {
 4. 国际化导航标签 Aria 文本
 
 **翻译键值**（`settings.json`）:
+
 ```json
 {
   "nav": {
@@ -135,6 +146,7 @@ interface GeneralSettingsPanelProps {
 ```
 
 **UI 顺序**:
+
 1. General（Settings 图标）
 2. LLM（Bot 图标）
 3. Version（GitBranch 图标）
@@ -144,12 +156,14 @@ interface GeneralSettingsPanelProps {
 **修改 `app/components/SettingsSidebar.tsx`**:
 
 **任务**:
+
 1. 导入 `GeneralSettingsPanel`
 2. 在 Tab 切换逻辑中新增 "general" 分支
 3. 传递必要的 props（defaultPath, onDefaultPathChange）
 4. 确保默认 Tab 为 "general"
 
 **渲染逻辑**:
+
 ```tsx
 {activeTab === "general" && (
   <GeneralSettingsPanel
@@ -181,6 +195,7 @@ interface GeneralSettingsPanelProps {
 ## UI 示例
 
 **语言切换器**:
+
 ```
 ┌─────────────────────────────────┐
 │ 🌐 语言 / Language              │
@@ -194,6 +209,7 @@ interface GeneralSettingsPanelProps {
 ```
 
 **通用设置面板**:
+
 ```
 ┌─────────────────────────────────────┐
 │ 通用设置                            │

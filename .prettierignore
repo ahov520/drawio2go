@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+
+# Logs
+*.log
+
+# Cache
+.cache/
+.parcel-cache/
+.pnpm-store/
+.eslintcache
+.stylelintcache
+
+# Environment files
+.env
+.env.*
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Other
+.DS_Store
+*.tsbuildinfo
+coverage/
+.nyc_output/
+.vscode/
+.idea/

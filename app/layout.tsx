@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import I18nProvider from "@/app/components/I18nProvider";
 
 export const metadata: Metadata = {
   title: "DrawIO2Go - Electron DrawIO Editor",
@@ -42,7 +43,8 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-background text-foreground antialiased transition-colors duration-300">
-        {children}
+        {/* 国际化上下文：同步 i18n 状态并维护 <html lang> */}
+        <I18nProvider>{children}</I18nProvider>
       </body>
     </html>
   );

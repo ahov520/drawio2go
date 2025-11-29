@@ -21,6 +21,7 @@
 **文件**: `app/components/UnifiedSidebar.tsx`
 
 **需要提取的文本** (~10 条):
+
 - Tab 标签（聊天、设置、版本）
 - Aria 标签（导航、选项卡等）
 - 工具提示文本（如有）
@@ -28,10 +29,12 @@
 ### 5.2 创建翻译资源
 
 **更新文件**:
+
 - `locales/zh-CN/sidebar.json`
 - `locales/en-US/sidebar.json`
 
 **翻译结构示例**:
+
 ```json
 {
   "tabs": {
@@ -56,16 +59,18 @@
 **改造步骤**:
 
 1. 导入 Hook:
+
 ```tsx
 import { useTranslation } from "@/app/i18n/hooks";
 
 export default function UnifiedSidebar() {
-  const { t } = useTranslation('sidebar');
+  const { t } = useTranslation("sidebar");
   // ...
 }
 ```
 
 2. 替换 Tab 标签:
+
 ```tsx
 // 改造前
 <Tabs>
@@ -83,30 +88,30 @@ export default function UnifiedSidebar() {
 ```
 
 3. 添加 Aria 标签:
+
 ```tsx
 // 改造后
-<Tabs aria-label={t('aria.navigation')}>
-  <Tab
-    id="chat"
-    aria-label={t('aria.selectTab', { tab: t('tabs.chat') })}
-  >
-    {t('tabs.chat')}
+<Tabs aria-label={t("aria.navigation")}>
+  <Tab id="chat" aria-label={t("aria.selectTab", { tab: t("tabs.chat") })}>
+    {t("tabs.chat")}
   </Tab>
   {/* ... */}
 </Tabs>
 ```
 
 4. 如果有工具提示:
+
 ```tsx
 // 使用 HeroUI Tooltip 组件
-<Tooltip content={t('tooltips.chat')}>
-  <Tab id="chat">{t('tabs.chat')}</Tab>
+<Tooltip content={t("tooltips.chat")}>
+  <Tab id="chat">{t("tabs.chat")}</Tab>
 </Tooltip>
 ```
 
 ### 5.4 验证功能
 
 **测试场景**:
+
 1. 打开应用，查看侧边栏
 2. 切换到英语
 3. 验证：
@@ -124,6 +129,7 @@ export default function UnifiedSidebar() {
 ## 翻译资源完整示例
 
 **`locales/zh-CN/sidebar.json`**:
+
 ```json
 {
   "tabs": {
@@ -145,6 +151,7 @@ export default function UnifiedSidebar() {
 ```
 
 **`locales/en-US/sidebar.json`**:
+
 ```json
 {
   "tabs": {

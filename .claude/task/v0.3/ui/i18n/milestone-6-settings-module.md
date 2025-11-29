@@ -19,6 +19,7 @@
 ### 6.1 提取中文文本
 
 **涉及文件**:
+
 - `app/components/SettingsSidebar.tsx`
 - `app/components/settings/SettingsNav.tsx`
 - `app/components/settings/LLMSettingsPanel.tsx`
@@ -27,6 +28,7 @@
 - 其他设置子组件
 
 **需要提取的文本** (~60 条):
+
 - LLM 配置：模型名称、API Key、Base URL、温度参数等标签
 - 版本设置：自动快照、快照间隔、保留策略等
 - 系统提示词：编辑器标签、占位符、帮助文本
@@ -36,10 +38,12 @@
 ### 6.2 创建翻译资源
 
 **更新文件**:
+
 - `locales/zh-CN/settings.json`（M2 已创建部分内容）
 - `locales/en-US/settings.json`
 
 **翻译结构示例**:
+
 ```json
 {
   "nav": {
@@ -146,32 +150,35 @@
 **改造要点**:
 
 1. 导入 Hook:
+
 ```tsx
 import { useTranslation } from "@/app/i18n/hooks";
 
 export default function LLMSettingsPanel() {
-  const { t } = useTranslation('settings');
+  const { t } = useTranslation("settings");
   // ...
 }
 ```
 
 2. 替换表单标签:
+
 ```tsx
 <TextField>
-  <Label>{t('llm.apiKey.label')}</Label>
+  <Label>{t("llm.apiKey.label")}</Label>
   <Input
-    type={showKey ? 'text' : 'password'}
-    placeholder={t('llm.apiKey.placeholder')}
+    type={showKey ? "text" : "password"}
+    placeholder={t("llm.apiKey.placeholder")}
   />
-  <Description>{t('llm.apiKey.description')}</Description>
+  <Description>{t("llm.apiKey.description")}</Description>
 </TextField>
 ```
 
 3. 处理滑块组件（温度参数）:
+
 ```tsx
 <Slider
-  label={t('llm.temperature.label')}
-  description={t('llm.temperature.value', { value: temperature })}
+  label={t("llm.temperature.label")}
+  description={t("llm.temperature.value", { value: temperature })}
   minValue={0}
   maxValue={2}
   step={0.1}
@@ -181,6 +188,7 @@ export default function LLMSettingsPanel() {
 ```
 
 4. 处理按钮:
+
 ```tsx
 <Button onPress={handleSave}>{t('buttons.save')}</Button>
 <Button onPress={handleTest}>{t('buttons.test')}</Button>
@@ -193,6 +201,7 @@ export default function LLMSettingsPanel() {
 **改造要点**:
 
 1. Switch 组件:
+
 ```tsx
 <Switch isSelected={autoSnapshot} onChange={setAutoSnapshot}>
   {t('version.autoSnapshot.label')}
@@ -204,10 +213,11 @@ export default function LLMSettingsPanel() {
 ```
 
 2. NumberField 组件:
+
 ```tsx
 <NumberField
-  label={t('version.snapshotInterval.label')}
-  description={t('version.snapshotInterval.description')}
+  label={t("version.snapshotInterval.label")}
+  description={t("version.snapshotInterval.description")}
   value={interval}
   onChange={setInterval}
   minValue={1}
@@ -216,19 +226,20 @@ export default function LLMSettingsPanel() {
 ```
 
 3. Select 组件（保留策略）:
+
 ```tsx
 <Select
-  label={t('version.retention.label')}
-  description={t('version.retention.description')}
+  label={t("version.retention.label")}
+  description={t("version.retention.description")}
   selectedKey={retentionPolicy}
   onSelectionChange={setRetentionPolicy}
 >
-  <SelectItem key="all">{t('version.retention.keepAll')}</SelectItem>
+  <SelectItem key="all">{t("version.retention.keepAll")}</SelectItem>
   <SelectItem key="last-10">
-    {t('version.retention.keepLast', { count: 10 })}
+    {t("version.retention.keepLast", { count: 10 })}
   </SelectItem>
   <SelectItem key="days-30">
-    {t('version.retention.keepDays', { days: 30 })}
+    {t("version.retention.keepDays", { days: 30 })}
   </SelectItem>
 </Select>
 ```
@@ -240,11 +251,12 @@ export default function LLMSettingsPanel() {
 **改造要点**:
 
 1. 文本编辑器:
+
 ```tsx
 <TextArea
-  label={t('systemPrompt.label')}
-  placeholder={t('systemPrompt.placeholder')}
-  description={t('systemPrompt.description')}
+  label={t("systemPrompt.label")}
+  placeholder={t("systemPrompt.placeholder")}
+  description={t("systemPrompt.description")}
   value={prompt}
   onChange={setPrompt}
   rows={10}
@@ -252,9 +264,10 @@ export default function LLMSettingsPanel() {
 ```
 
 2. 重置确认:
+
 ```tsx
 const handleReset = () => {
-  if (confirm(t('messages.resetConfirm'))) {
+  if (confirm(t("messages.resetConfirm"))) {
     resetToDefault();
   }
 };
@@ -265,18 +278,20 @@ const handleReset = () => {
 **文件**: `app/components/settings/SettingsNav.tsx`
 
 确保导航标签国际化：
-```tsx
-const { t } = useTranslation('settings');
 
-<Button aria-label={t('nav.general')}>
+```tsx
+const { t } = useTranslation("settings");
+
+<Button aria-label={t("nav.general")}>
   <Settings size={20} />
-  <span>{t('nav.general')}</span>
-</Button>
+  <span>{t("nav.general")}</span>
+</Button>;
 ```
 
 ### 6.7 验证功能
 
 **测试场景**:
+
 1. 打开设置侧边栏
 2. 切换到英语
 3. 验证：
@@ -298,6 +313,7 @@ const { t } = useTranslation('settings');
 详见上述 6.2 节的完整 JSON 示例。
 
 **`locales/en-US/settings.json`** 对应翻译：
+
 ```json
 {
   "nav": {
