@@ -43,7 +43,10 @@ export default function LLMSettingsPanel({
         <Input
           value={config.apiUrl}
           onChange={(e) => onChange({ apiUrl: e.target.value })}
-          placeholder={t("llm.apiUrl.placeholder", "https://api.example.com/v1")}
+          placeholder={t(
+            "llm.apiUrl.placeholder",
+            "https://api.example.com/v1",
+          )}
           className="mt-3"
         />
         <Description className="mt-3">

@@ -1,0 +1,116 @@
+@layer components {
+  .toast-stack {
+    position: fixed;
+    inset: auto var(--spacing-md) var(--spacing-md) auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    z-index: 1300;
+    pointer-events: none;
+  }
+
+  .toast {
+    --toast-bg: color-mix(in oklch, var(--info) 12%, var(--surface));
+    --toast-fg: var(--info-foreground, var(--foreground));
+    --toast-border: color-mix(in oklch, var(--info) 35%, transparent);
+
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: var(--spacing-sm);
+    align-items: start;
+    min-width: 280px;
+    max-width: 420px;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--toast-bg);
+    color: var(--toast-fg);
+    border: 1px solid var(--toast-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-4);
+    transform: translateY(8px);
+    opacity: 0;
+    transition:
+      transform var(--duration-medium) var(--ease-out-cubic),
+      opacity var(--duration-medium) var(--ease-out-cubic);
+    pointer-events: auto;
+  }
+
+  .toast--open {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  .toast--leaving {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+
+  .toast[data-variant="success"] {
+    --toast-bg: color-mix(in oklch, var(--success) 12%, var(--surface));
+    --toast-fg: var(--success-foreground);
+    --toast-border: color-mix(in oklch, var(--success) 35%, transparent);
+  }
+
+  .toast[data-variant="info"] {
+    --toast-bg: color-mix(in oklch, var(--info) 12%, var(--surface));
+    --toast-fg: var(--info-foreground, var(--foreground));
+    --toast-border: color-mix(in oklch, var(--info) 35%, transparent);
+  }
+
+  .toast[data-variant="warning"] {
+    --toast-bg: color-mix(in oklch, var(--warning) 12%, var(--surface));
+    --toast-fg: var(--warning-foreground, var(--foreground));
+    --toast-border: color-mix(in oklch, var(--warning) 35%, transparent);
+  }
+
+  .toast[data-variant="danger"] {
+    --toast-bg: color-mix(in oklch, var(--danger) 12%, var(--surface));
+    --toast-fg: var(--danger-foreground, var(--foreground));
+    --toast-border: color-mix(in oklch, var(--danger) 35%, transparent);
+  }
+
+  .toast svg {
+    margin-top: 2px;
+  }
+
+  .toast__content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .toast__title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1.2;
+  }
+
+  .toast__description {
+    font-size: 0.9rem;
+    line-height: 1.4;
+    color: color-mix(in oklch, var(--toast-fg) 90%, transparent);
+  }
+
+  .toast__close {
+    margin-left: var(--spacing-sm);
+    color: color-mix(in oklch, var(--toast-fg) 80%, transparent);
+  }
+
+  .toast:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 640px) {
+    .toast-stack {
+      inset: var(--spacing-md) auto auto 50%;
+      transform: translateX(-50%);
+      width: 90vw;
+      max-width: 640px;
+      align-items: center;
+    }
+
+    .toast {
+      width: 100%;
+    }
+  }
+}

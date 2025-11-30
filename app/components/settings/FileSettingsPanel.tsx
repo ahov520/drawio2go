@@ -38,9 +38,7 @@ export default function FileSettingsPanel({
             {t("file.defaultPath.browse")}
           </Button>
         </div>
-        <Description className="mt-3">
-          {t("file.defaultPath.note")}
-        </Description>
+        <Description className="mt-3">{t("file.defaultPath.note")}</Description>
       </TextField>
     </div>
   );

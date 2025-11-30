@@ -62,6 +62,9 @@
   "devDependencies": {
     "@electron/rebuild": "^4.0.1",
     "@eslint/eslintrc": "^3.3.3",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/better-sqlite3": "^7.6.13",
     "@types/diff-match-patch": "^1.0.36",
     "@types/node": "^20.19.25",
@@ -74,6 +77,7 @@
     "electron-builder": "^24.13.3",
     "eslint": "^9.39.1",
     "eslint-config-next": "^15.5.6",
+    "jsdom": "^27.2.0",
     "prettier": "^3.7.2",
     "typescript": "^5.9.3",
     "vitest": "^4.0.14",

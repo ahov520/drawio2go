@@ -14,6 +14,8 @@ vi.mock("../storage/current-project", () => ({
 
 vi.mock("../drawio-xml-utils", () => ({
   normalizeDiagramXml: vi.fn((xml: string) => xml),
+  // 保持验证通过，让后续 DrawIO merge 错误分支得以触发
+  validateXMLFormat: vi.fn(() => ({ valid: true })),
 }));
 
 vi.mock("../storage", () => ({
@@ -194,7 +196,7 @@ describe("replaceDrawioXML - 回滚错误处理", () => {
           getXMLVersionsByProject: vi.fn().mockResolvedValue([
             {
               id: "version-1",
-              semantic_version: "__wip__",
+              semantic_version: WIP_VERSION,
               xml_content: INVALID_XML,
               is_keyframe: true,
             },

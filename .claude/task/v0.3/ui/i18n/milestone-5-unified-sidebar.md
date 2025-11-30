@@ -33,6 +33,7 @@
 - **Codex 代理**（read-only）：深入分析代码实现、评估国际化改造影响和潜在问题
 
 **关键发现**：
+
 - 组件使用 HeroUI v3 Tabs 复合组件模式
 - 需要国际化：3 个 Tab 标签 + 2 个 ARIA 标签
 - 需要优化：TAB_ITEMS 需要响应语言切换（使用 useMemo）
@@ -70,17 +71,17 @@
 
 **已提取的文本**（9 处）:
 
-| 行号 | 类型 | 中文文本 | 用途 | 处理方式 |
-|------|------|---------|------|----------|
-| 35 | 标签 | `聊天` | Tab 标签 | ✅ 国际化为 `t("tabs.chat")` |
-| 36 | 标签 | `设置` | Tab 标签 | ✅ 国际化为 `t("tabs.settings")` |
-| 37 | 标签 | `版本` | Tab 标签 | ✅ 国际化为 `t("tabs.version")` |
-| 155 | ARIA | `侧栏导航` | Tabs aria-label | ✅ 国际化为 `t("aria.navigation")` |
-| 160 | ARIA | `侧栏选项` | Tabs.List aria-label | ✅ 国际化为 `t("aria.tabsList")` |
-| 50 | 注释 | `存储 Hook` | 代码注释 | ✅ 保留中文 |
-| 97 | 注释 | `从存储恢复侧栏宽度` | 代码注释 | ✅ 保留中文 |
-| 152 | 注释 | `拖拽分隔条` | JSX 注释 | ✅ 保留中文 |
-| 89, 107, 123, 140 | 日志 | 错误/警告消息 | Console 日志 | ✅ 改为英文 |
+| 行号              | 类型 | 中文文本             | 用途                 | 处理方式                           |
+| ----------------- | ---- | -------------------- | -------------------- | ---------------------------------- |
+| 35                | 标签 | `聊天`               | Tab 标签             | ✅ 国际化为 `t("tabs.chat")`       |
+| 36                | 标签 | `设置`               | Tab 标签             | ✅ 国际化为 `t("tabs.settings")`   |
+| 37                | 标签 | `版本`               | Tab 标签             | ✅ 国际化为 `t("tabs.version")`    |
+| 155               | ARIA | `侧栏导航`           | Tabs aria-label      | ✅ 国际化为 `t("aria.navigation")` |
+| 160               | ARIA | `侧栏选项`           | Tabs.List aria-label | ✅ 国际化为 `t("aria.tabsList")`   |
+| 50                | 注释 | `存储 Hook`          | 代码注释             | ✅ 保留中文                        |
+| 97                | 注释 | `从存储恢复侧栏宽度` | 代码注释             | ✅ 保留中文                        |
+| 152               | 注释 | `拖拽分隔条`         | JSX 注释             | ✅ 保留中文                        |
+| 89, 107, 123, 140 | 日志 | 错误/警告消息        | Console 日志         | ✅ 改为英文                        |
 
 ### 5.2 创建翻译资源 ✅
 
@@ -107,6 +108,7 @@
 ```
 
 **与原计划的差异**：
+
 - ❌ 未包含 `aria.selectTab`（HeroUI Tabs 组件不需要）
 - ❌ 未包含 `aria.closePanel`（组件中未使用）
 - ❌ 未包含 `tooltips.*`（组件中无工具提示）
@@ -196,6 +198,7 @@ const TAB_ITEMS = useMemo(
 ```
 
 **新增功能**：
+
 - `role="separator"` - 语义化角色
 - `aria-orientation="vertical"` - 垂直分隔条
 - `aria-label={t("aria.resizeHandle")}` - 屏幕阅读器描述
@@ -291,18 +294,22 @@ console.warn("Failed to release pointer capture:", err);
 ## 关键亮点
 
 ### 1. 性能优化 ⚡
+
 - 使用 `useMemo` 包裹 `TAB_ITEMS`，避免每次渲染都重新创建数组
 - 仅在语言切换时（`t` 函数变化）重新计算 Tab 标签
 
 ### 2. 无障碍增强 ♿
+
 - 为拖拽分隔条添加完整的 ARIA 属性（`role`、`aria-orientation`、`aria-label`）
 - 所有交互元素都有明确的 `aria-label`
 
 ### 3. 开发者友好 🛠️
+
 - 控制台日志使用英文，便于国际化协作和问题搜索
 - 代码注释保留中文，便于团队理解和维护
 
 ### 4. 代码质量 ✨
+
 - TypeScript 类型安全
 - ESLint 检查通过
 - 无破坏性变更
@@ -312,17 +319,21 @@ console.warn("Failed to release pointer capture:", err);
 ## 注意事项
 
 ### 1. Tab 状态保持 ✅
+
 - 切换语言不会影响当前选中的 Tab
 - `selectedKey` 使用固定枚举值（`"chat"` | `"settings"` | `"version"`），不依赖文案
 
 ### 2. 翻译键命名 ✅
+
 - 使用扁平化结构（`tabs.*`、`aria.*`），避免深层嵌套
 - 键名清晰、易于理解（`chat`、`settings`、`version`）
 
 ### 3. 一致性 ✅
+
 - Tab 标签的翻译与子组件名称保持一致（`ChatSidebar`、`SettingsSidebar`、`VersionSidebar`）
 
 ### 4. 实施决策 📝
+
 - **日志语言**：英文（用户选择：开发者友好）
 - **注释语言**：中文（用户选择：保持中文注释）
 - **工具提示**：未实现（组件中无需工具提示）
@@ -333,10 +344,12 @@ console.warn("Failed to release pointer capture:", err);
 ## 修改文件清单
 
 ### 新增文件（2 个）
+
 - ✅ `public/locales/zh-CN/sidebar.json`
 - ✅ `public/locales/en-US/sidebar.json`
 
 ### 修改文件（1 个）
+
 - ✅ `app/components/UnifiedSidebar.tsx`
   - 导入 `useAppTranslation` 和 `useMemo`
   - 使用 `const { t } = useAppTranslation("sidebar")`
@@ -368,14 +381,14 @@ git commit -m "feat(i18n): 完成 UnifiedSidebar 组件国际化改造(Milestone
 
 ## 整体质量评估
 
-| 评估维度 | 评分 | 说明 |
-|----------|------|------|
-| **功能完整性** | 10/10 ⭐ | 所有验收标准 100% 达成 |
-| **代码质量** | 10/10 ⭐ | 使用 React 最佳实践（useMemo、Hook） |
-| **翻译质量** | 10/10 ⭐ | 专业准确、结构清晰 |
-| **可访问性** | 10/10 ⭐ | ARIA 标签完整、语义化 |
-| **可维护性** | 10/10 ⭐ | 代码清晰、注释恰当 |
-| **性能优化** | 10/10 ⭐ | 避免不必要的重新渲染 |
+| 评估维度       | 评分     | 说明                                 |
+| -------------- | -------- | ------------------------------------ |
+| **功能完整性** | 10/10 ⭐ | 所有验收标准 100% 达成               |
+| **代码质量**   | 10/10 ⭐ | 使用 React 最佳实践（useMemo、Hook） |
+| **翻译质量**   | 10/10 ⭐ | 专业准确、结构清晰                   |
+| **可访问性**   | 10/10 ⭐ | ARIA 标签完整、语义化                |
+| **可维护性**   | 10/10 ⭐ | 代码清晰、注释恰当                   |
+| **性能优化**   | 10/10 ⭐ | 避免不必要的重新渲染                 |
 
 **综合评分**: **10/10** 🏆
 
@@ -390,14 +403,17 @@ git commit -m "feat(i18n): 完成 UnifiedSidebar 组件国际化改造(Milestone
 ## 执行记录
 
 ### 调度器：`/dev`
+
 **执行时间**: 2025-11-30
 **参与代理**:
+
 - Explore 代理（调研）
 - Codex MCP 代理（read-only，深入分析）
 - Codex MCP 代理（danger-full-access，实施 × 3）
 - general-purpose 代理（验证 × 2）
 
 **执行流程**:
+
 1. Phase 1 - 调研（并发执行 Explore + Codex read-only）
 2. 用户决策（日志英文化 + 注释保留中文）
 3. Phase 2 - 实施（顺序执行 3 个 Codex 任务）

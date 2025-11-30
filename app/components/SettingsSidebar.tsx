@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@heroui/react";
 import { LLMConfig } from "@/app/types/chat";
 import { DEFAULT_LLM_CONFIG, normalizeLLMConfig } from "@/app/lib/config-utils";
@@ -10,6 +10,7 @@ import LLMSettingsPanel from "./settings/LLMSettingsPanel";
 import { VersionSettingsPanel } from "./settings/VersionSettingsPanel";
 import { GeneralSettingsPanel } from "@/app/components/settings";
 import { useAppTranslation } from "@/app/i18n/hooks";
+import { useToast } from "@/app/components/toast";
 
 interface SettingsSidebarProps {
   isOpen: boolean;
@@ -47,26 +48,7 @@ export default function SettingsSidebar({
   });
 
   const [hasChanges, setHasChanges] = useState(false);
-  const [toast, setToast] = useState<
-    | {
-        message: string;
-        variant: "success" | "error";
-      }
-    | null
-  >(null);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const showToast = useCallback((message: string, variant: "success" | "error" = "success") => {
-    if (toastTimer.current) {
-      clearTimeout(toastTimer.current);
-    }
-    setToast({ message, variant });
-    toastTimer.current = setTimeout(() => setToast(null), 3200);
-  }, []);
-
-  useEffect(() => () => {
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-  }, []);
+  const { push } = useToast();
 
   // 加载保存的设置
   useEffect(() => {
@@ -97,17 +79,17 @@ export default function SettingsSidebar({
         setSavedLlmConfig(DEFAULT_LLM_CONFIG);
         setVersionSettings({ autoVersionOnAIEdit: true });
         setSavedVersionSettings({ autoVersionOnAIEdit: true });
-        showToast(
-          t("toasts.loadFailed", {
+        push({
+          variant: "danger",
+          description: t("toasts.loadFailed", {
             error: (e as Error)?.message || "unknown",
           }),
-          "error",
-        );
+        });
       }
     };
 
     loadSettings();
-  }, [getDefaultPath, getLLMConfig, getSetting, t, showToast]);
+  }, [getDefaultPath, getLLMConfig, getSetting, push, t]);
 
   // 监听变化，检测是否有修改
   useEffect(() => {
@@ -152,13 +134,15 @@ export default function SettingsSidebar({
         onSettingsChange({ defaultPath });
       }
 
-      showToast(t("toasts.saveSuccess"), "success");
+      push({ variant: "success", description: t("toasts.saveSuccess") });
     } catch (e) {
       console.error(t("errors.saveFailed"), e);
-      showToast(
-        t("toasts.saveFailed", { error: (e as Error)?.message || "unknown" }),
-        "error",
-      );
+      push({
+        variant: "danger",
+        description: t("toasts.saveFailed", {
+          error: (e as Error)?.message || "unknown",
+        }),
+      });
     }
   };
 
@@ -217,24 +201,6 @@ export default function SettingsSidebar({
               {t("actionBar.save")}
             </Button>
           </div>
-        </div>
-      )}
-
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-50 flex max-w-sm items-start gap-3 rounded-xl px-4 py-3 shadow-2xl"
-          style={{
-            backgroundColor:
-              toast.variant === "success" ? "var(--success-50, #ecfdf3)" : "var(--danger-50, #fef2f2)",
-            color:
-              toast.variant === "success" ? "var(--success-700, #047857)" : "var(--danger-700, #b91c1c)",
-            border: "1px solid var(--border-color, rgba(0,0,0,0.08))",
-          }}
-          role="status"
-        >
-          <span aria-hidden className="text-lg leading-none">
-            {toast.variant === "success" ? "✓" : "✗"}
-          </span>
-          <span className="text-sm leading-6">{toast.message}</span>
         </div>
       )}
     </div>
