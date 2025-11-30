@@ -41,7 +41,7 @@ import {
 import { decompressBlob } from "@/app/lib/compression-utils";
 import { countSubVersions, isSubVersion } from "@/app/lib/version-utils";
 import { formatVersionTimestamp } from "@/app/lib/format-utils";
-import { useAppTranslation, useI18n } from "@/app/i18n/hooks";
+import { useAppTranslation } from "@/app/i18n/hooks";
 
 interface VersionCardProps {
   version: XMLVersion;
@@ -82,6 +82,8 @@ export function VersionCard({
   allVersions,
   onNavigateToSubVersions,
 }: VersionCardProps) {
+  const { t: tVersion, i18n } = useAppTranslation("version");
+  const { t: tCommon } = useAppTranslation("common");
   const [isExporting, setIsExporting] = React.useState(false);
   const [isExpanded, setIsExpanded] = React.useState(defaultExpanded && !isWIP);
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
@@ -93,8 +95,6 @@ export function VersionCard({
   const [viewerInitialPage, setViewerInitialPage] = React.useState(0);
   const pageObjectUrlsRef = React.useRef<string[]>([]);
   const { getXMLVersion, loadVersionSVGFields } = useStorageXMLVersions();
-  const { t } = useI18n();
-  const { i18n } = useAppTranslation("version");
   const { push } = useToast();
   const [resolvedVersion, setResolvedVersion] =
     React.useState<XMLVersion>(version);
@@ -144,10 +144,12 @@ export function VersionCard({
 
   const versionLabel = isWIP ? "WIP" : `v${version.semantic_version}`;
   const diffLabel = isWIP
-    ? "当前画布内容"
+    ? tVersion("card.meta.wip")
     : resolvedVersion.is_keyframe
-      ? "关键帧快照"
-      : `Diff 链 +${resolvedVersion.diff_chain_depth}`;
+      ? tVersion("card.meta.keyframe")
+      : tVersion("card.meta.diffChain", {
+          depth: resolvedVersion.diff_chain_depth,
+        });
   const diffIcon = isWIP ? null : resolvedVersion.is_keyframe ? (
     <Key className="w-3.5 h-3.5" />
   ) : (
@@ -301,7 +303,7 @@ export function VersionCard({
     }
 
     if (!resolvedVersion.pages_svg) {
-      setPagesError("暂无多页 SVG 数据");
+      setPagesError(tVersion("card.preview.pagesError"));
       setPageThumbs([]);
       return;
     }
@@ -318,14 +320,14 @@ export function VersionCard({
           "application/json",
         );
         if (!blob) {
-          throw new Error("无法解析 pages_svg 数据");
+          throw new Error(tVersion("card.preview.pagesError"));
         }
 
         const pages = await deserializeSVGsFromBlob(blob);
         if (cancelled) return;
 
         if (!pages.length) {
-          throw new Error("多页数据为空");
+          throw new Error(tVersion("card.preview.pagesEmpty"));
         }
 
         const thumbs = pages
@@ -348,7 +350,9 @@ export function VersionCard({
       } catch (error) {
         console.error("解析多页 SVG 失败", error);
         if (!cancelled) {
-          setPagesError((error as Error).message || "无法加载页面 SVG");
+          setPagesError(
+            (error as Error).message || tVersion("card.preview.pagesError"),
+          );
           setPageThumbs([]);
         }
       } finally {
@@ -367,6 +371,7 @@ export function VersionCard({
     showAllPages,
     resolvedVersion.id,
     resolvedVersion.pages_svg,
+    tVersion,
   ]);
 
   // 处理回滚按钮点击
@@ -403,7 +408,13 @@ export function VersionCard({
       console.error("导出版本失败:", error);
       push({
         variant: "danger",
-        description: t("toasts.exportFailed"),
+        description: tCommon("toasts.versionExportFailed", {
+          version: version.semantic_version,
+          error:
+            error instanceof Error
+              ? error.message
+              : tCommon("toasts.exportFailed"),
+        }),
       });
     } finally {
       setIsExporting(false);
@@ -444,8 +455,10 @@ export function VersionCard({
                     aria-pressed={selected}
                     aria-label={
                       selected
-                        ? `已选择为对比序号 ${(compareOrder ?? 0) + 1}`
-                        : "选择该版本进行对比"
+                        ? tVersion("aria.card.selectOrder", {
+                            order: (compareOrder ?? 0) + 1,
+                          })
+                        : tVersion("aria.card.selectHint")
                     }
                     className={`version-card__select-chip${selected ? " version-card__select-chip--active" : ""}`}
                     onClick={(event) => {
@@ -467,15 +480,19 @@ export function VersionCard({
                     )}
                     <span>
                       {selected && compareOrder !== null
-                        ? `#${compareOrder + 1}`
-                        : "加入"}
+                        ? tVersion("card.compare.added", {
+                            order: compareOrder + 1,
+                          })
+                        : tVersion("card.compare.selectHint")}
                     </span>
                   </div>
                 )}
                 <div className="version-card__compact-left">
                   <span className="version-number">{versionLabel}</span>
                   {isLatest && !isWIP && (
-                    <span className="latest-badge">最新</span>
+                    <span className="latest-badge">
+                      {tVersion("card.badges.latest")}
+                    </span>
                   )}
                   {!isWIP &&
                     (version.is_keyframe ? (
@@ -483,7 +500,9 @@ export function VersionCard({
                         <span className="keyframe-badge">
                           <Key className="w-3 h-3" />
                         </span>
-                        <TooltipContent>关键帧</TooltipContent>
+                        <TooltipContent>
+                          {tVersion("card.badges.keyframe")}
+                        </TooltipContent>
                       </TooltipRoot>
                     ) : (
                       <TooltipRoot>
@@ -492,7 +511,9 @@ export function VersionCard({
                           {version.diff_chain_depth}
                         </span>
                         <TooltipContent>
-                          差异链深度 +{version.diff_chain_depth}
+                          {tVersion("card.badges.diffDepth", {
+                            depth: version.diff_chain_depth,
+                          })}
                         </TooltipContent>
                       </TooltipRoot>
                     ))}
@@ -504,7 +525,9 @@ export function VersionCard({
                         {version.page_count}
                       </span>
                       <TooltipContent>
-                        {version.page_count} 个页面
+                        {tVersion("card.badges.pages", {
+                          count: version.page_count,
+                        })}
                       </TooltipContent>
                     </TooltipRoot>
                   )}
@@ -512,13 +535,17 @@ export function VersionCard({
                     <TooltipRoot>
                       <span
                         className="version-card__sub-version-badge"
-                        aria-label={`包含 ${subVersionCount} 个子版本`}
+                        aria-label={tVersion("aria.card.subVersionBadge", {
+                          count: subVersionCount,
+                        })}
                       >
                         <Layers className="w-3 h-3" />
                         {subVersionCount}
                       </span>
                       <TooltipContent>
-                        {`包含 ${subVersionCount} 个子版本`}
+                        {tVersion("card.badges.subVersions", {
+                          count: subVersionCount,
+                        })}
                       </TooltipContent>
                     </TooltipRoot>
                   )}
@@ -526,9 +553,9 @@ export function VersionCard({
                   {isWIP ? (
                     <span
                       className="version-card__compact-description"
-                      title="当前画布内容"
+                      title={tVersion("card.badges.wip")}
                     >
-                      当前画布内容
+                      {tVersion("card.badges.wip")}
                     </span>
                   ) : (
                     version.description && (
@@ -545,8 +572,10 @@ export function VersionCard({
                   {compareMode && selected && (
                     <span className="version-card__chip">
                       {compareOrder !== null
-                        ? `第 ${compareOrder + 1} 个`
-                        : "已选"}
+                        ? tVersion("card.compare.selectedOrder", {
+                            order: compareOrder + 1,
+                          })
+                        : tVersion("card.compare.selected")}
                     </span>
                   )}
                   <span className="version-card__time">
@@ -586,8 +615,12 @@ export function VersionCard({
                     tabIndex={0}
                     aria-label={
                       hasMultiplePages
-                        ? `打开全屏查看器，当前共 ${version.page_count} 页`
-                        : `全屏查看 ${versionLabel} 预览图`
+                        ? tVersion("aria.card.openFullscreenPages", {
+                            count: version.page_count,
+                          })
+                        : tVersion("aria.card.openFullscreen", {
+                            label: versionLabel,
+                          })
                     }
                     onClick={handlePreviewActivate}
                     onKeyDown={(event) => {
@@ -599,14 +632,16 @@ export function VersionCard({
                   >
                     <img
                       src={previewUrl}
-                      alt={`${versionLabel} 预览图`}
+                      alt={tVersion("aria.card.openFullscreen", {
+                        label: versionLabel,
+                      })}
                       className="version-preview__image"
                       loading="lazy"
                     />
                     <div className="version-preview__overlay">
                       <ZoomIn className="version-preview__zoom-icon" />
                       <span className="version-preview__zoom-text">
-                        点击查看大图
+                        {tVersion("card.preview.zoomHint")}
                       </span>
                     </div>
                   </div>
@@ -614,10 +649,10 @@ export function VersionCard({
                   <div className="version-preview version-preview--placeholder">
                     <ImageOff className="version-preview__placeholder-icon" />
                     <p className="version-preview__placeholder-title">
-                      暂无 SVG 预览
+                      {tVersion("card.preview.emptyTitle")}
                     </p>
                     <span className="version-preview__placeholder-text">
-                      旧版本可能未导出 SVG，保存新的快照即可生成缩略图
+                      {tVersion("card.preview.emptyDescription")}
                     </span>
                   </div>
                 )}
@@ -627,8 +662,10 @@ export function VersionCard({
                     {version.page_count > 0 && pageNames.length > 0 && (
                       <TooltipRoot delay={0}>
                         <span className="version-page-badge" role="text">
-                          <LayoutGrid className="w-3 h-3" />共{" "}
-                          {version.page_count} 页
+                          <LayoutGrid className="w-3 h-3" />
+                          {tVersion("card.preview.pageBadge", {
+                            count: version.page_count,
+                          })}
                         </span>
                         <TooltipContent placement="top">
                           <p>{pageNames.join(" / ")}</p>
@@ -637,13 +674,15 @@ export function VersionCard({
                     )}
                     {version.page_count > 0 && pageNames.length === 0 && (
                       <span className="version-page-badge" role="text">
-                        <LayoutGrid className="w-3 h-3" />共{" "}
-                        {version.page_count} 页
+                        <LayoutGrid className="w-3 h-3" />
+                        {tVersion("card.preview.pageBadge", {
+                          count: version.page_count,
+                        })}
                       </span>
                     )}
                     {!previewUrl && (
                       <span className="version-preview__hint">
-                        旧版本缺少预览图
+                        {tVersion("card.preview.missingPreview")}
                       </span>
                     )}
                   </div>
@@ -656,20 +695,28 @@ export function VersionCard({
                         onPress={() => setShowAllPages((prev) => !prev)}
                         aria-expanded={showAllPages}
                         aria-label={
-                          showAllPages ? "收起页面缩略图" : "展开页面缩略图"
+                          showAllPages
+                            ? tVersion("card.preview.toggleThumbsAriaCollapse")
+                            : tVersion("card.preview.toggleThumbsAriaExpand")
                         }
                       >
                         <LayoutGrid className="w-3.5 h-3.5" />
-                        {showAllPages ? "收起缩略图" : "展开缩略图"}
+                        {showAllPages
+                          ? tVersion("card.preview.toggleThumbsCollapse")
+                          : tVersion("card.preview.toggleThumbsExpand")}
                       </Button>
                       <Button
                         size="sm"
                         variant="secondary"
                         onPress={() => openViewer(0)}
-                        aria-label={`打开多页查看器，当前共 ${version.page_count} 页`}
+                        aria-label={tVersion("aria.card.openMultiViewer", {
+                          count: version.page_count,
+                        })}
                       >
                         <Maximize2 className="w-3.5 h-3.5" />
-                        查看所有 {version.page_count} 页
+                        {tVersion("card.preview.openViewer", {
+                          count: version.page_count,
+                        })}
                       </Button>
                     </div>
                   )}
@@ -681,7 +728,7 @@ export function VersionCard({
                   {isLoadingPages && (
                     <div className="version-pages-grid__status">
                       <Loader2 className="version-pages-grid__spinner" />
-                      <span>正在加载全部页面...</span>
+                      <span>{tVersion("card.preview.loadingPages")}</span>
                     </div>
                   )}
 
@@ -697,7 +744,7 @@ export function VersionCard({
                     pageThumbs.length === 0 && (
                       <div className="version-pages-grid__status version-pages-grid__status--empty">
                         <ImageOff className="version-pages-grid__status-icon" />
-                        <span>暂无页面预览</span>
+                        <span>{tVersion("card.preview.pagesEmpty")}</span>
                       </div>
                     )}
 
@@ -709,12 +756,17 @@ export function VersionCard({
                           type="button"
                           className="version-pages-grid__item"
                           onClick={() => handleThumbnailActivate(thumb.index)}
-                          title={`打开第 ${thumb.index + 1} 页 ${thumb.name}`}
+                          title={tVersion("card.preview.thumbTitle", {
+                            index: thumb.index + 1,
+                            name: thumb.name,
+                          })}
                         >
                           <div className="version-pages-grid__thumb">
                             <img
                               src={thumb.url}
-                              alt={`第 ${thumb.index + 1} 页预览`}
+                              alt={tVersion("card.preview.thumbAlt", {
+                                index: thumb.index + 1,
+                              })}
                               loading="lazy"
                             />
                           </div>
@@ -753,16 +805,20 @@ export function VersionCard({
                       onPress={() =>
                         onNavigateToSubVersions?.(version.semantic_version)
                       }
-                      aria-label={`查看 ${subVersionCount} 个子版本`}
+                      aria-label={tVersion("aria.card.subVersionBadge", {
+                        count: subVersionCount,
+                      })}
                     >
                       <Layers className="w-3.5 h-3.5" />
-                      查看 {subVersionCount} 个子版本
+                      {tVersion("card.actions.viewSubVersions", {
+                        count: subVersionCount,
+                      })}
                     </Button>
                   )}
                   {onQuickCompare && (
                     <Button size="sm" variant="ghost" onPress={onQuickCompare}>
                       <LayoutGrid className="w-3.5 h-3.5" />
-                      快速对比
+                      {tVersion("card.actions.quickCompare")}
                     </Button>
                   )}
                   <Button
@@ -770,10 +826,10 @@ export function VersionCard({
                     variant="tertiary"
                     onPress={handleExport}
                     isDisabled={isExporting}
-                    aria-label={`导出 ${versionLabel}`}
+                    aria-label={tVersion("card.actions.export")}
                   >
                     <Download className="w-3.5 h-3.5" />
-                    导出
+                    {tVersion("card.actions.export")}
                   </Button>
 
                   {onRestore && (
@@ -783,7 +839,7 @@ export function VersionCard({
                       onPress={handleRestore}
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
-                      回滚
+                      {tVersion("card.actions.restore")}
                     </Button>
                   )}
                 </div>

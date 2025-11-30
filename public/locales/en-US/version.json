@@ -1,1 +1,283 @@
-{}
+{
+  "sidebar": {
+    "title": "Version Management",
+    "subtitle": "Track keyframes and diff chains to quickly restore history",
+    "noProject": {
+      "title": "No project selected",
+      "description": "Pick a project to browse snapshots, keyframes, and diff history"
+    },
+    "loadError": {
+      "title": "Version Management",
+      "description": "Failed to load snapshot history, please retry",
+      "retry": "Retry"
+    },
+    "actions": {
+      "compareOn": "Exit Compare",
+      "compareOff": "Compare Versions",
+      "create": "Save Version"
+    },
+    "compareBanner": {
+      "title": "Compare mode enabled",
+      "selected": "{{count}}/2 versions selected",
+      "ready": "Ready",
+      "needTwo": "Select two historical versions",
+      "start": "Start Compare",
+      "clear": "Clear Selection"
+    }
+  },
+  "card": {
+    "labels": {
+      "version": "Version {{version}}",
+      "description": "Description",
+      "noDescription": "No description",
+      "createdAt": "Created at"
+    },
+    "badges": {
+      "latest": "Latest",
+      "keyframe": "Keyframe",
+      "diffDepth": "Diff depth +{{depth}}",
+      "pages": "{{count}} pages",
+      "subVersions": "{{count}} sub-versions",
+      "wip": "Current canvas"
+    },
+    "compare": {
+      "selectHint": "Select this version to compare",
+      "selectedOrder": "No. {{order}}",
+      "selected": "Selected",
+      "added": "#{{order}}"
+    },
+    "preview": {
+      "openFullscreenPages": "Open full-screen viewer, {{count}} pages",
+      "openFullscreen": "View {{label}} preview in full screen",
+      "zoomHint": "Click to zoom in",
+      "emptyTitle": "No SVG preview",
+      "emptyDescription": "Older versions may not export SVG. Save a new snapshot to generate thumbnails.",
+      "pageBadge": "{{count}} pages",
+      "missingPreview": "Preview missing in older version",
+      "toggleThumbsExpand": "Expand thumbnails",
+      "toggleThumbsCollapse": "Collapse thumbnails",
+      "toggleThumbsAriaExpand": "Expand page thumbnails",
+      "toggleThumbsAriaCollapse": "Collapse page thumbnails",
+      "openViewer": "View all {{count}} pages",
+      "openViewerAria": "Open multi-page viewer ({{count}} pages)",
+      "loadingPages": "Loading all pages...",
+      "pagesEmpty": "No page preview",
+      "pagesError": "Failed to load page SVGs",
+      "thumbTitle": "Open page {{index}} · {{name}}",
+      "thumbAlt": "Preview of page {{index}}"
+    },
+    "meta": {
+      "keyframe": "Keyframe snapshot",
+      "diffChain": "Diff chain +{{depth}}",
+      "wip": "Current canvas"
+    },
+    "actions": {
+      "viewSubVersions": "View {{count}} sub-versions",
+      "quickCompare": "Quick compare",
+      "export": "Export",
+      "restore": "Restore"
+    }
+  },
+  "timeline": {
+    "titleMain": "Version History",
+    "titleSub": "Sub-version View",
+    "description": {
+      "base": "Snapshots sorted by newest",
+      "virtualEnabled": "Virtual scroll enabled",
+      "compareMode": "Compare mode",
+      "sub": "Version management · Sub-versions of v{{version}}",
+      "subUnknown": "Version management · Sub-versions (unknown parent)"
+    },
+    "stats": {
+      "main": "{{count}} snapshots",
+      "mainWithWip": "{{count}} snapshots + WIP",
+      "sub": "{{count}} sub-versions"
+    },
+    "empty": {
+      "mainTitle": "No history yet",
+      "subTitle": "No sub-versions",
+      "createFirst": "Click “Save Version” to create the first snapshot",
+      "noSubForParent": "v{{parent}} has no sub-versions yet",
+      "selectParent": "Select a parent version"
+    },
+    "buttons": {
+      "back": "Back",
+      "quickCompare": "Latest vs Previous"
+    },
+    "groups": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "thisWeek": "This week",
+      "lastWeek": "Last week",
+      "thisMonth": "This month",
+      "older": "Older"
+    }
+  },
+  "compare": {
+    "title": "Version Compare",
+    "close": "Close",
+    "selectors": {
+      "left": "Version A",
+      "right": "Version B",
+      "swap": "Swap versions"
+    },
+    "layout": {
+      "label": "Layout",
+      "split": "Side by side",
+      "stack": "Stacked",
+      "overlay": "Overlay",
+      "smart": "Smart",
+      "overlayOpacity": "Overlay opacity"
+    },
+    "zoom": {
+      "out": "Zoom out",
+      "in": "Zoom in",
+      "reset": "Reset"
+    },
+    "status": {
+      "loading": "Loading version data…",
+      "error": "Load failed"
+    },
+    "errors": {
+      "missingPagesBoth": "Both versions miss pages_svg data. Cannot compare.",
+      "missingPagesA": "Version A has no multi-page SVG data",
+      "missingPagesB": "Version B has no multi-page SVG data",
+      "pageCountMismatch": "Page count mismatch: A {{countA}} vs B {{countB}}",
+      "pageNameMismatch": "Page names differ; aligned by index",
+      "noParsedPages": "No valid SVG pages parsed"
+    },
+    "pages": {
+      "label": "Pages",
+      "previous": "Previous",
+      "next": "Next",
+      "select": "Select page",
+      "indicator": "{{version}} · {{count}} pages",
+      "shortcut": "Use ←/→ to switch pages"
+    },
+    "diff": {
+      "title": "Smart diff highlight",
+      "empty": "No diff image available",
+      "statsTitle": "Smart match stats",
+      "coverage": "Coverage {{coverage}}",
+      "coverageShort": "Smart coverage {{coverage}}",
+      "matched": "Matched elements",
+      "changed": "Changed content",
+      "onlyA": "Only in version A",
+      "onlyB": "Only in version B",
+      "legendAligned": "Aligned (gray)",
+      "legendAddedB": "Added in B (green)",
+      "legendOnlyA": "Only in A (red)",
+      "legendChanged": "Changed (yellow)",
+      "smartResultAlt": "Smart diff highlight result"
+    },
+    "pageStatus": {
+      "missingA": "Version A missing this page",
+      "missingB": "Version B missing this page"
+    }
+  },
+  "create": {
+    "title": "Create Version",
+    "subtitle": "Create a snapshot for the current project",
+    "versionType": {
+      "label": "Version type",
+      "description": "Choose the type; sub-version inherits the parent number",
+      "main": {
+        "label": "Main version",
+        "description": "Standard x.y.z format (e.g. 1.2.0)"
+      },
+      "sub": {
+        "label": "Sub-version",
+        "description": "Append .h to parent (e.g. 1.2.0.1)"
+      }
+    },
+    "parent": {
+      "label": "Parent version *",
+      "loading": "Loading main versions...",
+      "empty": "No main versions yet. Create one first, then add sub-versions.",
+      "locked": "Parent locked to v{{version}}",
+      "filterHint": "Show only three-part main versions (exclude WIP & sub-versions)",
+      "noneSelected": "No parent selected"
+    },
+    "versionNumber": {
+      "labelMain": "Version number *",
+      "labelSub": "Sub-version number *",
+      "placeholder": "1.0.0 or 1.0.0.1",
+      "description": "Format: x.y.z (e.g. 1.0.0) or x.y.z.h for sub-version",
+      "recommend": "Auto-suggest",
+      "checking": "Checking version number...",
+      "available": "✓ {{version}} is available",
+      "inputSubHint": "Enter a numeric sub-version; it will save as {{full}}",
+      "autoFilled": "parent.subVersion"
+    },
+    "description": {
+      "label": "Description (optional)",
+      "placeholder": "Describe the main changes...",
+      "helper": "Briefly explain this version's changes"
+    },
+    "status": {
+      "exporting": "Exporting page {{current}}/{{total}}",
+      "exportingMessage": "Exporting SVG and saving the version...",
+      "success": "Version created! {{pageCount}} pages cached with SVG preview.",
+      "degraded": "Version created! {{pageCount}} pages, SVG export failed and fell back.",
+      "error": "Create version failed",
+      "validateFailed": "Version validation failed, please retry",
+      "recommendFailed": "Failed to get suggested version",
+      "parentLoadFailed": "Failed to load main versions, try again later",
+      "parentRequired": "Select a parent before requesting suggestion"
+    },
+    "buttons": {
+      "cancel": "Cancel",
+      "create": "Create",
+      "creating": "Creating..."
+    }
+  },
+  "viewer": {
+    "title": "Multi-page Viewer",
+    "versionSummary": "v{{version}} · {{count}} pages",
+    "zoom": {
+      "out": "Zoom out",
+      "in": "Zoom in",
+      "reset": "Reset",
+      "fit": "Fit"
+    },
+    "nav": {
+      "previous": "Previous",
+      "next": "Next",
+      "current": "Page {{current}} / {{total}}",
+      "hint": "Use arrow keys to switch pages"
+    },
+    "export": {
+      "current": "Export current page",
+      "all": "Export all pages"
+    },
+    "loading": "Loading multi-page SVG...",
+    "error": "Failed to load multi-page SVG",
+    "help": "• Arrow keys to change pages, Ctrl/Cmd + wheel to zoom • Space/Enter on preview to enter full screen"
+  },
+  "aria": {
+    "compare": {
+      "dialog": "Version compare: {{versionA}} vs {{versionB}}",
+      "close": "Close compare",
+      "swap": "Swap versions",
+      "pageSelect": "Select page",
+      "overlayOpacity": "Overlay opacity"
+    },
+    "card": {
+      "selectHint": "Select this version to compare",
+      "selectOrder": "Selected as compare order {{order}}",
+      "openFullscreenPages": "Open full-screen viewer, {{count}} pages total",
+      "openFullscreen": "Open {{label}} preview in full screen",
+      "openMultiViewer": "Open multi-page viewer, {{count}} pages",
+      "subVersionBadge": "{{count}} sub-versions"
+    },
+    "viewer": {
+      "root": "Multi-page SVG viewer, version {{version}}",
+      "fit": "Fit window",
+      "fullscreenEnter": "Enter full screen",
+      "fullscreenExit": "Exit full screen",
+      "close": "Close",
+      "previous": "Previous page",
+      "next": "Next page"
+    }
+  }
+}

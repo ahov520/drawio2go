@@ -397,26 +397,3 @@ git commit -m "feat(i18n): 完成 UnifiedSidebar 组件国际化改造(Milestone
 ## 下一步
 
 完成后继续 [M6: 设置模块国际化](./milestone-6-settings-module.md)
-
----
-
-## 执行记录
-
-### 调度器：`/dev`
-
-**执行时间**: 2025-11-30
-**参与代理**:
-
-- Explore 代理（调研）
-- Codex MCP 代理（read-only，深入分析）
-- Codex MCP 代理（danger-full-access，实施 × 3）
-- general-purpose 代理（验证 × 2）
-
-**执行流程**:
-
-1. Phase 1 - 调研（并发执行 Explore + Codex read-only）
-2. 用户决策（日志英文化 + 注释保留中文）
-3. Phase 2 - 实施（顺序执行 3 个 Codex 任务）
-4. Phase 3 - 验证（首次验证 → 修复 → 最终验证）
-
-**执行结果**: 所有验收标准 100% 达成，代码质量优秀，无遗留问题。

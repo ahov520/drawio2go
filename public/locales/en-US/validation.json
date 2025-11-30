@@ -1,5 +1,17 @@
 {
   "project": {
     "nameRequired": "Project name is required"
+  },
+  "version": {
+    "numberRequired": "Version number is required",
+    "formatInvalid": "Invalid version format. Use x.y.z or x.y.z.h",
+    "reservedVersion": "0.0.0 is reserved",
+    "subVersionRequired": "Sub-version number is required",
+    "subVersionNumeric": "Sub-version must be numeric",
+    "subVersionRange": "Sub-version must be between {{min}} and {{max}}",
+    "descriptionMaxLength": "Description must be at most {{max}} characters",
+    "versionExists": "Version {{version}} already exists",
+    "parentRequired": "Parent version is required",
+    "parentNotFound": "Parent version {{parent}} not found; please create the main version first"
   }
 }

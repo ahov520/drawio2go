@@ -27,6 +27,7 @@ import type { XMLVersion } from "@/app/lib/storage/types";
 import { deserializeSVGsFromBlob } from "@/app/lib/svg-export-utils";
 import { createBlobFromSource, type BinarySource } from "./version-utils";
 import { useStorageXMLVersions } from "@/app/hooks/useStorageXMLVersions";
+import { useAppTranslation } from "@/app/i18n/hooks";
 
 interface PageSVGViewerProps {
   version: XMLVersion;
@@ -53,6 +54,7 @@ export function PageSVGViewer({
   onClose,
   defaultPageIndex = 0,
 }: PageSVGViewerProps) {
+  const { t: tVersion } = useAppTranslation("version");
   const [pages, setPages] = React.useState<PageState[] | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -107,13 +109,13 @@ export function PageSVGViewer({
           } catch (err) {
             if (!cancelled) {
               console.warn("加载 PageSVG 数据失败", err);
-              throw new Error("加载多页 SVG 数据失败");
+              throw new Error(tVersion("viewer.error"));
             }
           }
         }
 
         if (!targetVersion.pages_svg) {
-          throw new Error("该版本未包含多页 SVG 数据");
+          throw new Error(tVersion("viewer.error"));
         }
 
         if (cancelled) return;
@@ -125,23 +127,30 @@ export function PageSVGViewer({
         );
 
         if (!blob) {
-          throw new Error("无法解析 pages_svg 数据");
+          throw new Error(tVersion("viewer.error"));
         }
 
         const parsed = await deserializeSVGsFromBlob(blob);
         if (cancelled) return;
 
+        const totalPages = parsed.length;
+
         const normalized = parsed
           .map((item, idx) => ({
             id: item.id ?? `page-${idx + 1}`,
-            name: item.name ?? `Page ${idx + 1}`,
+            name:
+              item.name ??
+              tVersion("viewer.nav.current", {
+                current: idx + 1,
+                total: totalPages,
+              }),
             index: typeof item.index === "number" ? item.index : idx,
             svg: item.svg,
           }))
           .sort((a, b) => a.index - b.index);
 
         if (!normalized.length) {
-          throw new Error("多页 SVG 数据为空");
+          throw new Error(tVersion("viewer.error"));
         }
 
         setPages(normalized);
@@ -154,7 +163,9 @@ export function PageSVGViewer({
         setOffset({ x: 0, y: 0 });
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "加载多页 SVG 失败");
+          setError(
+            err instanceof Error ? err.message : tVersion("viewer.error"),
+          );
           setPages(null);
         }
       } finally {
@@ -167,7 +178,7 @@ export function PageSVGViewer({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, version, defaultPageIndex, loadVersionSVGFields]);
+  }, [isOpen, version, defaultPageIndex, loadVersionSVGFields, tVersion]);
 
   const currentPage = React.useMemo(() => {
     if (!pages || pages.length === 0) return null;
@@ -354,7 +365,9 @@ export function PageSVGViewer({
       className={`page-svg-viewer__overlay${isFullscreen ? " page-svg-viewer__overlay--fullscreen" : ""}`}
       role="dialog"
       aria-modal="true"
-      aria-label={`多页面 SVG 查看器，版本 ${version.semantic_version}`}
+      aria-label={tVersion("aria.viewer.root", {
+        version: version.semantic_version,
+      })}
       onClick={onClose}
     >
       <Card.Root
@@ -363,9 +376,14 @@ export function PageSVGViewer({
       >
         <Card.Header className="page-svg-viewer__header">
           <div className="page-svg-viewer__title">
-            <span className="page-svg-viewer__heading">多页面查看器</span>
+            <span className="page-svg-viewer__heading">
+              {tVersion("viewer.title")}
+            </span>
             <span className="page-svg-viewer__subtext">
-              v{version.semantic_version} · {version.page_count} 页
+              {tVersion("viewer.versionSummary", {
+                version: version.semantic_version,
+                count: version.page_count,
+              })}
             </span>
           </div>
 
@@ -374,7 +392,7 @@ export function PageSVGViewer({
               size="sm"
               variant="ghost"
               isIconOnly
-              aria-label="适应窗口"
+              aria-label={tVersion("aria.viewer.fit")}
               onPress={fitToStage}
             >
               <RotateCcw className="w-4 h-4" />
@@ -383,7 +401,11 @@ export function PageSVGViewer({
               size="sm"
               variant="ghost"
               isIconOnly
-              aria-label={isFullscreen ? "退出全屏" : "进入全屏"}
+              aria-label={
+                isFullscreen
+                  ? tVersion("aria.viewer.fullscreenExit")
+                  : tVersion("aria.viewer.fullscreenEnter")
+              }
               onPress={toggleFullscreen}
             >
               {isFullscreen ? (
@@ -396,7 +418,7 @@ export function PageSVGViewer({
               size="sm"
               variant="ghost"
               isIconOnly
-              aria-label="关闭"
+              aria-label={tVersion("aria.viewer.close")}
               onPress={onClose}
             >
               <X className="w-4 h-4" />
@@ -412,19 +434,24 @@ export function PageSVGViewer({
                 variant="secondary"
                 onPress={handlePrev}
                 isDisabled={!canPrev}
-                aria-label="上一页"
+                aria-label={tVersion("aria.viewer.previous")}
               >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
               <div className="page-svg-viewer__counter" role="status">
-                {pages ? currentIndex + 1 : 0} / {pages?.length ?? 0}
+                {pages
+                  ? tVersion("viewer.nav.current", {
+                      current: currentIndex + 1,
+                      total: pages.length,
+                    })
+                  : tVersion("viewer.nav.current", { current: 0, total: 0 })}
               </div>
               <Button
                 size="sm"
                 variant="secondary"
                 onPress={handleNext}
                 isDisabled={!canNext}
-                aria-label="下一页"
+                aria-label={tVersion("aria.viewer.next")}
               >
                 <ChevronRight className="w-4 h-4" />
               </Button>
@@ -436,7 +463,7 @@ export function PageSVGViewer({
                   {currentPage?.name || "-"}
                 </span>
                 <TooltipContent placement="bottom">
-                  <p>使用键盘左右方向键切换页面</p>
+                  <p>{tVersion("viewer.nav.hint")}</p>
                 </TooltipContent>
               </TooltipRoot>
               {pages && pages.length > 1 && (
@@ -470,17 +497,17 @@ export function PageSVGViewer({
             <div className="page-svg-viewer__actions">
               <Button size="sm" variant="ghost" onPress={zoomOut}>
                 <ZoomOut className="w-4 h-4" />
-                缩小
+                {tVersion("viewer.zoom.out")}
               </Button>
               <Button size="sm" variant="ghost" onPress={zoomIn}>
                 <ZoomIn className="w-4 h-4" />
-                放大
+                {tVersion("viewer.zoom.in")}
               </Button>
               <Button size="sm" variant="ghost" onPress={resetView}>
-                重置
+                {tVersion("viewer.zoom.reset")}
               </Button>
               <Button size="sm" variant="ghost" onPress={fitToStage}>
-                适应
+                {tVersion("viewer.zoom.fit")}
               </Button>
               <Button
                 size="sm"
@@ -489,7 +516,7 @@ export function PageSVGViewer({
                 isDisabled={!currentPage}
               >
                 <Download className="w-4 h-4" />
-                导出当前页
+                {tVersion("viewer.export.current")}
               </Button>
               <Button
                 size="sm"
@@ -497,7 +524,7 @@ export function PageSVGViewer({
                 onPress={handleExportAll}
                 isDisabled={!pages?.length}
               >
-                导出所有页
+                {tVersion("viewer.export.all")}
               </Button>
             </div>
           </div>
@@ -514,7 +541,7 @@ export function PageSVGViewer({
             {loading && (
               <div className="page-svg-viewer__status">
                 <Spinner size="sm" />
-                <span>正在加载多页 SVG ...</span>
+                <span>{tVersion("viewer.loading")}</span>
               </div>
             )}
 
@@ -549,9 +576,7 @@ export function PageSVGViewer({
         </Card.Content>
 
         <Card.Footer className="page-svg-viewer__footer">
-          <div className="page-svg-viewer__hint">
-            • 支持方向键切页、Ctrl/Cmd + 滚轮缩放 • 空格或回车点击预览可进入全屏
-          </div>
+          <div className="page-svg-viewer__hint">{tVersion("viewer.help")}</div>
         </Card.Footer>
       </Card.Root>
     </div>

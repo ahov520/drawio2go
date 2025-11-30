@@ -1,5 +1,17 @@
 {
   "project": {
     "nameRequired": "项目名称不能为空"
+  },
+  "version": {
+    "numberRequired": "版本号不能为空",
+    "formatInvalid": "版本号格式无效，应为 x.y.z 或 x.y.z.h",
+    "reservedVersion": "0.0.0 是保留版本号",
+    "subVersionRequired": "子版本号不能为空",
+    "subVersionNumeric": "子版本号必须是数字",
+    "subVersionRange": "子版本号必须在 {{min}} 到 {{max}} 之间",
+    "descriptionMaxLength": "描述不能超过 {{max}} 个字符",
+    "versionExists": "版本 {{version}} 已存在",
+    "parentRequired": "父版本不能为空",
+    "parentNotFound": "父版本 {{parent}} 不存在，请先创建主版本"
   }
 }

@@ -9,6 +9,7 @@ import { WIP_VERSION } from "@/app/lib/storage/constants";
 import { filterSubVersions, isSubVersion } from "@/app/lib/version-utils";
 import type { XMLVersion } from "@/app/lib/storage/types";
 import type { VersionPair } from "@/app/hooks/useVersionCompare";
+import { useAppTranslation } from "@/app/i18n/hooks";
 
 // 虚拟滚动阈值 - 版本数量超过此值时启用虚拟滚动（极致紧凑优化）
 const VIRTUAL_SCROLL_THRESHOLD = 30;
@@ -49,6 +50,7 @@ export function VersionTimeline({
   onViewModeChange,
   onNavigateToSubVersions,
 }: VersionTimelineProps) {
+  const { t: tVersion } = useAppTranslation("version");
   const parentRef = React.useRef<HTMLDivElement>(null);
   const skeletonItems = React.useMemo(() => Array.from({ length: 3 }), []);
   const selectedIdSet = React.useMemo(
@@ -158,15 +160,15 @@ export function VersionTimeline({
     !isLoading && timelineVersions.length > VIRTUAL_SCROLL_THRESHOLD;
 
   const mainDescriptionText = React.useMemo(() => {
-    const parts = ["按时间倒序的快照记录"];
+    const parts = [tVersion("timeline.description.base")];
     if (enableVirtualScroll) {
-      parts.push("虚拟滚动已启用");
+      parts.push(tVersion("timeline.description.virtualEnabled"));
     }
     if (compareMode) {
-      parts.push("对比模式");
+      parts.push(tVersion("timeline.description.compareMode"));
     }
     return parts.join(" • ");
-  }, [enableVirtualScroll, compareMode]);
+  }, [enableVirtualScroll, compareMode, tVersion]);
 
   React.useEffect(() => {
     if (!parentRef.current) return;
@@ -327,14 +329,18 @@ export function VersionTimeline({
           <History className="w-5 h-5" />
         </div>
         <p>
-          {resolvedViewMode.type === "main" ? "暂无历史版本" : "暂无子版本"}
+          {resolvedViewMode.type === "main"
+            ? tVersion("timeline.empty.mainTitle")
+            : tVersion("timeline.empty.subTitle")}
         </p>
         <p>
           {resolvedViewMode.type === "main"
-            ? "点击“保存版本”创建第一份快照"
+            ? tVersion("timeline.empty.createFirst")
             : resolvedViewMode.parentVersion
-              ? `v${resolvedViewMode.parentVersion} 尚未创建子版本`
-              : "请选择一个主版本"}
+              ? tVersion("timeline.empty.noSubForParent", {
+                  parent: resolvedViewMode.parentVersion,
+                })
+              : tVersion("timeline.empty.selectParent")}
         </p>
       </div>
     </div>
@@ -360,27 +366,39 @@ export function VersionTimeline({
               className="timeline-back-button"
             >
               <ArrowLeft className="w-4 h-4" />
-              返回
+              {tVersion("timeline.buttons.back")}
             </Button>
           )}
           <div>
             {resolvedViewMode.type === "main" ? (
-              <h3>历史版本</h3>
+              <h3>{tVersion("timeline.titleMain")}</h3>
             ) : (
-              <h3>子版本视图</h3>
+              <h3>{tVersion("timeline.titleSub")}</h3>
             )}
             <p className="timeline-description">
               {resolvedViewMode.type === "main"
                 ? mainDescriptionText
-                : `版本管理 > v${resolvedViewMode.parentVersion ?? "未知"} 的子版本`}
+                : resolvedViewMode.parentVersion
+                  ? tVersion("timeline.description.sub", {
+                      version: resolvedViewMode.parentVersion,
+                    })
+                  : tVersion("timeline.description.subUnknown")}
             </p>
           </div>
         </div>
         <div className="timeline-header__actions">
           <span className="timeline-chip">
             {resolvedViewMode.type === "main"
-              ? `历史快照 ${mainSnapshotCount} 个${hasWip ? " + WIP" : ""}`
-              : `子版本 ${timelineVersions.length} 个`}
+              ? hasWip
+                ? tVersion("timeline.stats.mainWithWip", {
+                    count: mainSnapshotCount,
+                  })
+                : tVersion("timeline.stats.main", {
+                    count: mainSnapshotCount,
+                  })
+              : tVersion("timeline.stats.sub", {
+                  count: timelineVersions.length,
+                })}
           </span>
           {compareMode &&
             resolvedViewMode.type === "main" &&
@@ -400,7 +418,7 @@ export function VersionTimeline({
                   onQuickCompare({ versionA: older, versionB: newer });
                 }}
               >
-                最新 vs 上一版本
+                {tVersion("timeline.buttons.quickCompare")}
               </Button>
             )}
         </div>

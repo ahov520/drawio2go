@@ -24,6 +24,7 @@ import type { DrawioEditorRef } from "@/app/components/DrawioEditorNative";
 import type { XMLVersion } from "@/app/lib/storage/types";
 import { WIP_VERSION } from "@/app/lib/storage/constants";
 import { isSubVersion } from "@/app/lib/version-utils";
+import { useAppTranslation } from "@/app/i18n/hooks";
 
 type VersionType = "main" | "sub";
 
@@ -48,6 +49,8 @@ export function CreateVersionDialog({
   editorRef,
   parentVersion,
 }: CreateVersionDialogProps) {
+  const { t: tVersion } = useAppTranslation("version");
+  const { t: tValidation } = useAppTranslation("validation");
   const [mainVersionInput, setMainVersionInput] = React.useState("");
   const [subVersionInput, setSubVersionInput] = React.useState("");
   const [versionType, setVersionType] = React.useState<VersionType>(
@@ -142,25 +145,31 @@ export function CreateVersionDialog({
     }
 
     if (!effectiveVersionNumber) {
-      setError("请输入版本号");
+      setValidationError(tValidation("version.numberRequired"));
       return;
     }
 
     const validation = validateVersion(projectUuid, effectiveVersionNumber);
     if (!validation.valid) {
-      setValidationError(validation.error || "版本号格式错误");
+      setValidationError(
+        validation.error || tValidation("version.formatInvalid"),
+      );
       return;
     }
 
     try {
       const exists = await isVersionExists(projectUuid, effectiveVersionNumber);
       if (exists) {
-        setValidationError("版本号已存在");
+        setValidationError(
+          tValidation("version.versionExists", {
+            version: effectiveVersionNumber,
+          }),
+        );
         return;
       }
     } catch (err) {
       console.error("同步版本号唯一性校验失败:", err);
-      setError("验证版本号失败,请重试");
+      setError(tVersion("create.status.validateFailed"));
       return;
     }
 
@@ -185,8 +194,8 @@ export function CreateVersionDialog({
       onVersionCreated?.(result);
 
       const successText = result.svgAttached
-        ? `版本创建成功！共 ${result.pageCount} 页，已缓存 SVG 预览。`
-        : `版本创建成功！共 ${result.pageCount} 页，SVG 导出失败已自动降级。`;
+        ? tVersion("create.status.success", { pageCount: result.pageCount })
+        : tVersion("create.status.degraded", { pageCount: result.pageCount });
       setSuccessMessage(successText);
 
       if (versionType === "sub") {
@@ -206,7 +215,9 @@ export function CreateVersionDialog({
         handleDialogClose();
       }, 1400);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "创建版本失败");
+      setError(
+        err instanceof Error ? err.message : tVersion("create.status.error"),
+      );
     } finally {
       setIsCreating(false);
       setExportProgress(null);
@@ -223,6 +234,8 @@ export function CreateVersionDialog({
     onVersionCreated,
     handleDialogClose,
     versionType,
+    tValidation,
+    tVersion,
   ]);
 
   const handleRecommend = React.useCallback(async () => {
@@ -230,7 +243,7 @@ export function CreateVersionDialog({
       if (versionType === "sub") {
         const parent = selectedParentVersion?.trim();
         if (!parent) {
-          setError("请选择父版本后再获取推荐子版本");
+          setError(tVersion("create.status.parentRequired"));
           return;
         }
         const recommended = await getRecommendedVersion(projectUuid, parent);
@@ -246,9 +259,15 @@ export function CreateVersionDialog({
       setError("");
     } catch (err) {
       console.error("获取推荐版本号失败:", err);
-      setError("获取推荐版本号失败");
+      setError(tVersion("create.status.recommendFailed"));
     }
-  }, [versionType, selectedParentVersion, projectUuid, getRecommendedVersion]);
+  }, [
+    versionType,
+    selectedParentVersion,
+    projectUuid,
+    getRecommendedVersion,
+    tVersion,
+  ]);
 
   React.useEffect(() => {
     if (isOpen && projectUuid) {
@@ -310,20 +329,20 @@ export function CreateVersionDialog({
   React.useEffect(() => {
     if (versionType === "sub") {
       if (!selectedParentVersion) {
-        setValidationError("请选择父版本");
+        setValidationError(tValidation("version.parentRequired"));
         setCheckingExists(false);
         return;
       }
 
       const suffix = subVersionInput.trim();
       if (!suffix) {
-        setValidationError("请输入子版本号");
+        setValidationError(tValidation("version.subVersionRequired"));
         setCheckingExists(false);
         return;
       }
 
       if (!/^\d+$/.test(suffix)) {
-        setValidationError("子版本号必须为纯数字");
+        setValidationError(tValidation("version.subVersionNumeric"));
         setCheckingExists(false);
         return;
       }
@@ -337,7 +356,9 @@ export function CreateVersionDialog({
 
     const validation = validateVersion(projectUuid, effectiveVersionNumber);
     if (!validation.valid) {
-      setValidationError(validation.error || "版本号格式错误");
+      setValidationError(
+        validation.error || tValidation("version.formatInvalid"),
+      );
       setCheckingExists(false);
       return;
     }
@@ -349,7 +370,11 @@ export function CreateVersionDialog({
         const exists = await isVersionExists(projectUuid, currentVersion);
         if (currentVersion === effectiveVersionNumber) {
           if (exists) {
-            setValidationError("版本号已存在");
+            setValidationError(
+              tValidation("version.versionExists", {
+                version: effectiveVersionNumber,
+              }),
+            );
           } else {
             setValidationError("");
           }
@@ -370,6 +395,7 @@ export function CreateVersionDialog({
     projectUuid,
     validateVersion,
     isVersionExists,
+    tValidation,
   ]);
 
   React.useEffect(() => {
@@ -465,7 +491,7 @@ export function CreateVersionDialog({
         if (!isMounted) return;
         console.error("加载主版本列表失败:", err);
         setParentOptions([]);
-        setParentOptionsError("无法加载主版本列表，请稍后重试");
+        setParentOptionsError(tVersion("create.status.parentLoadFailed"));
       })
       .finally(() => {
         if (isMounted) {
@@ -476,7 +502,7 @@ export function CreateVersionDialog({
     return () => {
       isMounted = false;
     };
-  }, [isOpen, projectUuid, getAllXMLVersions]);
+  }, [isOpen, projectUuid, getAllXMLVersions, tVersion]);
 
   if (!isOpen) return null;
 
@@ -484,12 +510,12 @@ export function CreateVersionDialog({
     <div className="dialog-overlay" onClick={handleDialogClose}>
       <div className="dialog-container" onClick={(e) => e.stopPropagation()}>
         <div className="dialog-header">
-          <h3 className="text-lg font-semibold">创建新版本</h3>
+          <h3 className="text-lg font-semibold">{tVersion("create.title")}</h3>
           <Button
             size="sm"
             variant="ghost"
             isIconOnly
-            aria-label="关闭创建版本对话框"
+            aria-label={tVersion("aria.viewer.close")}
             onPress={handleDialogClose}
             isDisabled={isCreating}
           >
@@ -505,23 +531,23 @@ export function CreateVersionDialog({
             onChange={handleVersionTypeChange}
             isDisabled={isCreating}
           >
-            <Label>版本类型</Label>
+            <Label>{tVersion("create.versionType.label")}</Label>
             <Description className="mt-2">
-              选择要创建的版本类型，子版本会继承父版本号
+              {tVersion("create.versionType.description")}
             </Description>
             <Radio value="main" isDisabled={!!parentVersion}>
               <Radio.Content>
-                <Label>主版本</Label>
+                <Label>{tVersion("create.versionType.main.label")}</Label>
                 <Description className="text-xs text-default-500">
-                  标准 x.y.z 格式（如 1.2.0）
+                  {tVersion("create.versionType.main.description")}
                 </Description>
               </Radio.Content>
             </Radio>
             <Radio value="sub">
               <Radio.Content>
-                <Label>子版本</Label>
+                <Label>{tVersion("create.versionType.sub.label")}</Label>
                 <Description className="text-xs text-default-500">
-                  为主版本追加 .h（如 1.2.0.1）
+                  {tVersion("create.versionType.sub.description")}
                 </Description>
               </Radio.Content>
             </Radio>
@@ -538,7 +564,7 @@ export function CreateVersionDialog({
               }}
               isDisabled={isCreating || !!parentVersion}
             >
-              <Label>父版本 *</Label>
+              <Label>{tVersion("create.parent.label")}</Label>
               <Select.Trigger className="mt-2 flex w-full items-center justify-between rounded-md border border-default-200 bg-content1 px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
                 <Select.Value className="text-sm leading-6 text-foreground" />
                 <Select.Indicator />
@@ -550,7 +576,8 @@ export function CreateVersionDialog({
                       key={version.id}
                       id={version.semantic_version}
                       textValue={`v${version.semantic_version} - ${
-                        version.description?.trim() || "暂无描述"
+                        version.description?.trim() ||
+                        tVersion("card.labels.noDescription")
                       }`}
                       className="select-item flex items-center justify-between rounded-xl px-3 py-2 text-sm text-foreground hover:bg-primary-50"
                     >
@@ -558,7 +585,7 @@ export function CreateVersionDialog({
                         v{version.semantic_version} -{" "}
                         {version.description?.trim()
                           ? version.description
-                          : "暂无描述"}
+                          : tVersion("card.labels.noDescription")}
                       </span>
                       <ListBox.ItemIndicator />
                     </ListBox.Item>
@@ -570,17 +597,19 @@ export function CreateVersionDialog({
               ) : isLoadingParents ? (
                 <Description className="mt-2 flex items-center gap-2 text-default-500">
                   <Spinner size="sm" />
-                  正在加载可用主版本...
+                  {tVersion("create.parent.loading")}
                 </Description>
               ) : noParentOptions ? (
                 <FieldError className="mt-2">
-                  暂无可用主版本，请先创建一个主版本后再添加子版本
+                  {tVersion("create.parent.empty")}
                 </FieldError>
               ) : (
                 <Description className="mt-2 text-default-500">
                   {parentVersion
-                    ? `父版本已锁定为 v${parentVersion}`
-                    : "仅显示三段式主版本（排除 WIP 与子版本）"}
+                    ? tVersion("create.parent.locked", {
+                        version: parentVersion,
+                      })
+                    : tVersion("create.parent.filterHint")}
                 </Description>
               )}
             </Select>
@@ -591,7 +620,11 @@ export function CreateVersionDialog({
             isRequired
             isInvalid={!!validationError}
           >
-            <Label>{versionType === "sub" ? "子版本号 *" : "版本号 *"}</Label>
+            <Label>
+              {versionType === "sub"
+                ? tVersion("create.versionNumber.labelSub")
+                : tVersion("create.versionNumber.labelMain")}
+            </Label>
             <div
               className={`mt-2 flex gap-2 ${versionType === "sub" ? "items-center" : ""}`}
             >
@@ -600,7 +633,7 @@ export function CreateVersionDialog({
                   <span className="min-w-[120px] rounded-md border border-dashed border-default-200 bg-default-100 px-3 py-2 text-sm text-default-600">
                     {selectedParentVersion
                       ? `${selectedParentVersion}.`
-                      : "未选择父版本"}
+                      : tVersion("create.parent.noneSelected")}
                   </span>
                   <Input
                     value={subVersionInput}
@@ -618,7 +651,7 @@ export function CreateVersionDialog({
                 <Input
                   value={mainVersionInput}
                   onChange={(e) => setMainVersionInput(e.target.value)}
-                  placeholder="1.0.0"
+                  placeholder={tVersion("create.versionNumber.placeholder")}
                   className="flex-1"
                   disabled={isCreating}
                 />
@@ -633,46 +666,49 @@ export function CreateVersionDialog({
                 }
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                智能推荐
+                {tVersion("create.versionNumber.recommend")}
               </Button>
             </div>
             {checkingExists ? (
               <Description className="mt-2 flex items-center gap-2 text-blue-600">
                 <Spinner size="sm" />
-                正在检查版本号...
+                {tVersion("create.versionNumber.checking")}
               </Description>
             ) : validationError ? (
               <FieldError className="mt-2">{validationError}</FieldError>
             ) : effectiveVersionNumber ? (
               <Description className="mt-2 text-green-600">
-                ✓ 版本号 {effectiveVersionNumber} 可用
+                {tVersion("create.versionNumber.available", {
+                  version: effectiveVersionNumber,
+                })}
               </Description>
             ) : versionType === "sub" ? (
               <Description className="mt-2">
-                请输入子版本号（纯数字），最终版本将保存为
-                {selectedParentVersion
-                  ? ` ${selectedParentVersion}.子版本号`
-                  : " 父版本.子版本号"}
+                {tVersion("create.versionNumber.inputSubHint", {
+                  full: selectedParentVersion
+                    ? `${selectedParentVersion}.${tVersion("create.versionNumber.autoFilled")}`
+                    : tVersion("create.versionNumber.autoFilled"),
+                })}
               </Description>
             ) : (
               <Description className="mt-2">
-                格式：x.y.z（如 1.0.0），或升级后生成 x.y.z.h 子版本
+                {tVersion("create.versionNumber.description")}
               </Description>
             )}
           </TextField>
 
           <TextField className="w-full mt-4">
-            <Label>版本描述（可选）</Label>
+            <Label>{tVersion("create.description.label")}</Label>
             <TextArea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="描述这个版本的主要变更..."
+              placeholder={tVersion("create.description.placeholder")}
               rows={4}
               className="mt-2"
               disabled={isCreating}
             />
             <Description className="mt-2">
-              简要说明这个版本的更改内容
+              {tVersion("create.description.helper")}
             </Description>
           </TextField>
 
@@ -692,11 +728,14 @@ export function CreateVersionDialog({
             <div className="mt-4 rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-700">
               {exportProgress?.total ? (
                 <span>
-                  正在导出第 {exportProgress.current}/{exportProgress.total} 页
+                  {tVersion("create.status.exporting", {
+                    current: exportProgress.current,
+                    total: exportProgress.total,
+                  })}
                   {exportProgress.name ? `（${exportProgress.name}）` : ""}...
                 </span>
               ) : (
-                <span>正在导出 SVG 并保存版本，请稍候...</span>
+                <span>{tVersion("create.status.exportingMessage")}</span>
               )}
             </div>
           )}
@@ -708,7 +747,7 @@ export function CreateVersionDialog({
             onPress={handleDialogClose}
             isDisabled={isCreating}
           >
-            取消
+            {tVersion("create.buttons.cancel")}
           </Button>
           <Button
             variant="primary"
@@ -723,10 +762,12 @@ export function CreateVersionDialog({
             {isCreating ? (
               <>
                 <Spinner size="sm" />
-                <span className="ml-2">创建中...</span>
+                <span className="ml-2">
+                  {tVersion("create.buttons.creating")}
+                </span>
               </>
             ) : (
-              "创建版本"
+              tVersion("create.buttons.create")
             )}
           </Button>
         </div>

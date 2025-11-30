@@ -1,1 +1,283 @@
-{}
+{
+  "sidebar": {
+    "title": "版本管理",
+    "subtitle": "追踪关键帧与 Diff 链，快速回溯历史",
+    "noProject": {
+      "title": "尚未选择项目",
+      "description": "选择一个项目后即可查看快照、关键帧与 Diff 历史"
+    },
+    "loadError": {
+      "title": "版本管理",
+      "description": "快照历史加载失败，请重试",
+      "retry": "重试"
+    },
+    "actions": {
+      "compareOn": "退出对比",
+      "compareOff": "对比版本",
+      "create": "保存版本"
+    },
+    "compareBanner": {
+      "title": "对比模式已开启",
+      "selected": "已选择 {{count}}/2 个版本",
+      "ready": "准备就绪",
+      "needTwo": "请选择两个历史版本",
+      "start": "开始对比",
+      "clear": "清空选择"
+    }
+  },
+  "card": {
+    "labels": {
+      "version": "版本 {{version}}",
+      "description": "描述",
+      "noDescription": "暂无描述",
+      "createdAt": "创建于"
+    },
+    "badges": {
+      "latest": "最新",
+      "keyframe": "关键帧",
+      "diffDepth": "差异链深度 +{{depth}}",
+      "pages": "{{count}} 个页面",
+      "subVersions": "包含 {{count}} 个子版本",
+      "wip": "当前画布内容"
+    },
+    "compare": {
+      "selectHint": "选择该版本进行对比",
+      "selectedOrder": "第 {{order}} 个",
+      "selected": "已选",
+      "added": "#{{order}}"
+    },
+    "preview": {
+      "openFullscreenPages": "打开全屏查看器，当前共 {{count}} 页",
+      "openFullscreen": "全屏查看 {{label}} 预览图",
+      "zoomHint": "点击查看大图",
+      "emptyTitle": "暂无 SVG 预览",
+      "emptyDescription": "旧版本可能未导出 SVG，保存新的快照即可生成缩略图",
+      "pageBadge": "共 {{count}} 页",
+      "missingPreview": "旧版本缺少预览图",
+      "toggleThumbsExpand": "展开缩略图",
+      "toggleThumbsCollapse": "收起缩略图",
+      "toggleThumbsAriaExpand": "展开页面缩略图",
+      "toggleThumbsAriaCollapse": "收起页面缩略图",
+      "openViewer": "查看所有 {{count}} 页",
+      "openViewerAria": "打开多页查看器，当前共 {{count}} 页",
+      "loadingPages": "正在加载全部页面...",
+      "pagesEmpty": "暂无页面预览",
+      "pagesError": "无法加载页面 SVG",
+      "thumbTitle": "打开第 {{index}} 页 {{name}}",
+      "thumbAlt": "第 {{index}} 页预览"
+    },
+    "meta": {
+      "keyframe": "关键帧快照",
+      "diffChain": "Diff 链 +{{depth}}",
+      "wip": "当前画布内容"
+    },
+    "actions": {
+      "viewSubVersions": "查看 {{count}} 个子版本",
+      "quickCompare": "快速对比",
+      "export": "导出",
+      "restore": "回滚"
+    }
+  },
+  "timeline": {
+    "titleMain": "历史版本",
+    "titleSub": "子版本视图",
+    "description": {
+      "base": "按时间倒序的快照记录",
+      "virtualEnabled": "虚拟滚动已启用",
+      "compareMode": "对比模式",
+      "sub": "版本管理 > v{{version}} 的子版本",
+      "subUnknown": "版本管理 > 未知的子版本"
+    },
+    "stats": {
+      "main": "历史快照 {{count}} 个",
+      "mainWithWip": "历史快照 {{count}} 个 + WIP",
+      "sub": "子版本 {{count}} 个"
+    },
+    "empty": {
+      "mainTitle": "暂无历史版本",
+      "subTitle": "暂无子版本",
+      "createFirst": "点击“保存版本”创建第一份快照",
+      "noSubForParent": "v{{parent}} 尚未创建子版本",
+      "selectParent": "请选择一个主版本"
+    },
+    "buttons": {
+      "back": "返回",
+      "quickCompare": "最新 vs 上一版本"
+    },
+    "groups": {
+      "today": "今天",
+      "yesterday": "昨天",
+      "thisWeek": "本周",
+      "lastWeek": "上周",
+      "thisMonth": "本月",
+      "older": "更早"
+    }
+  },
+  "compare": {
+    "title": "版本对比",
+    "close": "关闭",
+    "selectors": {
+      "left": "版本 A",
+      "right": "版本 B",
+      "swap": "交换版本"
+    },
+    "layout": {
+      "label": "布局",
+      "split": "左右",
+      "stack": "上下",
+      "overlay": "叠加",
+      "smart": "智能",
+      "overlayOpacity": "叠加透明度"
+    },
+    "zoom": {
+      "out": "缩小",
+      "in": "放大",
+      "reset": "重置"
+    },
+    "status": {
+      "loading": "正在加载版本数据…",
+      "error": "加载失败"
+    },
+    "errors": {
+      "missingPagesBoth": "两个版本都缺少 pages_svg 数据，无法进行对比",
+      "missingPagesA": "版本 A 缺少多页 SVG 数据",
+      "missingPagesB": "版本 B 缺少多页 SVG 数据",
+      "pageCountMismatch": "页面数量不一致：A 有 {{countA}} 页，B 有 {{countB}} 页",
+      "pageNameMismatch": "检测到页面名称不一致，已按索引对齐",
+      "noParsedPages": "未解析到有效的 SVG 页面数据"
+    },
+    "pages": {
+      "label": "页面",
+      "previous": "上一页",
+      "next": "下一页",
+      "select": "选择页面",
+      "indicator": "{{version}} · 共 {{count}} 页",
+      "shortcut": "按左右方向键切换页面"
+    },
+    "diff": {
+      "title": "智能差异高亮",
+      "empty": "暂无可生成的智能差异图",
+      "statsTitle": "智能匹配统计",
+      "coverage": "覆盖率 {{coverage}}",
+      "coverageShort": "智能覆盖 {{coverage}}",
+      "matched": "匹配元素",
+      "changed": "内容变更",
+      "onlyA": "仅存在于版本 A",
+      "onlyB": "仅存在于版本 B",
+      "legendAligned": "已对齐（透明灰）",
+      "legendAddedB": "版本 B 新增（绿色）",
+      "legendOnlyA": "版本 A 独有（红色）",
+      "legendChanged": "内容变更（黄色）",
+      "smartResultAlt": "智能差异高亮结果"
+    },
+    "pageStatus": {
+      "missingA": "版本 A 缺少此页面",
+      "missingB": "版本 B 缺少此页面"
+    }
+  },
+  "create": {
+    "title": "创建新版本",
+    "subtitle": "为当前项目创建版本快照",
+    "versionType": {
+      "label": "版本类型",
+      "description": "选择要创建的版本类型，子版本会继承父版本号",
+      "main": {
+        "label": "主版本",
+        "description": "标准 x.y.z 格式（如 1.2.0）"
+      },
+      "sub": {
+        "label": "子版本",
+        "description": "为主版本追加 .h（如 1.2.0.1）"
+      }
+    },
+    "parent": {
+      "label": "父版本 *",
+      "loading": "正在加载可用主版本...",
+      "empty": "暂无可用主版本，请先创建一个主版本后再添加子版本",
+      "locked": "父版本已锁定为 v{{version}}",
+      "filterHint": "仅显示三段式主版本（排除 WIP 与子版本）",
+      "noneSelected": "未选择父版本"
+    },
+    "versionNumber": {
+      "labelMain": "版本号 *",
+      "labelSub": "子版本号 *",
+      "placeholder": "1.0.0 或 1.0.0.1",
+      "description": "格式：x.y.z（如 1.0.0），或升级后生成 x.y.z.h 子版本",
+      "recommend": "智能推荐",
+      "checking": "正在检查版本号...",
+      "available": "✓ 版本号 {{version}} 可用",
+      "inputSubHint": "请输入子版本号（纯数字），最终版本将保存为 {{full}}",
+      "autoFilled": "父版本.子版本号"
+    },
+    "description": {
+      "label": "版本描述（可选）",
+      "placeholder": "描述这个版本的主要变更...",
+      "helper": "简要说明这个版本的更改内容"
+    },
+    "status": {
+      "exporting": "正在导出第 {{current}}/{{total}} 页",
+      "exportingMessage": "正在导出 SVG 并保存版本，请稍候...",
+      "success": "版本创建成功！共 {{pageCount}} 页，已缓存 SVG 预览。",
+      "degraded": "版本创建成功！共 {{pageCount}} 页，SVG 导出失败已自动降级。",
+      "error": "创建版本失败",
+      "validateFailed": "验证版本号失败，请重试",
+      "recommendFailed": "获取推荐版本号失败",
+      "parentLoadFailed": "无法加载主版本列表，请稍后重试",
+      "parentRequired": "请选择父版本后再获取推荐子版本"
+    },
+    "buttons": {
+      "cancel": "取消",
+      "create": "创建版本",
+      "creating": "创建中..."
+    }
+  },
+  "viewer": {
+    "title": "多页面查看器",
+    "versionSummary": "v{{version}} · {{count}} 页",
+    "zoom": {
+      "out": "缩小",
+      "in": "放大",
+      "reset": "重置",
+      "fit": "适应"
+    },
+    "nav": {
+      "previous": "上一页",
+      "next": "下一页",
+      "current": "第 {{current}} / {{total}} 页",
+      "hint": "使用键盘左右方向键切换页面"
+    },
+    "export": {
+      "current": "导出当前页",
+      "all": "导出所有页"
+    },
+    "loading": "正在加载多页 SVG ...",
+    "error": "加载多页 SVG 失败",
+    "help": "• 支持方向键切页、Ctrl/Cmd + 滚轮缩放 • 空格或回车点击预览可进入全屏"
+  },
+  "aria": {
+    "compare": {
+      "dialog": "版本对比：{{versionA}} 对比 {{versionB}}",
+      "close": "关闭对比",
+      "swap": "交换版本",
+      "pageSelect": "选择页面",
+      "overlayOpacity": "叠加透明度"
+    },
+    "card": {
+      "selectHint": "选择该版本进行对比",
+      "selectOrder": "已选择为对比序号 {{order}}",
+      "openFullscreenPages": "打开全屏查看器，当前共 {{count}} 页",
+      "openFullscreen": "全屏查看 {{label}} 预览图",
+      "openMultiViewer": "打开多页查看器，当前共 {{count}} 页",
+      "subVersionBadge": "包含 {{count}} 个子版本"
+    },
+    "viewer": {
+      "root": "多页面 SVG 查看器，版本 {{version}}",
+      "fit": "适应窗口",
+      "fullscreenEnter": "进入全屏",
+      "fullscreenExit": "退出全屏",
+      "close": "关闭",
+      "previous": "上一页",
+      "next": "下一页"
+    }
+  }
+}

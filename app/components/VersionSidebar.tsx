@@ -23,7 +23,7 @@ import { History, Save } from "lucide-react";
 import { useToast } from "@/app/components/toast";
 import type { XMLVersion } from "@/app/lib/storage/types";
 import type { DrawioEditorRef } from "@/app/components/DrawioEditorNative";
-import { useI18n } from "@/app/i18n/hooks";
+import { useAppTranslation } from "@/app/i18n/hooks";
 
 interface VersionSidebarProps {
   projectUuid: string | null;
@@ -40,7 +40,8 @@ export function VersionSidebar({
   onVersionRestore,
   editorRef,
 }: VersionSidebarProps) {
-  const { t } = useI18n();
+  const { t: tCommon } = useAppTranslation("common");
+  const { t: tVersion } = useAppTranslation("version");
   const { push } = useToast();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [versions, setVersions] = useState<XMLVersion[]>([]);
@@ -128,7 +129,7 @@ export function VersionSidebar({
         setIsLoading(false);
       },
       () => {
-        setError("加载版本列表失败");
+        setError(tVersion("sidebar.loadError.description"));
         setIsLoading(false);
       },
     );
@@ -136,7 +137,7 @@ export function VersionSidebar({
     return () => {
       unsubscribe?.();
     };
-  }, [projectUuid, subscribeVersions]);
+  }, [projectUuid, subscribeVersions, tVersion]);
 
   useEffect(() => {
     setTimelineViewMode({ type: "main" });
@@ -149,12 +150,12 @@ export function VersionSidebar({
     try {
       await getAllXMLVersions(projectUuid);
     } catch (err) {
-      console.error("加载版本列表失败:", err);
-      setError("加载版本列表失败");
+      console.error(tVersion("sidebar.loadError.description"), err);
+      setError(tVersion("sidebar.loadError.description"));
     } finally {
       setIsLoading(false);
     }
-  }, [getAllXMLVersions, projectUuid]);
+  }, [getAllXMLVersions, projectUuid, tVersion]);
 
   // 版本创建后反馈提示
   const handleVersionCreated = useCallback(
@@ -162,19 +163,23 @@ export function VersionSidebar({
       if (result) {
         const tone = result.svgAttached ? "success" : "warning";
         const message = result.svgAttached
-          ? t("toasts.versionCreateSuccess", { pageCount: result.pageCount })
-          : t("toasts.versionCreateDegraded", { pageCount: result.pageCount });
+          ? tCommon("toasts.versionCreateSuccess", {
+              pageCount: result.pageCount,
+            })
+          : tCommon("toasts.versionCreateDegraded", {
+              pageCount: result.pageCount,
+            });
         push({
           variant: tone,
           title:
             tone === "success"
-              ? t("toasts.versionCreateSuccessTitle")
-              : t("toasts.versionCreateDegradedTitle"),
+              ? tCommon("toasts.versionCreateSuccessTitle")
+              : tCommon("toasts.versionCreateDegradedTitle"),
           description: message,
         });
       }
     },
-    [push, t],
+    [push, tCommon],
   );
 
   // 如果没有选择项目，显示空状态
@@ -183,9 +188,11 @@ export function VersionSidebar({
       <div className="version-sidebar version-sidebar--empty">
         <div className="empty-state-card">
           <History className="empty-state-card__icon" />
-          <p className="empty-state-card__title">尚未选择项目</p>
+          <p className="empty-state-card__title">
+            {tVersion("sidebar.noProject.title")}
+          </p>
           <p className="empty-state-card__description">
-            选择一个项目后即可查看快照、关键帧与 Diff 历史
+            {tVersion("sidebar.noProject.description")}
           </p>
         </div>
       </div>
@@ -202,9 +209,11 @@ export function VersionSidebar({
               <History className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold">版本管理</h2>
+              <h2 className="text-lg font-semibold">
+                {tVersion("sidebar.loadError.title")}
+              </h2>
               <p className="sidebar-header__description">
-                快照历史加载失败，请重试
+                {tVersion("sidebar.loadError.description")}
               </p>
             </div>
           </div>
@@ -214,7 +223,7 @@ export function VersionSidebar({
             onPress={handleReload}
             className="version-sidebar__retry"
           >
-            重试
+            {tVersion("sidebar.loadError.retry")}
           </Button>
         </div>
         <div className="empty-state-card">
@@ -233,9 +242,11 @@ export function VersionSidebar({
             <History className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold">版本管理</h2>
+            <h2 className="text-lg font-semibold">
+              {tVersion("sidebar.title")}
+            </h2>
             <p className="sidebar-header__description">
-              追踪关键帧与 Diff 链，快速回溯历史
+              {tVersion("sidebar.subtitle")}
             </p>
           </div>
         </div>
@@ -247,7 +258,9 @@ export function VersionSidebar({
               onPress={toggleCompareMode}
               className="version-sidebar__compare-btn"
             >
-              {isCompareMode ? "退出对比" : "对比版本"}
+              {isCompareMode
+                ? tVersion("sidebar.actions.compareOn")
+                : tVersion("sidebar.actions.compareOff")}
             </Button>
           )}
           <Button
@@ -258,7 +271,7 @@ export function VersionSidebar({
             isDisabled={isLoading}
           >
             <Save className="w-4 h-4" />
-            保存版本
+            {tVersion("sidebar.actions.create")}
           </Button>
         </div>
       </div>
@@ -285,10 +298,15 @@ export function VersionSidebar({
               <div className="compare-mode-banner">
                 <div className="compare-mode-banner__info">
                   <p>
-                    对比模式已开启 · 已选择 {selectedVersions.length}/2 个版本
+                    {tVersion("sidebar.compareBanner.title")} ·{" "}
+                    {tVersion("sidebar.compareBanner.selected", {
+                      count: selectedVersions.length,
+                    })}
                   </p>
                   <span>
-                    {canStartCompare ? "准备就绪" : "请选择两个历史版本"}
+                    {canStartCompare
+                      ? tVersion("sidebar.compareBanner.ready")
+                      : tVersion("sidebar.compareBanner.needTwo")}
                   </span>
                 </div>
                 {selectedVersions.length > 0 && (
@@ -309,7 +327,7 @@ export function VersionSidebar({
                     }
                     isDisabled={!canStartCompare}
                   >
-                    开始对比
+                    {tVersion("sidebar.compareBanner.start")}
                   </Button>
                   <Button
                     size="sm"
@@ -317,7 +335,7 @@ export function VersionSidebar({
                     onPress={resetSelection}
                     isDisabled={!selectedIds.length}
                   >
-                    清空选择
+                    {tVersion("sidebar.compareBanner.clear")}
                   </Button>
                 </div>
               </div>
