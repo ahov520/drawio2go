@@ -11,7 +11,9 @@
     "weeksAgo_other": "{{count}} weeks ago"
   },
   "toast": {
-    "close": "Close notification"
+    "close": "Close notification",
+    "copy": "Copy notification",
+    "copied": "Copied"
   },
   "toasts": {
     "noContentToSave": "Nothing to save.",

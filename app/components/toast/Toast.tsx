@@ -1,9 +1,16 @@
 "use client";
 
 import React from "react";
-import { useEffect, useState, FocusEvent, KeyboardEvent } from "react";
-import { CloseButton } from "@heroui/react";
-import { AlertTriangle, CheckCircle2, Info, XCircle } from "lucide-react";
+import { useEffect, useRef, useState, FocusEvent, KeyboardEvent } from "react";
+import { Button, CloseButton } from "@heroui/react";
+import {
+  AlertTriangle,
+  Check,
+  CheckCircle2,
+  Copy,
+  Info,
+  XCircle,
+} from "lucide-react";
 import type { Toast as ToastItem } from "@/app/types/toast";
 import { useAppTranslation } from "@/app/i18n/hooks";
 
@@ -71,9 +78,13 @@ function ToastRoot({
   isLeaving = false,
 }: ToastRootProps) {
   const [isMounted, setIsMounted] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { t } = useAppTranslation("common");
 
   const closeLabel = t("toast.close", "Close notification");
+  const copyLabel = t("toast.copy", "Copy notification");
+  const copiedLabel = t("toast.copied", "Copied");
 
   const role =
     toast.variant === "warning" || toast.variant === "danger"
@@ -82,6 +93,12 @@ function ToastRoot({
 
   useEffect(() => {
     setIsMounted(true);
+
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+    };
   }, []);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -118,7 +135,68 @@ function ToastRoot({
     >
       <ToastIcon variant={toast.variant} />
       <ToastContent title={toast.title} description={toast.description} />
-      <ToastClose onPress={() => onDismiss(toast.id)} ariaLabel={closeLabel} />
+      <div className="toast__actions">
+        <Button
+          isIconOnly
+          size="sm"
+          variant="tertiary"
+          aria-label={copied ? copiedLabel : copyLabel}
+          onPress={async () => {
+            const text = toast.title
+              ? `${toast.title}\n${toast.description}`
+              : toast.description;
+
+            const copyFallback = () => {
+              try {
+                const textarea = document.createElement("textarea");
+                textarea.value = text;
+                textarea.setAttribute("readonly", "");
+                textarea.style.position = "absolute";
+                textarea.style.left = "-9999px";
+                document.body.appendChild(textarea);
+                textarea.select();
+                const succeeded = document.execCommand("copy");
+                document.body.removeChild(textarea);
+                return succeeded;
+              } catch {
+                return false;
+              }
+            };
+
+            const copySucceeded = await (async () => {
+              if (navigator?.clipboard?.writeText) {
+                try {
+                  await navigator.clipboard.writeText(text);
+                  return true;
+                } catch {
+                  return copyFallback();
+                }
+              }
+
+              return copyFallback();
+            })();
+
+            if (copySucceeded) {
+              setCopied(true);
+              if (copyTimeoutRef.current) {
+                clearTimeout(copyTimeoutRef.current);
+              }
+              copyTimeoutRef.current = setTimeout(() => setCopied(false), 1500);
+            }
+          }}
+          className="toast__copy"
+        >
+          {copied ? (
+            <Check size={18} aria-hidden />
+          ) : (
+            <Copy size={18} aria-hidden />
+          )}
+        </Button>
+        <ToastClose
+          onPress={() => onDismiss(toast.id)}
+          ariaLabel={closeLabel}
+        />
+      </div>
     </div>
   );
 }

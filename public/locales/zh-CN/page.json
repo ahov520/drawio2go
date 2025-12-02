@@ -14,7 +14,8 @@
     "saveFailed": "保存更改失败",
     "loadingError": "加载项目时发生错误",
     "unknownError": "未知错误",
-    "webFeatureUnavailable": "网页无法使用该功能。"
+    "webFeatureUnavailable": "网页无法使用该功能。",
+    "userCanceledOpen": "用户取消打开"
   },
   "selection": {
     "summary": "选中了 {{count}} 个对象",

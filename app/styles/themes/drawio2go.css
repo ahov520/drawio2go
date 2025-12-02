@@ -67,6 +67,7 @@
     --info-foreground: var(--snow);
     --danger: oklch(0.65 0.24 25);
     --danger-foreground: var(--snow);
+    --toast-surface-mix: 12%;
 
     /* Components */
     --segment: var(--white);
@@ -115,6 +116,17 @@
     --glass-effect: backdrop-blur(12px) saturate(180%) brightness(105%);
     --glass-background: color-mix(in oklch, var(--surface) 85%, transparent);
 
+    /* Overlay and Warning System */
+    --surface-overlay: color-mix(in oklch, var(--black) 50%, transparent);
+    --text-on-overlay: var(--snow);
+    --warning-bg-subtle: color-mix(in oklch, var(--warning) 10%, transparent);
+    --warning-text: oklch(0.55 0.18 68);
+    --warning-border-dashed: color-mix(
+      in oklch,
+      var(--warning) 35%,
+      transparent
+    );
+
     --skeleton-animation: shimmer;
   }
 
@@ -122,6 +134,12 @@
   .dark[data-theme="drawio2go-dark"],
   [data-theme="drawio2go-dark"] {
     color-scheme: dark;
+
+    /* Primitive Colors */
+    --white: oklch(1 0 0);
+    --black: oklch(0 0 0);
+    --snow: oklch(0.9911 0 0);
+    --eclipse: oklch(0.2103 0.0059 285.89);
 
     --background: oklch(0.16 0.035 238);
     --foreground: var(--snow);
@@ -155,13 +173,14 @@
     --field-border: rgba(255, 255, 255, 0.08);
 
     --success: oklch(0.76 0.22 150);
-    --success-foreground: var(--eclipse);
+    --success-foreground: var(--snow);
     --warning: oklch(0.82 0.19 68);
-    --warning-foreground: var(--eclipse);
+    --warning-foreground: var(--snow);
     --info: oklch(0.7 0.23 290);
-    --info-foreground: var(--eclipse);
+    --info-foreground: var(--snow);
     --danger: oklch(0.68 0.24 25);
-    --danger-foreground: var(--eclipse);
+    --danger-foreground: var(--snow);
+    --toast-surface-mix: 20%;
 
     --segment: color-mix(in oklch, var(--surface) 85%, var(--background));
     --segment-foreground: var(--foreground);
@@ -211,6 +230,17 @@
     );
     --glass-effect: backdrop-blur(16px) saturate(200%) brightness(110%);
     --glass-background: color-mix(in oklch, var(--surface) 75%, transparent);
+
+    /* Overlay and Warning System */
+    --surface-overlay: color-mix(in oklch, var(--black) 65%, transparent);
+    --text-on-overlay: var(--snow);
+    --warning-bg-subtle: color-mix(in oklch, var(--warning) 18%, transparent);
+    --warning-text: var(--warning);
+    --warning-border-dashed: color-mix(
+      in oklch,
+      var(--warning) 45%,
+      transparent
+    );
   }
 }
 

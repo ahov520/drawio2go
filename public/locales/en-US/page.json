@@ -14,7 +14,8 @@
     "saveFailed": "Failed to save changes",
     "loadingError": "An error occurred while loading the project",
     "unknownError": "Unknown error",
-    "webFeatureUnavailable": "This feature is unavailable on the web."
+    "webFeatureUnavailable": "This feature is unavailable on the web.",
+    "userCanceledOpen": "User canceled file opening"
   },
   "selection": {
     "summary": "Selected {{count}} objects",

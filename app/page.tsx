@@ -256,7 +256,7 @@ export default function Home() {
             variant: "danger",
           });
         }
-      } else if (result.message !== "用户取消打开") {
+      } else if (result.message !== tp("main.userCanceledOpen")) {
         push({
           description: t("toasts.loadFailed", { error: result.message }),
           variant: "danger",

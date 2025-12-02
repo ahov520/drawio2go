@@ -6,6 +6,7 @@ export interface Toast {
   description: string;
   variant: ToastVariant;
   duration?: number; // 毫秒,默认 3200
+  // 所有通知默认支持复制功能，无需额外标记
 }
 
 export interface ToastContextValue {

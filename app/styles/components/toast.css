@@ -10,7 +10,11 @@
   }
 
   .toast {
-    --toast-bg: color-mix(in oklch, var(--info) 12%, var(--surface));
+    --toast-bg: color-mix(
+      in oklch,
+      var(--info) var(--toast-surface-mix, 12%),
+      var(--surface)
+    );
     --toast-fg: var(--info-foreground, var(--foreground));
     --toast-border: color-mix(in oklch, var(--info) 35%, transparent);
 
@@ -45,27 +49,39 @@
   }
 
   .toast[data-variant="success"] {
-    --toast-bg: color-mix(in oklch, var(--success) 12%, var(--surface));
+    --toast-bg: color-mix(
+      in oklch,
+      var(--success) var(--toast-surface-mix, 12%),
+      var(--surface)
+    );
     --toast-fg: var(--success-foreground);
     --toast-border: color-mix(in oklch, var(--success) 35%, transparent);
   }
 
   .toast[data-variant="info"] {
-    --toast-bg: color-mix(in oklch, var(--info) 12%, var(--surface));
+    --toast-bg: color-mix(
+      in oklch,
+      var(--info) var(--toast-surface-mix, 12%),
+      var(--surface)
+    );
     --toast-fg: var(--info-foreground, var(--foreground));
     --toast-border: color-mix(in oklch, var(--info) 35%, transparent);
   }
 
   .toast[data-variant="warning"] {
-    --toast-bg: color-mix(in oklch, var(--warning) 12%, var(--surface));
+    --toast-bg: color-mix(
+      in oklch,
+      var(--warning) var(--toast-surface-mix, 12%),
+      var(--surface)
+    );
     --toast-fg: var(--warning-foreground, var(--foreground));
     --toast-border: color-mix(in oklch, var(--warning) 35%, transparent);
   }
 
   .toast[data-variant="danger"] {
-    --toast-bg: color-mix(in oklch, var(--danger) 12%, var(--surface));
-    --toast-fg: var(--danger-foreground, var(--foreground));
-    --toast-border: color-mix(in oklch, var(--danger) 35%, transparent);
+    --toast-bg: color-mix(in oklch, var(--danger) 92%, var(--black) 8%);
+    --toast-fg: var(--snow);
+    --toast-border: color-mix(in oklch, var(--danger) 55%, transparent);
   }
 
   .toast svg {
@@ -93,6 +109,27 @@
   .toast__close {
     margin-left: var(--spacing-sm);
     color: color-mix(in oklch, var(--toast-fg) 80%, transparent);
+  }
+
+  .toast__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+  }
+
+  .toast .toast__copy {
+    color: color-mix(in oklch, var(--toast-fg) 92%, transparent);
+    background-color: transparent;
+    border-color: color-mix(in oklch, var(--toast-fg) 28%, transparent);
+    box-shadow: none;
+  }
+
+  .toast .toast__copy:hover {
+    background-color: color-mix(in oklch, var(--toast-fg) 14%, transparent);
+  }
+
+  .toast .toast__copy:focus-visible {
+    box-shadow: 0 0 0 2px color-mix(in oklch, var(--toast-fg) 35%, transparent);
   }
 
   .toast:focus-visible {

@@ -433,7 +433,7 @@
   align-items: center;
   justify-content: center;
   gap: var(--spacing-compact-xs);
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--surface-overlay);
   border-radius: calc(var(--radius) - 0.25rem);
   opacity: 0;
   transition: opacity var(--transition-fast);
@@ -443,13 +443,13 @@
 .version-preview__zoom-icon {
   width: 2rem;
   height: 2rem;
-  color: white;
+  color: var(--text-on-overlay);
 }
 
 .version-preview__zoom-text {
   font-size: var(--font-size-compact-sm);
   font-weight: 500;
-  color: white;
+  color: var(--text-on-overlay);
 }
 
 .version-preview--placeholder {
@@ -1020,9 +1020,9 @@
   padding: 0.5rem var(--spacing-lg);
   margin: 0 var(--spacing-lg);
   border-radius: var(--radius);
-  background: rgba(245, 158, 11, 0.1);
-  color: #b45309;
-  border: 1px dashed rgba(245, 158, 11, 0.35);
+  background: var(--warning-bg-subtle);
+  color: var(--warning-text);
+  border: 1px dashed var(--warning-border-dashed);
 }
 
 .version-compare__body {

@@ -79,7 +79,8 @@
       "Bash(ls:*)",
       "Bash(npm run test:*)",
       "Bash(npm test:*)",
-      "Bash(pnpm run lint:*)"
+      "Bash(pnpm run lint:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

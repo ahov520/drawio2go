@@ -759,14 +759,17 @@ export function CreateVersionDialog({
               </Button>
             </div>
             {checkingExists ? (
-              <Description className="mt-2 flex items-center gap-2 text-blue-600">
+              <Description
+                className="mt-2 flex items-center gap-2"
+                style={{ color: "var(--info)" }}
+              >
                 <Spinner size="sm" />
                 {tVersion("create.versionNumber.checking")}
               </Description>
             ) : validationError ? (
               <FieldError className="mt-2">{validationError}</FieldError>
             ) : effectiveVersionNumber ? (
-              <Description className="mt-2 text-green-600">
+              <Description className="mt-2" style={{ color: "var(--success)" }}>
                 {tVersion("create.versionNumber.available", {
                   version: effectiveVersionNumber,
                 })}
@@ -803,18 +806,29 @@ export function CreateVersionDialog({
 
           {error && (
             <div className="error-message mt-4">
-              <p className="text-sm text-red-600">{error}</p>
+              <p className="text-sm" style={{ color: "var(--danger)" }}>
+                {error}
+              </p>
             </div>
           )}
 
           {successMessage && !isCreating && (
-            <div className="success-message mt-4 text-sm text-green-600">
+            <div
+              className="success-message mt-4 text-sm"
+              style={{ color: "var(--success)" }}
+            >
               {successMessage}
             </div>
           )}
 
           {isCreating && (
-            <div className="mt-4 rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-700">
+            <div
+              className="mt-4 rounded-md px-3 py-2 text-sm"
+              style={{
+                background: "var(--accent-soft)",
+                color: "var(--accent)",
+              }}
+            >
               {exportProgress?.total ? (
                 <span>
                   {tVersion("create.status.exporting", {

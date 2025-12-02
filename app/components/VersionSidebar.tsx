@@ -227,7 +227,12 @@ export function VersionSidebar({
           </Button>
         </div>
         <div className="empty-state-card">
-          <p className="empty-state-card__description text-red-500">{error}</p>
+          <p
+            className="empty-state-card__description"
+            style={{ color: "var(--danger)" }}
+          >
+            {error}
+          </p>
         </div>
       </div>
     );

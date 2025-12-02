@@ -102,11 +102,6 @@ export default function ChatSidebar({
   const [saveError, setSaveError] = useState<string | null>(null);
   const { t, i18n } = useI18n();
   const { push } = useToast();
-  const lastErrorRef = useRef<{
-    chat?: string;
-    settings?: string;
-    conversations?: string;
-  }>({});
 
   // ========== 引用 ==========
   const sendingSessionIdRef = useRef<string | null>(null);
@@ -589,16 +584,14 @@ export default function ChatSidebar({
 
   useEffect(() => {
     const message = extractErrorMessage(settingsError);
-    if (message && lastErrorRef.current.settings !== message) {
-      lastErrorRef.current.settings = message;
+    if (message) {
       pushErrorToast(message, t("toasts.settingsLoadFailed"));
     }
   }, [extractErrorMessage, settingsError, pushErrorToast, t]);
 
   useEffect(() => {
     const message = extractErrorMessage(conversationsError);
-    if (message && lastErrorRef.current.conversations !== message) {
-      lastErrorRef.current.conversations = message;
+    if (message) {
       pushErrorToast(message, t("toasts.conversationsSyncFailed"));
     }
   }, [conversationsError, extractErrorMessage, pushErrorToast, t]);
@@ -606,8 +599,7 @@ export default function ChatSidebar({
   useEffect(() => {
     const message = extractErrorMessage(chatError);
 
-    if (message && lastErrorRef.current.chat !== message) {
-      lastErrorRef.current.chat = message;
+    if (message) {
       pushErrorToast(message, t("toasts.chatRequestFailed"));
     }
   }, [chatError, extractErrorMessage, pushErrorToast, t]);
