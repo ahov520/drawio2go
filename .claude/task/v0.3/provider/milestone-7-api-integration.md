@@ -54,8 +54,18 @@
   - stopWhen: 使用 `stepCountIs(runtimeConfig.maxToolRounds)`（模型独立的轮次）
   - 其他参数保持不变
 - [ ] 更新开发模式日志（如有）
-  - 记录provider、model、temperature、maxToolRounds等信息
-  - 便于调试
+  ```typescript
+  if (isDev) {
+    console.log("[Chat API] 收到请求:", {
+      messagesCount: modelMessages.length,
+      provider: normalizedConfig.providerType,
+      model: normalizedConfig.modelName,
+      maxRounds: normalizedConfig.maxToolRounds,
+      capabilities: normalizedConfig.capabilities, // 新增
+      enableToolsInThinking: normalizedConfig.enableToolsInThinking, // 新增
+    });
+  }
+  ```
 
 ### 4. 清理旧代码
 
@@ -72,6 +82,100 @@
 - [ ] 确认 `useChat` 的body参数已更新
   - body: `{ providerId, modelId }` 而不是 `{ llmConfig }`
 - [ ] 验证发送消息时传递正确的参数
+
+### 6. DeepSeek Native Provider 集成
+
+**文件**: `app/api/chat/route.ts`
+
+- [ ] 导入 DeepSeek SDK
+
+  ```typescript
+  import { createDeepSeek } from "@ai-sdk/deepseek";
+  ```
+
+- [ ] 修改 provider 选择逻辑
+
+  ```typescript
+  if (normalizedConfig.providerType === "openai-reasoning") {
+    // OpenAI Reasoning: 使用 @ai-sdk/openai
+    const openaiProvider = createOpenAI({...});
+    model = openaiProvider.chat(normalizedConfig.modelName);
+  } else if (normalizedConfig.providerType === "deepseek-native") {
+    // DeepSeek Native: 使用 @ai-sdk/deepseek
+    const deepseekProvider = createDeepSeek({
+      baseURL: normalizedConfig.apiUrl,
+      apiKey: normalizedConfig.apiKey || "dummy-key",
+    });
+    model = deepseekProvider(normalizedConfig.modelName);
+  } else {
+    // OpenAI Compatible: 其他供应商
+    const compatibleProvider = createOpenAICompatible({...});
+    model = compatibleProvider(normalizedConfig.modelName);
+  }
+  ```
+
+- [ ] 移除对 "deepseek" providerType 的支持（破坏性更改）
+
+### 7. 思考模式工具调用支持
+
+**文件**: `app/api/chat/route.ts`
+
+基于DeepSeek官方文档实现reasoning_content传递逻辑：
+
+- [ ] 实现 reasoning_content 提取辅助函数
+
+  ```typescript
+  function extractRecentReasoning(messages: Message[]): string | undefined {
+    // 从后向前查找最近的 assistant 消息
+    // 提取 parts 中 type="reasoning" 的内容
+  }
+  ```
+
+- [ ] 实现新问题检测函数
+
+  ```typescript
+  function isNewUserQuestion(messages: Message[]): boolean {
+    // 检测最后一条消息是否为 user 角色
+    // 用于决定是否清空 reasoning_content
+  }
+  ```
+
+- [ ] 在 streamText() 调用中添加 reasoning_content 逻辑
+
+  ```typescript
+  let experimentalParams: Record<string, unknown> | undefined;
+
+  if (
+    normalizedConfig.enableToolsInThinking &&
+    normalizedConfig.capabilities?.supportsThinking
+  ) {
+    const isNewQuestion = isNewUserQuestion(modelMessages);
+
+    if (!isNewQuestion) {
+      // 工具调用轮次: 回传 reasoning_content
+      const reasoningContent = extractRecentReasoning(modelMessages);
+      if (reasoningContent) {
+        experimentalParams = { reasoning_content: reasoningContent };
+      }
+    }
+  }
+
+  const result = streamText({
+    model,
+    system: normalizedConfig.systemPrompt,
+    messages: modelMessages,
+    temperature: normalizedConfig.temperature,
+    tools: drawioTools,
+    stopWhen: stepCountIs(normalizedConfig.maxToolRounds),
+    ...(experimentalParams && { experimental: experimentalParams }),
+    // ...其他参数
+  });
+  ```
+
+- [ ] 添加错误处理和降级策略
+  - 在 try-catch 中包裹 reasoning_content 相关逻辑
+  - 处理失败时降级为普通模式，不中断请求
+  - 记录详细错误日志
 
 ## 涉及文件
 
@@ -120,6 +224,30 @@
 - [ ] 开发模式日志输出有用的调试信息
 - [ ] 日志包含provider、model、temperature、maxToolRounds等关键信息
 
+### DeepSeek Native 集成验收
+
+- [ ] "deepseek-native" providerType 正确使用 createDeepSeek()
+- [ ] DeepSeek 模型正确接收 baseURL 和 apiKey
+- [ ] DeepSeek 模型响应正常（测试 deepseek-chat）
+- [ ] DeepSeek Reasoner 模型正确返回 reasoning 内容
+- [ ] 旧的 "deepseek" providerType 在运行时产生错误
+
+### 思考模式工具调用验收
+
+- [ ] enableToolsInThinking 为 true 时 reasoning_content 逻辑生效
+- [ ] extractRecentReasoning() 正确提取最近的 reasoning 内容
+- [ ] isNewUserQuestion() 正确检测新问题
+- [ ] 工具调用轮次中 reasoning_content 正确回传到 API
+- [ ] 新问题开始时 reasoning_content 不传递
+- [ ] deepseek-reasoner 模型在思考中正确执行工具调用
+- [ ] reasoning_content 传递失败时降级为普通模式，不崩溃
+
+### 日志输出验收
+
+- [ ] 开发日志包含 capabilities 和 enableToolsInThinking 信息
+- [ ] reasoning_content 传递有清晰日志记录
+- [ ] 错误降级有 console.error 记录
+
 ## 依赖关系
 
 **前置依赖**:
@@ -141,6 +269,11 @@
 5. **向后不兼容**: 这是破坏性更改，旧的llmConfig格式将不再被接受
 6. **开发日志**: 保留或增强开发模式日志，便于调试新的配置流程
 7. **性能**: 每次请求都要读取存储，确保存储操作足够快（通常<100ms）
+8. **DeepSeek SDK 兼容性**: @ai-sdk/deepseek 的 API 可能与 openai-compatible 有差异，需测试验证
+9. **reasoning_content 格式**: 严格按照 DeepSeek 文档格式传递，目前假设为纯字符串
+10. **错误处理**: reasoning_content 处理失败时需降级为普通模式，不应崩溃整个请求
+11. **消息历史长度**: extractRecentReasoning 只提取最近的 reasoning，避免传递过长内容
+12. **experimental 参数**: reasoning_content 可能需要放在 experimental 对象中
 
 ## 测试要点
 
