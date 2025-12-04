@@ -79,6 +79,8 @@
       "description": "添加一个供应商以开始使用"
     },
     "addProvider": "添加供应商",
+    "addModel": "添加模型",
+    "editModel": "编辑模型",
     "editProvider": "编辑供应商",
     "provider": {
       "type": "类型",
@@ -88,13 +90,21 @@
     },
     "modelsList": {
       "title": "模型",
-      "empty": "暂无模型配置"
+      "empty": "暂无模型配置",
+      "emptyWithAction": "该供应商还没有模型，点击添加按钮创建模型"
+    },
+    "capabilities": {
+      "thinking": "思考",
+      "vision": "视觉",
+      "tools": "工具"
     },
     "default": "默认",
     "active": "正在使用",
+    "unlimited": "无限制",
     "actions": {
       "edit": "编辑",
-      "delete": "删除"
+      "delete": "删除",
+      "setDefault": "设为默认"
     },
     "form": {
       "name": {
@@ -128,7 +138,48 @@
         "description": "可选。不填则使用无认证访问",
         "minLength": "API Key 至少 {min} 个字符"
       },
-      "testConnection": "测试连接"
+      "testConnection": "测试连接",
+      "modelName": {
+        "label": "模型名称",
+        "placeholder": "请输入模型名称，如 gpt-4o",
+        "description": "用于请求的实际模型 ID，必填",
+        "required": "模型名称不能为空"
+      },
+      "displayName": {
+        "label": "显示名称",
+        "placeholder": "例如：高质量推理模型",
+        "description": "用于界面展示的别名，不影响请求"
+      },
+      "temperature": {
+        "label": "温度",
+        "placeholder": "0 - 2，默认 0.3",
+        "description": "控制输出随机性，数值越大越发散",
+        "invalid": "温度必须是数字",
+        "outOfRange": "温度需在 0 - 2 之间"
+      },
+      "maxToolRounds": {
+        "label": "最大工具轮次",
+        "placeholder": "1 - 999，默认 5",
+        "description": "单次对话允许的工具调用轮数上限",
+        "invalid": "最大工具轮次必须是整数",
+        "outOfRange": "请输入 1 - 999 之间的数值"
+      },
+      "capabilities": {
+        "title": "模型能力",
+        "description": "标记模型是否支持思考/视觉能力，影响工具调用策略",
+        "thinking": {
+          "label": "支持思考",
+          "description": "适用于 o1 / o3 / deepseek-reasoner 等推理模型"
+        },
+        "vision": {
+          "label": "支持视觉",
+          "description": "能够解析图片/截图输入，如 gpt-4o"
+        }
+      },
+      "enableToolsInThinking": {
+        "label": "思考中允许调用工具",
+        "description": "某些推理模型可在思考阶段直接触发工具调用"
+      }
     },
     "test": {
       "success": "连接成功",
@@ -138,7 +189,10 @@
     "save": {
       "createSuccess": "供应商“{name}”已创建",
       "updateSuccess": "供应商“{name}”已更新",
-      "error": "保存供应商失败"
+      "error": "保存供应商失败",
+      "modelCreateSuccess": "模型“{name}”已创建",
+      "modelUpdateSuccess": "模型“{name}”已更新",
+      "modelError": "保存模型失败，请稍后重试"
     },
     "delete": {
       "confirmTitle": "删除供应商",
@@ -147,10 +201,22 @@
       "successWithSwitch": "供应商“{name}”已删除，已切换到“{newModel}”",
       "successNoActiveModel": "供应商“{name}”已删除，没有可用的活动模型，请配置模型。",
       "error": "删除供应商失败"
+    },
+    "deleteModel": {
+      "title": "删除模型",
+      "description": "确认删除模型“{name}”吗？",
+      "success": "模型“{name}”已删除",
+      "error": "删除模型失败"
+    },
+    "setDefault": {
+      "success": "已将“{name}”设为默认模型",
+      "error": "设置默认模型失败"
     }
   },
   "common": {
     "optional": "(可选)",
+    "required": "必填",
+    "confirm": "确认",
     "cancel": "取消",
     "save": "保存"
   },

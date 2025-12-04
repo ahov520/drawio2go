@@ -79,6 +79,8 @@
       "description": "Add a provider to get started"
     },
     "addProvider": "Add Provider",
+    "addModel": "Add Model",
+    "editModel": "Edit Model",
     "editProvider": "Edit Provider",
     "provider": {
       "type": "Type",
@@ -88,13 +90,21 @@
     },
     "modelsList": {
       "title": "Models",
-      "empty": "No models configured"
+      "empty": "No models configured",
+      "emptyWithAction": "This provider has no models yet. Click Add Model to create one."
+    },
+    "capabilities": {
+      "thinking": "Thinking",
+      "vision": "Vision",
+      "tools": "Tools"
     },
     "default": "Default",
     "active": "Active",
+    "unlimited": "Unlimited",
     "actions": {
       "edit": "Edit",
-      "delete": "Delete"
+      "delete": "Delete",
+      "setDefault": "Set as default"
     },
     "form": {
       "name": {
@@ -128,7 +138,48 @@
         "description": "Optional. Leave blank to use without authentication.",
         "minLength": "API Key must be at least {min} characters"
       },
-      "testConnection": "Test Connection"
+      "testConnection": "Test Connection",
+      "modelName": {
+        "label": "Model Name",
+        "placeholder": "e.g., gpt-4o",
+        "description": "The actual model ID used in requests (required)",
+        "required": "Model name is required"
+      },
+      "displayName": {
+        "label": "Display Name",
+        "placeholder": "e.g., High-quality reasoning model",
+        "description": "A friendly name for UI display, does not affect requests"
+      },
+      "temperature": {
+        "label": "Temperature",
+        "placeholder": "0 - 2, default 0.3",
+        "description": "Controls output randomness, higher values increase creativity",
+        "invalid": "Temperature must be a number",
+        "outOfRange": "Temperature must be between 0 and 2"
+      },
+      "maxToolRounds": {
+        "label": "Max Tool Rounds",
+        "placeholder": "1 - 999, default 5",
+        "description": "Maximum number of tool call rounds per conversation",
+        "invalid": "Max tool rounds must be an integer",
+        "outOfRange": "Please enter a value between 1 and 999"
+      },
+      "capabilities": {
+        "title": "Model Capabilities",
+        "description": "Mark whether the model supports thinking/vision abilities, affects tool call strategy",
+        "thinking": {
+          "label": "Supports Thinking",
+          "description": "For reasoning models like o1 / o3 / deepseek-reasoner"
+        },
+        "vision": {
+          "label": "Supports Vision",
+          "description": "Can parse image/screenshot inputs, e.g., gpt-4o"
+        }
+      },
+      "enableToolsInThinking": {
+        "label": "Enable Tools in Thinking",
+        "description": "Some reasoning models can invoke tools during thinking phase"
+      }
     },
     "test": {
       "success": "Connection successful",
@@ -138,7 +189,10 @@
     "save": {
       "createSuccess": "Provider \"{name}\" created",
       "updateSuccess": "Provider \"{name}\" updated",
-      "error": "Failed to save provider"
+      "error": "Failed to save provider",
+      "modelCreateSuccess": "Model \"{name}\" created successfully",
+      "modelUpdateSuccess": "Model \"{name}\" updated successfully",
+      "modelError": "Failed to save model, please try again"
     },
     "delete": {
       "confirmTitle": "Delete Provider",
@@ -147,10 +201,22 @@
       "successWithSwitch": "Provider \"{name}\" deleted. Switched to \"{newModel}\"",
       "successNoActiveModel": "Provider \"{name}\" deleted. No active model available. Please configure a model.",
       "error": "Failed to delete provider"
+    },
+    "deleteModel": {
+      "title": "Delete Model",
+      "description": "Are you sure you want to delete \"{name}\"?",
+      "success": "Model \"{name}\" deleted",
+      "error": "Failed to delete model"
+    },
+    "setDefault": {
+      "success": "\"{name}\" set as default model",
+      "error": "Failed to set default model"
     }
   },
   "common": {
     "optional": "(optional)",
+    "required": "Required",
+    "confirm": "Confirm",
     "cancel": "Cancel",
     "save": "Save"
   },

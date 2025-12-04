@@ -590,7 +590,16 @@ export function useStorageSettings() {
           updatedAt: now,
         };
 
-        const updatedModels = [...models, newModel];
+        // 若设置为默认模型，需清除同一供应商下其他模型的默认标记
+        const normalizedModels = modelData.isDefault
+          ? models.map((m) =>
+              m.providerId === providerId
+                ? { ...m, isDefault: false, updatedAt: now }
+                : m,
+            )
+          : models;
+
+        const updatedModels = [...normalizedModels, newModel];
         const updatedProviders = providers.map((item) =>
           item.id === providerId
             ? {
@@ -678,7 +687,17 @@ export function useStorageSettings() {
           updatedAt: Date.now(),
         };
 
-        models[index] = updatedModel;
+        let nextModels = [...models];
+        nextModels[index] = updatedModel;
+
+        // 若当前更新将模型设为默认，则取消同一供应商下其他模型的默认标记
+        if (updates.isDefault === true && !current.isDefault) {
+          nextModels = nextModels.map((m) =>
+            m.providerId === providerId && m.id !== modelId
+              ? { ...m, isDefault: false, updatedAt: Date.now() }
+              : m,
+          );
+        }
 
         const updatedProviders = providers.map((provider) =>
           provider.id === providerId
@@ -691,7 +710,7 @@ export function useStorageSettings() {
         );
 
         await Promise.all([
-          persistModels(storage, models),
+          persistModels(storage, nextModels),
           persistProviders(storage, updatedProviders),
         ]);
 

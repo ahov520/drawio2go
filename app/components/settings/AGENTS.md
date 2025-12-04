@@ -17,16 +17,17 @@
 
 ## 设置面板列表
 
-| 面板                     | 职责             | 核心配置项                                                                |
-| ------------------------ | ---------------- | ------------------------------------------------------------------------- |
-| **GeneralSettingsPanel** | 通用设置         | 语言选择、默认文件路径                                                    |
-| **ModelsSettingsPanel**  | 供应商/模型管理  | 供应商列表（Accordion）、模型预览、删除供应商级联处理、后续编辑对话框占位 |
-| **ProviderEditDialog**   | 供应商新增/编辑  | HeroUI Modal 弹窗，支持新增/编辑供应商、表单校验、连接测试、Toast 反馈    |
-| **AgentSettingsPanel**   | Agent 配置       | 全局系统提示词（System Prompt）编辑                                       |
-| **VersionSettingsPanel** | 版本管理         | AI 编辑前自动创建版本快照                                                 |
-| **SystemPromptEditor**   | 系统提示词编辑器 | 弹窗编辑模式，支持恢复默认值                                              |
-| **ConnectionTester**     | 连接测试器       | 测试 LLM API 连接可用性                                                   |
-| **SettingsNav**          | 设置导航栏       | 标签页切换（通用 / 模型 / Agent / 版本，图标导航）                        |
+| 面板                     | 职责             | 核心配置项                                                                 |
+| ------------------------ | ---------------- | -------------------------------------------------------------------------- |
+| **GeneralSettingsPanel** | 通用设置         | 语言选择、默认文件路径                                                     |
+| **ModelsSettingsPanel**  | 供应商/模型管理  | 供应商列表（Accordion）、模型预览、删除供应商级联处理、Provider/Model 编辑 |
+| **ProviderEditDialog**   | 供应商新增/编辑  | HeroUI Modal 弹窗，支持新增/编辑供应商、表单校验、连接测试、Toast 反馈     |
+| **ModelEditDialog**      | 模型新增/编辑    | HeroUI Modal 弹窗，模型名称/温度/工具轮次校验，能力（思考/视觉）勾选       |
+| **AgentSettingsPanel**   | Agent 配置       | 全局系统提示词（System Prompt）编辑                                        |
+| **VersionSettingsPanel** | 版本管理         | AI 编辑前自动创建版本快照                                                  |
+| **SystemPromptEditor**   | 系统提示词编辑器 | 弹窗编辑模式，支持恢复默认值                                               |
+| **ConnectionTester**     | 连接测试器       | 测试 LLM API 连接可用性                                                    |
+| **SettingsNav**          | 设置导航栏       | 标签页切换（通用 / 模型 / Agent / 版本，图标导航）                         |
 
 ---
 
@@ -62,9 +63,11 @@ interface ModelsSettingsPanelProps {
 **功能点：**
 
 - 供应商列表（Accordion 展示）与模型预览
-- 删除供应商（级联删除模型）并处理活动模型切换
-- Provider 编辑/新增对话框占位（ProviderEditDialog）
-- 删除后的自动刷新与 Toast 反馈
+- 删除供应商（级联删除模型）并处理活动模型切换，使用 ConfirmDialog 二次确认
+- Provider 编辑/新增对话框（ProviderEditDialog）
+- 模型完整 CRUD：Card 列表 + 能力徽章（思考/视觉/工具）、Popover 菜单（编辑/设为默认/删除）
+- ModelEditDialog 支持新增/编辑模型，ConfirmDialog 统一模型删除确认
+- 操作完成后自动刷新 provider/model/activeModel，并通过 Toast 反馈
 
 ### AgentSettingsPanel（Agent 配置）
 
@@ -108,8 +111,10 @@ GeneralSettingsPanel
 
 ModelsSettingsPanel
 ├── Provider 列表（Accordion）
-├── Model 预览
-├── ProviderEditDialog（新增/编辑，占位）
+├── Model 卡片列表（能力徽章、状态、操作菜单）
+├── ProviderEditDialog（新增/编辑）
+├── ModelEditDialog（新增/编辑模型）
+├── ConfirmDialog（供应商/模型删除确认）
 └── 删除供应商级联模型 & 活动模型切换处理
 
 AgentSettingsPanel
