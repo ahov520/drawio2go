@@ -9,6 +9,9 @@ import {
 import { getDefaultCapabilities } from "@/app/lib/model-capabilities";
 import { generateProjectUUID } from "@/app/lib/utils";
 import type { StorageAdapter } from "@/app/lib/storage/adapter";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("LLM");
 
 export const DEFAULT_SYSTEM_PROMPT = `你是一个专业的 DrawIO XML 绘制助手，负责通过 Socket.IO + XPath 工具链安全地读取和编辑图表。
 
@@ -243,7 +246,7 @@ export async function initializeDefaultLLMConfig(
       try {
         await storage.deleteSetting("llmConfig");
       } catch (cleanupError) {
-        console.warn("[LLM] Failed to delete legacy llmConfig", cleanupError);
+        logger.warn("Failed to delete legacy llmConfig", { cleanupError });
       }
     };
 
@@ -277,14 +280,15 @@ export async function initializeDefaultLLMConfig(
             STORAGE_KEY_LLM_PROVIDERS,
             JSON.stringify(migratedProviders),
           );
-          console.warn(
-            "[LLM] providerType 'deepseek' 已迁移为 'deepseek-native'，请确认自定义配置是否需要更新",
+          logger.warn(
+            "providerType 'deepseek' 已迁移为 'deepseek-native'，请确认自定义配置是否需要更新",
+            { providersMigrated: migratedProviders.length },
           );
         }
       } catch (migrationError) {
-        console.error(
-          "[LLM] 解析或迁移已存在的 LLM providers 时失败，已跳过兼容迁移",
-          migrationError,
+        logger.error(
+          "解析或迁移已存在的 LLM providers 时失败，已跳过兼容迁移",
+          { migrationError },
         );
       }
       await cleanupLegacyKey();
@@ -361,6 +365,6 @@ export async function initializeDefaultLLMConfig(
     );
     await cleanupLegacyKey();
   } catch (error) {
-    console.error("[LLM] Failed to initialize default LLM config", error);
+    logger.error("Failed to initialize default LLM config", { error });
   }
 }

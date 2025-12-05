@@ -18,6 +18,9 @@ import type {
   RemoveElementOperation,
 } from "@/app/types/drawio-tools";
 import type { GetXMLResult, ReplaceXMLResult } from "@/app/types/drawio-tools";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("DrawIO XML Service");
 
 function ensureParser(): DOMParser {
   const parser = getDomParser();
@@ -135,7 +138,7 @@ export async function executeDrawioEditBatch(
   )) as ReplaceXMLResult;
 
   if (!replaceResult?.success) {
-    console.error("[DrawIO XML Service] 批量编辑写回失败:", replaceResult);
+    logger.error("批量编辑写回失败", { replaceResult });
 
     // drawio_syntax_error 表示前端在解析失败时已自行回滚，避免重复回滚
     const alreadyRolledBack = replaceResult?.error === "drawio_syntax_error";
@@ -159,25 +162,20 @@ export async function executeDrawioEditBatch(
 
       if (rollbackResult?.success) {
         rollbackSucceeded = true;
-        console.warn(
-          "[DrawIO XML Service] replace_drawio_xml 失败后已回滚到原始 XML",
-        );
+        logger.warn("replace_drawio_xml 失败后已回滚到原始 XML");
       } else {
         rollbackErrorMessage =
           rollbackResult?.error ||
           rollbackResult?.message ||
           "未知原因导致回滚失败";
-        console.error(
-          "[DrawIO XML Service] 回滚到原始 XML 失败:",
-          rollbackResult,
-        );
+        logger.error("回滚到原始 XML 失败", { rollbackResult });
       }
     } catch (rollbackError) {
       rollbackErrorMessage =
         rollbackError instanceof Error
           ? rollbackError.message
           : String(rollbackError);
-      console.error("[DrawIO XML Service] 回滚过程异常:", rollbackError);
+      logger.error("回滚过程异常", { rollbackError });
     }
 
     const originalError =

@@ -6,6 +6,9 @@ import { X, MessageSquare, User, Bot } from "lucide-react";
 import type { Conversation, Message } from "@/app/lib/storage";
 import { formatConversationDate } from "@/app/lib/format-utils";
 import { useAppTranslation } from "@/app/i18n/hooks";
+import { createLogger } from "@/app/lib/logger";
+
+const logger = createLogger("MessagePreviewPanel");
 
 interface MessagePreviewPanelProps {
   isOpen: boolean;
@@ -116,11 +119,10 @@ export default function MessagePreviewPanel({
                         ""
                       );
                     } catch (error) {
-                      console.error(
-                        "[MessagePreviewPanel] 解析 parts_structure 失败:",
+                      logger.error("解析 parts_structure 失败", {
                         error,
-                        msg.id,
-                      );
+                        messageId: msg.id,
+                      });
                       return (
                         t("messages.emptyMessage", { defaultValue: "" }) || ""
                       );

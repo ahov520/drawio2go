@@ -28,10 +28,12 @@
 @import "./styles/components/history-view.css" layer(components);
 @import "./styles/components/toast.css" layer(components);
 @import "./styles/components/model-selector.css" layer(components); /* 新增 */
+@import "./styles/components/loading.css" layer(components);
 @import "./styles/components/version-animations.css" layer(components);
 @import "./styles/components/version-sidebar.css" layer(components);
 @import "./styles/components/version-timeline.css" layer(components);
 @import "./styles/components/version-dialog.css" layer(components);
+@import "./styles/components/project-selector.css" layer(components);
 
 /* 工具类模块 */
 @import "./styles/utilities/animations.css" layer(utilities);

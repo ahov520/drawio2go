@@ -1,5 +1,8 @@
 import type { IDBPDatabase, IDBPTransaction } from "idb";
 import { applyIndexedDbV1Migration } from "./v1";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("IndexedDB Migration");
 
 export async function runIndexedDbMigrations(
   db: IDBPDatabase<unknown>,
@@ -11,7 +14,5 @@ export async function runIndexedDbMigrations(
     applyIndexedDbV1Migration(db, tx);
   }
 
-  console.log(
-    `[IndexedDB] Applied migrations up to v${newVersion ?? "unknown"}`,
-  );
+  logger.info("Applied migrations", { targetVersion: newVersion ?? "unknown" });
 }

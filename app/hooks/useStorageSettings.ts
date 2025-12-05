@@ -167,10 +167,7 @@ export function useStorageSettings() {
         try {
           callback(detail);
         } catch (error) {
-          console.warn(
-            "[useStorageSettings] settings subscriber failed",
-            error,
-          );
+          logger.warn("settings subscriber failed", { error });
         }
       };
 

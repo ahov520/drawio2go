@@ -18,6 +18,9 @@ import {
   assertValidSvgBinary,
   resolvePageMetadataFromXml,
 } from "./page-metadata-validators";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("SQLiteStorage");
 
 type ConversationEventType =
   | "conversation-created"
@@ -44,7 +47,7 @@ function parseMetadata(value: unknown): Record<string, unknown> | null {
     try {
       return JSON.parse(value);
     } catch (error) {
-      console.warn("[SQLiteStorage] Failed to parse metadata", error);
+      logger.warn("Failed to parse metadata", { error });
       return null;
     }
   }
@@ -176,7 +179,7 @@ export class SQLiteStorage implements StorageAdapter {
       const message =
         `安全错误：版本 ${id} 不属于当前项目 ${projectUuid}。` +
         `该版本属于项目 ${normalized.project_uuid}，已拒绝访问。`;
-      console.error("[SQLiteStorage] 拒绝跨项目访问", {
+      logger.error("拒绝跨项目访问", {
         versionId: id,
         requestedProject: projectUuid,
         versionProject: normalized.project_uuid,
@@ -259,7 +262,7 @@ export class SQLiteStorage implements StorageAdapter {
       const message =
         `安全错误：版本 ${id} 的 SVG 数据属于项目 ${svgData.project_uuid}，` +
         `与请求的项目 ${projectUuid} 不一致。`;
-      console.error("[SQLiteStorage] 拒绝跨项目 SVG 访问", {
+      logger.error("拒绝跨项目 SVG 访问", {
         versionId: id,
         requestedProject: projectUuid,
         versionProject: svgData.project_uuid,

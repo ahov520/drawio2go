@@ -218,6 +218,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .chat-actions-left,
@@ -225,6 +226,15 @@
   display: flex;
   gap: 0.5rem;
   align-items: center;
+}
+
+.chat-actions-left {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.chat-actions-right {
+  flex: 0 0 auto;
 }
 
 /* Markdown内容包装器 - 让打字指示器显示在同一行 */

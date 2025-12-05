@@ -2,17 +2,53 @@ import { drawioTools } from "@/app/lib/drawio-ai-tools";
 import { normalizeLLMConfig } from "@/app/lib/config-utils";
 import { LLMConfig } from "@/app/types/chat";
 import { ErrorCodes, type ErrorCode } from "@/app/errors/error-codes";
+import { createLogger } from "@/lib/logger";
 import {
   streamText,
   stepCountIs,
   convertToModelMessages,
+  type ModelMessage,
   type UIMessage,
 } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
+import { createDeepSeek } from "@ai-sdk/deepseek";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { NextRequest, NextResponse } from "next/server";
 
-const isDev = process.env.NODE_ENV === "development";
+const logger = createLogger("Chat API");
+
+function extractRecentReasoning(messages: ModelMessage[]): string | undefined {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const message = messages[i];
+    if (message.role !== "assistant") {
+      continue;
+    }
+
+    const { content } = message;
+    if (!Array.isArray(content)) {
+      return undefined;
+    }
+
+    const reasoningText = content
+      .filter((part) => part.type === "reasoning")
+      .map((part) => part.text ?? "")
+      .join("")
+      .trim();
+
+    return reasoningText || undefined;
+  }
+
+  return undefined;
+}
+
+function isNewUserQuestion(messages: ModelMessage[]): boolean {
+  if (messages.length === 0) {
+    return false;
+  }
+
+  const lastMessage = messages[messages.length - 1];
+  return lastMessage.role === "user";
+}
 
 function apiError(code: ErrorCode, message: string, status = 500) {
   return NextResponse.json({ code, message }, { status });
@@ -48,14 +84,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (isDev) {
-      console.log("[Chat API] 收到请求:", {
-        messagesCount: modelMessages.length,
-        provider: normalizedConfig.providerType,
-        model: normalizedConfig.modelName,
-        maxRounds: normalizedConfig.maxToolRounds,
-      });
-    }
+    const requestLogger = logger.withContext({
+      provider: normalizedConfig.providerType,
+      model: normalizedConfig.modelName,
+      maxRounds: normalizedConfig.maxToolRounds,
+    });
+
+    requestLogger.info("收到请求", {
+      messagesCount: modelMessages.length,
+      capabilities: normalizedConfig.capabilities,
+      enableToolsInThinking: normalizedConfig.enableToolsInThinking,
+    });
 
     // 根据 providerType 选择合适的 provider
     let model;
@@ -67,14 +106,59 @@ export async function POST(req: NextRequest) {
         apiKey: normalizedConfig.apiKey || "dummy-key",
       });
       model = openaiProvider.chat(normalizedConfig.modelName);
+    } else if (normalizedConfig.providerType === "deepseek-native") {
+      // DeepSeek Native：使用 @ai-sdk/deepseek
+      const deepseekProvider = createDeepSeek({
+        baseURL: normalizedConfig.apiUrl,
+        apiKey: normalizedConfig.apiKey || "dummy-key",
+      });
+      // deepseekProvider 直接返回模型调用函数（无需 .chat）
+      model = deepseekProvider(normalizedConfig.modelName);
     } else {
-      // OpenAI Compatible 和 DeepSeek：使用 @ai-sdk/openai-compatible
+      // OpenAI Compatible：使用 @ai-sdk/openai-compatible
       const compatibleProvider = createOpenAICompatible({
         name: normalizedConfig.providerType,
         baseURL: normalizedConfig.apiUrl,
         apiKey: normalizedConfig.apiKey || "dummy-key",
       });
       model = compatibleProvider(normalizedConfig.modelName);
+    }
+
+    let experimentalParams: Record<string, unknown> | undefined;
+    let reasoningContent: string | undefined;
+
+    try {
+      if (
+        normalizedConfig.enableToolsInThinking &&
+        normalizedConfig.capabilities?.supportsThinking
+      ) {
+        const isNewQuestion = isNewUserQuestion(modelMessages);
+
+        if (!isNewQuestion) {
+          reasoningContent = extractRecentReasoning(modelMessages);
+
+          if (reasoningContent) {
+            experimentalParams = { reasoning_content: reasoningContent };
+
+            requestLogger.debug("复用 reasoning_content", {
+              length: reasoningContent.length,
+            });
+          } else {
+            requestLogger.debug("无可复用的 reasoning_content");
+          }
+        } else {
+          requestLogger.debug("新用户问题，跳过 reasoning_content 复用");
+        }
+      }
+    } catch (reasoningError) {
+      requestLogger.error("构建 reasoning_content 失败，已降级为普通模式", {
+        error:
+          reasoningError instanceof Error
+            ? reasoningError.message
+            : reasoningError,
+        stack:
+          reasoningError instanceof Error ? reasoningError.stack : undefined,
+      });
     }
 
     const result = streamText({
@@ -84,12 +168,9 @@ export async function POST(req: NextRequest) {
       temperature: normalizedConfig.temperature,
       tools: drawioTools,
       stopWhen: stepCountIs(normalizedConfig.maxToolRounds),
+      ...(experimentalParams && { experimental: experimentalParams }),
       onStepFinish: (step) => {
-        if (!isDev) {
-          return;
-        }
-
-        console.log("[Chat API] 步骤完成:", {
+        requestLogger.debug("步骤完成", {
           toolCalls: step.toolCalls.length,
           textLength: step.text.length,
           reasoning: step.reasoning.length,
@@ -99,7 +180,7 @@ export async function POST(req: NextRequest) {
 
     return result.toUIMessageStreamResponse({ sendReasoning: true });
   } catch (error: unknown) {
-    console.error("Chat API error:", error);
+    logger.error("Chat API error", error);
 
     let statusCode = 500;
     let code: ErrorCode = ErrorCodes.CHAT_SEND_FAILED;

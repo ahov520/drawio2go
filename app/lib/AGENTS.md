@@ -304,10 +304,22 @@ export function ensureParser(): {
 ### logger.ts - 日志工厂
 
 ```typescript
-export function createLogger(componentName: string): Logger;
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("VersionSidebar");
+logger.info("init", { projectId });
+logger.warn("save:debounced", { pending: queue.length });
+logger.error("save:failed", err);
 ```
 
-支持 debug/info/warn/error 级别，自动加组件前缀
+**设计**：轻量级工厂，自动附加组件名前缀，暴露 `debug` / `info` / `warn` / `error` 四个级别，输出格式与浏览器/Electron 控制台兼容。
+
+**使用最佳实践**：
+
+- 在文件顶部创建单例 `logger`，避免在渲染中重复创建
+- 日志 key 采用 `模块:动作` 命名，便于过滤（如 `autosave:debounce`）
+- 传递结构化对象而非拼接字符串，方便后续接入日志收集
+- 生产环境关闭 `debug`，保留 `info` 以上；高频路径使用防抖/采样避免噪声
 
 ## 工具链工作流
 

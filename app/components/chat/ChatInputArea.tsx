@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent } from "react";
+import { type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { TextArea } from "@heroui/react";
 import { type LLMConfig } from "@/app/types/chat";
 import ChatInputActions from "./ChatInputActions";
@@ -16,6 +16,7 @@ interface ChatInputAreaProps {
   onCancel?: () => void;
   onNewChat: () => void;
   onHistory: () => void;
+  modelSelector?: ReactNode;
 }
 
 export default function ChatInputArea({
@@ -28,12 +29,13 @@ export default function ChatInputArea({
   onCancel,
   onNewChat,
   onHistory,
+  modelSelector,
 }: ChatInputAreaProps) {
   const { t } = useAppTranslation("chat");
   const isSendDisabled =
     !input.trim() || isChatStreaming || configLoading || !llmConfig;
 
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       if (!isSendDisabled) {
@@ -72,6 +74,7 @@ export default function ChatInputArea({
           onCancel={onCancel}
           onNewChat={onNewChat}
           onHistory={onHistory}
+          modelSelector={modelSelector}
         />
       </form>
     </div>

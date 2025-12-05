@@ -151,6 +151,35 @@ export default function ChatSidebar({
     [llmConfig],
   );
 
+  const groupedModels = useMemo(() => {
+    if (providers.length === 0 || models.length === 0) {
+      return [];
+    }
+
+    const modelsByProvider = models.reduce<Map<string, ModelConfig[]>>(
+      (acc, model) => {
+        const list = acc.get(model.providerId);
+        if (list) {
+          list.push(model);
+        } else {
+          acc.set(model.providerId, [model]);
+        }
+        return acc;
+      },
+      new Map(),
+    );
+
+    return providers.reduce<
+      Array<{ provider: ProviderConfig; models: ModelConfig[] }>
+    >((acc, provider) => {
+      const providerModels = modelsByProvider.get(provider.id);
+      if (providerModels && providerModels.length > 0) {
+        acc.push({ provider, models: providerModels });
+      }
+      return acc;
+    }, []);
+  }, [providers, models]);
+
   const resolveModelSelection = useCallback(
     (
       providerList: ProviderConfig[],
@@ -1051,57 +1080,60 @@ export default function ChatSidebar({
 
   const modelSelectorDisabled = isChatStreaming || selectorLoading;
 
-  const renderModelSelector = () => (
-    <div className="model-selector-container">
-      {providers.length === 0 || models.length === 0 ? (
-        <p className="model-selector-empty">
-          暂无可用模型，请先在设置中添加供应商和模型
-        </p>
-      ) : (
-        <Select
-          value={selectedModelId ?? undefined}
-          onChange={(value) => handleModelChange(value as string)}
-          isDisabled={modelSelectorDisabled}
-          placeholder="选择模型"
-          className="model-selector"
-        >
-          <Label>当前模型</Label>
-          <Select.Trigger>
-            <Select.Value>
-              {({ defaultChildren, isPlaceholder }) => {
-                if (isPlaceholder || !selectedModelId) {
-                  return defaultChildren;
-                }
+  const renderModelSelector = (mode: "inline" | "floating" = "inline") => {
+    const isInline = mode === "inline";
 
-                const model = models.find(
-                  (item) => item.id === selectedModelId,
-                );
-                const provider = providers.find(
-                  (item) => item.id === selectedProviderId,
-                );
+    return (
+      <div
+        className={`model-selector-container${
+          isInline ? " model-selector-container--inline" : ""
+        }`}
+      >
+        {providers.length === 0 || models.length === 0 ? (
+          <p className="model-selector-empty">
+            暂无可用模型，请先在设置中添加供应商和模型
+          </p>
+        ) : (
+          <Select
+            value={selectedModelId ?? undefined}
+            onChange={(value) => handleModelChange(value as string)}
+            isDisabled={modelSelectorDisabled}
+            placeholder="选择模型"
+            className={`model-selector${
+              isInline ? " model-selector--inline" : ""
+            }`}
+          >
+            <Label>当前模型</Label>
+            <Select.Trigger>
+              <Select.Value>
+                {({ defaultChildren, isPlaceholder }) => {
+                  if (isPlaceholder || !selectedModelId) {
+                    return defaultChildren;
+                  }
 
-                return (
-                  <div className="model-selector-trigger-content">
-                    <Cpu size={16} />
-                    <span>{model?.displayName || model?.modelName}</span>
-                    <span className="provider-name">
-                      {provider?.displayName}
-                    </span>
-                  </div>
-                );
-              }}
-            </Select.Value>
-            <Select.Indicator />
-          </Select.Trigger>
-          <Select.Content>
-            <ListBox>
-              {providers.map((provider) => {
-                const providerModels = models.filter(
-                  (model) => model.providerId === provider.id,
-                );
-                if (providerModels.length === 0) return null;
+                  const model = models.find(
+                    (item) => item.id === selectedModelId,
+                  );
+                  const provider = providers.find(
+                    (item) => item.id === selectedProviderId,
+                  );
 
-                return (
+                  return (
+                    <div className="model-selector-trigger-content">
+                      <Cpu size={16} />
+                      <span>{model?.displayName || model?.modelName}</span>
+                      <span className="provider-name">
+                        {provider?.displayName}
+                      </span>
+                    </div>
+                  );
+                }}
+              </Select.Value>
+              <Select.Indicator />
+            </Select.Trigger>
+            <Select.Content>
+              <ListBox>
+                {groupedModels.map(({ provider, models: providerModels }) => (
                   <ListBox.Section key={provider.id}>
                     <Header>{provider.displayName}</Header>
                     {providerModels.map((model) => (
@@ -1128,14 +1160,14 @@ export default function ChatSidebar({
                       </ListBox.Item>
                     ))}
                   </ListBox.Section>
-                );
-              })}
-            </ListBox>
-          </Select.Content>
-        </Select>
-      )}
-    </div>
-  );
+                ))}
+              </ListBox>
+            </Select.Content>
+          </Select>
+        )}
+      </div>
+    );
+  };
 
   if (currentView === "history") {
     return (
@@ -1150,7 +1182,6 @@ export default function ChatSidebar({
             onExportConversations={handleBatchExport}
           />
         </div>
-        {renderModelSelector()}
       </>
     );
   }
@@ -1217,9 +1248,9 @@ export default function ChatSidebar({
           onCancel={handleCancel}
           onNewChat={handleNewChat}
           onHistory={handleHistory}
+          modelSelector={renderModelSelector()}
         />
       </div>
-      {renderModelSelector()}
     </>
   );
 }

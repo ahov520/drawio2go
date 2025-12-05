@@ -10,6 +10,9 @@ import {
 } from "./constants";
 import type { XMLVersion } from "./types";
 import { normalizeDiagramXml } from "../drawio-xml-utils";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("XMLVersion");
 
 type DiffEngine = InstanceType<typeof diff_match_patch>;
 
@@ -177,7 +180,7 @@ async function resolveMaterializedXml(
         versionProject: version.project_uuid,
       },
     )}`;
-    console.error("[XMLVersion] 拒绝跨项目版本链", {
+    logger.error("拒绝跨项目版本链", {
       currentVersionId: version.id,
       currentProject: version.project_uuid,
       parentVersionId: parent.id,
@@ -196,7 +199,7 @@ async function resolveMaterializedXml(
   const patches = diffEngine.patch_fromText(version.xml_content);
   const [result, applied] = diffEngine.patch_apply(patches, baseXml);
   if (applied.some((flag: boolean) => !flag)) {
-    console.warn("[XMLVersion] Diff 应用异常", {
+    logger.warn("Diff 应用异常", {
       versionId: version.id,
       sourceVersionId: version.source_version_id,
     });

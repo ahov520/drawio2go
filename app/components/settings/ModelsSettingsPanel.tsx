@@ -159,7 +159,7 @@ export default function ModelsSettingsPanel({
       try {
         await refreshSettings();
       } catch (error) {
-        console.error("[ModelsSettingsPanel] 刷新供应商列表失败", error);
+        logger.error("刷新供应商列表失败", { error });
       }
     },
     [refreshSettings],
@@ -352,75 +352,82 @@ export default function ModelsSettingsPanel({
                 className="rounded-xl border border-default-200 bg-content1"
               >
                 <Accordion.Heading className="px-2">
-                  <Accordion.Trigger className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-2 text-left">
-                    <div className="flex items-center gap-3">
-                      <span className="text-base font-medium text-foreground">
-                        {provider.displayName}
-                      </span>
-                      <Chip
-                        size="sm"
-                        variant="secondary"
-                        color="accent"
-                        className="text-xs"
-                      >
-                        {t("models.modelsList.title")} ({providerModels.length})
-                      </Chip>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Popover>
-                        <Popover.Trigger className="flex items-center">
-                          <Button
-                            variant="tertiary"
-                            size="sm"
-                            isIconOnly
-                            isDisabled={isDeleting}
-                            aria-label={t("models.actions.edit")}
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </Popover.Trigger>
-                        <Popover.Content className="min-w-[160px] rounded-xl border border-default-200 bg-content1 p-1 shadow-2xl">
-                          <ListBox
-                            aria-label="provider-actions"
-                            selectionMode="single"
-                            onAction={(key) => {
-                              if (key === "edit") {
-                                handleEditProvider(provider);
-                              } else if (key === "delete") {
-                                setDeleteProviderState({
-                                  isOpen: true,
-                                  provider,
-                                });
-                              }
-                            }}
-                          >
-                            <ListBox.Item
-                              id="edit"
-                              key="edit"
-                              textValue="edit"
-                              className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-primary-50"
-                              isDisabled={isDeleting}
-                            >
-                              <Edit className="h-4 w-4" />
-                              {t("models.actions.edit")}
-                            </ListBox.Item>
-                            <ListBox.Item
-                              id="delete"
-                              key="delete"
-                              textValue="delete"
-                              className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm text-danger hover:bg-danger-50"
-                              isDisabled={isDeleting}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              {t("models.actions.delete")}
-                            </ListBox.Item>
-                          </ListBox>
-                        </Popover.Content>
-                      </Popover>
+                  <div className="flex items-center justify-between gap-3 rounded-lg px-2 py-2">
+                    <Accordion.Trigger className="flex flex-1 items-center justify-between gap-3 text-left">
+                      <div className="flex items-center gap-3">
+                        <span className="text-base font-medium text-foreground">
+                          {provider.displayName}
+                        </span>
+                        <Chip
+                          size="sm"
+                          variant="secondary"
+                          color="accent"
+                          className="text-xs"
+                        >
+                          {t("models.modelsList.title")} (
+                          {providerModels.length})
+                        </Chip>
+                      </div>
                       <Accordion.Indicator />
-                    </div>
-                  </Accordion.Trigger>
+                    </Accordion.Trigger>
+
+                    <Popover>
+                      <Popover.Trigger className="flex items-center">
+                        <Button
+                          variant="tertiary"
+                          size="sm"
+                          isIconOnly
+                          isDisabled={isDeleting}
+                          aria-label={t("models.actions.edit")}
+                          onPress={(event) => {
+                            const pressEvent = event as unknown as {
+                              stopPropagation?: () => void;
+                            };
+                            pressEvent.stopPropagation?.();
+                          }}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </Popover.Trigger>
+                      <Popover.Content className="min-w-[160px] rounded-xl border border-default-200 bg-content1 p-1 shadow-2xl">
+                        <ListBox
+                          aria-label="provider-actions"
+                          selectionMode="single"
+                          onAction={(key) => {
+                            if (key === "edit") {
+                              handleEditProvider(provider);
+                            } else if (key === "delete") {
+                              setDeleteProviderState({
+                                isOpen: true,
+                                provider,
+                              });
+                            }
+                          }}
+                        >
+                          <ListBox.Item
+                            id="edit"
+                            key="edit"
+                            textValue="edit"
+                            className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-primary-50"
+                            isDisabled={isDeleting}
+                          >
+                            <Edit className="h-4 w-4" />
+                            {t("models.actions.edit")}
+                          </ListBox.Item>
+                          <ListBox.Item
+                            id="delete"
+                            key="delete"
+                            textValue="delete"
+                            className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm text-danger hover:bg-danger-50"
+                            isDisabled={isDeleting}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            {t("models.actions.delete")}
+                          </ListBox.Item>
+                        </ListBox>
+                      </Popover.Content>
+                    </Popover>
+                  </div>
                 </Accordion.Heading>
 
                 <Accordion.Panel className="px-2 pb-3">
@@ -593,8 +600,9 @@ export default function ModelsSettingsPanel({
                                       </Chip>
                                     )}
                                     <Popover>
-                                      <Popover.Trigger className="flex items-center">
+                                      <Popover.Trigger>
                                         <Button
+                                          className="flex items-center"
                                           variant="tertiary"
                                           size="sm"
                                           isIconOnly

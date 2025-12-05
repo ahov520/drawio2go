@@ -17,7 +17,7 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-sm, 0.5rem);
-  padding: 0.75rem 1rem;
+  padding: var(--spacing-3) var(--spacing-md);
   border-radius: var(--radius-lg, 0.75rem);
   border: 1px solid var(--border-default, var(--border));
   background: color-mix(in oklch, var(--surface) 90%, transparent);
@@ -36,7 +36,7 @@
 .model-option-content {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--spacing-xs);
 }
 
 .model-option-content .model-name {
@@ -58,10 +58,42 @@
 }
 
 .model-selector-empty {
-  padding: 1rem;
+  padding: var(--spacing-md);
   text-align: center;
   color: var(--foreground-tertiary, var(--text-tertiary));
   font-size: 0.875rem;
+}
+
+.model-selector-container--inline {
+  position: static;
+  inset: auto;
+  min-width: 220px;
+  max-width: 360px;
+  flex: 1 1 240px;
+}
+
+.model-selector--inline {
+  width: 100%;
+}
+
+.model-selector--inline .model-selector-trigger-content {
+  padding: 0.45rem 0.75rem;
+  min-height: 36px;
+  border-radius: var(--radius-md, 0.5rem);
+  border: 1px solid var(--border-default, var(--border));
+  background: var(--surface, #fff);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.model-selector--inline .model-selector-trigger-content:hover {
+  border-color: var(--border-hover, var(--border));
+  box-shadow: none;
+}
+
+.model-selector--inline [aria-disabled="true"],
+.model-selector--inline [data-disabled="true"] {
+  opacity: 0.6;
 }
 
 @media (max-width: 768px) {

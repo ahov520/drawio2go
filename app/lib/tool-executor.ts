@@ -8,6 +8,9 @@
 
 import { v4 as uuidv4 } from "uuid";
 import type { ToolCallRequest } from "@/app/types/socket-protocol";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("Tool Executor");
 
 /**
  * 通过 Socket.IO 在客户端执行工具
@@ -77,9 +80,11 @@ export async function executeToolOnClient(
     // 广播到所有连接的客户端
     io.emit("tool:execute", request);
 
-    console.log(
-      `[Tool Executor] 已发送工具调用请求: ${toolName} (${requestId}), 连接客户端数: ${connectedClients}`,
-    );
+    logger.info("已发送工具调用请求", {
+      toolName,
+      requestId,
+      connectedClients,
+    });
   });
 }
 

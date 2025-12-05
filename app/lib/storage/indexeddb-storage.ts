@@ -33,6 +33,9 @@ import {
 import { runIndexedDbMigrations } from "./migrations/indexeddb";
 import { v4 as uuidv4 } from "uuid";
 import { createDefaultDiagramXml } from "./default-diagram-xml";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("IndexedDBStorage");
 
 type ConversationEventType =
   | "conversation-created"
@@ -126,9 +129,10 @@ export class IndexedDBStorage implements StorageAdapter {
     try {
       this.db = await openDB(DB_NAME, DB_VERSION, {
         upgrade: async (db, oldVersion, newVersion, transaction) => {
-          console.log(
-            `Upgrading IndexedDB from ${oldVersion} to ${newVersion}`,
-          );
+          logger.info("Upgrading IndexedDB", {
+            oldVersion,
+            newVersion,
+          });
           await runIndexedDbMigrations(db, oldVersion, newVersion, transaction);
         },
       });
@@ -137,9 +141,12 @@ export class IndexedDBStorage implements StorageAdapter {
       await this._ensureDefaultProject();
       await this._ensureDefaultWipVersion();
 
-      console.log("IndexedDB initialized");
+      logger.info("IndexedDB initialized", {
+        dbName: DB_NAME,
+        version: DB_VERSION,
+      });
     } catch (error) {
-      console.error("Failed to initialize IndexedDB:", error);
+      logger.error("Failed to initialize IndexedDB", { error });
       throw error;
     }
   }
@@ -172,7 +179,9 @@ export class IndexedDBStorage implements StorageAdapter {
       };
 
       await db.put("projects", defaultProject);
-      console.log("Created default project");
+      logger.info("Created default project", {
+        projectUuid: DEFAULT_PROJECT_UUID,
+      });
     }
   }
 
@@ -347,7 +356,7 @@ export class IndexedDBStorage implements StorageAdapter {
       const message =
         `安全错误：版本 ${id} 不属于当前项目 ${projectUuid}。` +
         `该版本属于项目 ${version.project_uuid}，已拒绝访问。`;
-      console.error("[IndexedDBStorage] 拒绝跨项目访问", {
+      logger.error("拒绝跨项目访问", {
         versionId: id,
         requestedProject: projectUuid,
         versionProject: version.project_uuid,
@@ -416,7 +425,7 @@ export class IndexedDBStorage implements StorageAdapter {
       const message =
         `安全错误：版本 ${id} 不属于当前项目 ${projectUuid}。` +
         `该版本属于项目 ${version.project_uuid}，已拒绝访问 SVG 数据。`;
-      console.error("[IndexedDBStorage] 拒绝跨项目 SVG 访问", {
+      logger.error("拒绝跨项目 SVG 访问", {
         versionId: id,
         requestedProject: projectUuid,
         versionProject: version.project_uuid,
@@ -482,7 +491,7 @@ export class IndexedDBStorage implements StorageAdapter {
 
     if (projectUuid && existing.project_uuid !== projectUuid) {
       const message = `安全错误：删除版本 ${id} 被拒绝，目标项目 ${projectUuid} 与版本归属 ${existing.project_uuid} 不一致。`;
-      console.error("[IndexedDBStorage] 拒绝跨项目删除", {
+      logger.error("拒绝跨项目删除", {
         versionId: id,
         requestedProject: projectUuid,
         versionProject: existing.project_uuid,

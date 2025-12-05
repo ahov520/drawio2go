@@ -20,8 +20,16 @@ import { getDrawioXML, replaceDrawioXML } from "@/app/lib/drawio-tools";
 import { useStorageXMLVersions } from "./useStorageXMLVersions";
 import { useCurrentProject } from "./useCurrentProject";
 import { useStorageSettings } from "./useStorageSettings";
-import { getNextSubVersion, isSubVersion } from "@/lib/version-utils";
+import {
+  getNextSubVersion,
+  getParentVersion,
+  isSubVersion,
+  parseVersion,
+} from "@/lib/version-utils";
 import { DEFAULT_FIRST_VERSION, WIP_VERSION } from "@/app/lib/storage";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("Socket Client");
 
 /**
  * DrawIO Socket.IO Hook
@@ -42,12 +50,82 @@ export function useDrawioSocket(
   const { currentProject } = useCurrentProject();
   const { getSetting } = useStorageSettings();
   const currentProjectRef = useRef(currentProject);
+  const cachedProjectUuidRef = useRef<string | null>(null);
+  const latestMainVersionRef = useRef<string | null>(null);
+  const latestSubVersionRef = useRef<string | null>(null);
+  const isCreatingSnapshotRef = useRef(false);
 
   useEffect(() => {
     currentProjectRef.current = currentProject;
   }, [currentProject]);
 
   useEffect(() => {
+    const projectId = currentProject?.uuid ?? null;
+    if (cachedProjectUuidRef.current !== projectId) {
+      cachedProjectUuidRef.current = projectId;
+      latestMainVersionRef.current = null;
+      latestSubVersionRef.current = null;
+    }
+  }, [currentProject]);
+
+  useEffect(() => {
+    const getLastSubNumber = (version: string | null): number | null => {
+      if (!version) return null;
+      try {
+        const parsed = parseVersion(version);
+        return typeof parsed.sub === "number" ? parsed.sub : null;
+      } catch {
+        return null;
+      }
+    };
+
+    const seedVersionCache = async (projectId: string) => {
+      if (latestMainVersionRef.current) return;
+      const versions = await getAllXMLVersions(projectId);
+      const mainVersions = versions.filter(
+        (version) =>
+          !isSubVersion(version.semantic_version) &&
+          version.semantic_version !== WIP_VERSION,
+      );
+
+      const latestMain = mainVersions[0]?.semantic_version ?? null;
+      latestMainVersionRef.current = latestMain;
+
+      if (!latestMain) {
+        latestSubVersionRef.current = null;
+        return;
+      }
+
+      try {
+        const nextSubVersion = getNextSubVersion(versions, latestMain);
+        const parsedNext = parseVersion(nextSubVersion);
+        const lastSub = (parsedNext.sub ?? 1) - 1;
+        latestSubVersionRef.current =
+          lastSub > 0 ? `${latestMain}.${lastSub}` : null;
+      } catch (error) {
+        logger.debug("初始化子版本缓存失败，使用默认子版本起点", {
+          projectId,
+          parentVersion: latestMain,
+          error,
+        });
+        latestSubVersionRef.current = null;
+      }
+    };
+
+    const getNextSubVersionIncremental = (parentVersion: string) => {
+      const lastSub = latestSubVersionRef.current;
+      if (lastSub && getParentVersion(lastSub) === parentVersion) {
+        const subNumber = getLastSubNumber(lastSub) ?? 0;
+        return `${parentVersion}.${subNumber + 1}`;
+      }
+      return `${parentVersion}.1`;
+    };
+
+    const resetVersionCache = () => {
+      latestMainVersionRef.current = null;
+      latestSubVersionRef.current = null;
+    };
+
     const handleAutoVersionSnapshot = async (
       request: ToolCallRequest,
       originalToolName?: string,
@@ -61,26 +139,36 @@ export function useDrawioSocket(
           return;
         }
 
-        const versions = await getAllXMLVersions(project.uuid);
-        const mainVersions = versions.filter(
-          (version) =>
-            !isSubVersion(version.semantic_version) &&
-            version.semantic_version !== WIP_VERSION,
-        );
+        if (isCreatingSnapshotRef.current) {
+          logger.debug("已有快照任务进行中，跳过本次自动快照", {
+            requestId: request.requestId,
+            projectId: project.uuid,
+          });
+          return;
+        }
+
+        isCreatingSnapshotRef.current = true;
+
+        if (cachedProjectUuidRef.current !== project.uuid) {
+          cachedProjectUuidRef.current = project.uuid;
+          resetVersionCache();
+        }
+
+        await seedVersionCache(project.uuid);
+
         const timestamp = new Date().toLocaleString("zh-CN");
         const aiDescription = request.description || "AI 自动编辑";
         const sourceDescription = originalToolName ?? request.toolName;
         const versionDescription = `${sourceDescription} - ${aiDescription} (${timestamp})`;
 
-        let versionsForSub = versions;
-        let latestMainVersion = mainVersions[0]?.semantic_version;
+        let latestMainVersion = latestMainVersionRef.current;
 
         // 没有主版本时，先创建首个主版本（关键帧），再创建子版本
         if (!latestMainVersion) {
-          console.info(
-            "[自动版本] 未检测到主版本，正在创建首个主版本:",
-            DEFAULT_FIRST_VERSION,
-          );
+          logger.info("未检测到主版本，正在创建首个主版本", {
+            projectId: project?.uuid,
+            version: DEFAULT_FIRST_VERSION,
+          });
 
           await createHistoricalVersion(
             project.uuid,
@@ -90,45 +178,29 @@ export function useDrawioSocket(
             { onExportProgress: undefined },
           );
 
-          const refreshedVersions = await getAllXMLVersions(project.uuid);
-          const refreshedMainVersions = refreshedVersions.filter(
-            (version) =>
-              !isSubVersion(version.semantic_version) &&
-              version.semantic_version !== WIP_VERSION,
-          );
-
-          if (refreshedMainVersions.length === 0) {
-            throw new Error(
-              "[自动版本] 首个主版本创建失败，无法生成子版本。请重试或手动创建主版本。",
-            );
-          }
-
-          versionsForSub = refreshedVersions;
-          latestMainVersion = refreshedMainVersions[0].semantic_version;
-          console.info(
-            "[自动版本] 首个主版本创建成功，准备创建子版本，父版本:",
-            latestMainVersion,
-          );
+          latestMainVersion = DEFAULT_FIRST_VERSION;
+          latestMainVersionRef.current = DEFAULT_FIRST_VERSION;
+          logger.info("首个主版本创建成功，准备创建子版本", {
+            projectId: project?.uuid,
+            parentVersion: latestMainVersion,
+          });
         }
 
         // 确保父版本实体存在
-        const hasParent = versionsForSub.some(
-          (v) => v.semantic_version === latestMainVersion,
-        );
-        if (!hasParent || !latestMainVersion) {
+        if (!latestMainVersion) {
           throw new Error(
             "[自动版本] 找不到可用的父版本，无法生成子版本。请刷新版本列表或重试。",
           );
         }
 
-        const nextSubVersion = getNextSubVersion(
-          versionsForSub,
-          latestMainVersion,
-        );
+        const nextSubVersion = getNextSubVersionIncremental(latestMainVersion);
 
-        console.info(
-          `[自动版本] 准备创建子版本: parent=${latestMainVersion}, next=${nextSubVersion}`,
-        );
+        logger.info("准备创建子版本", {
+          projectId: project?.uuid,
+          parentVersion: latestMainVersion,
+          nextVersion: nextSubVersion,
+          requestId: request.requestId,
+        });
 
         await createHistoricalVersion(
           project.uuid,
@@ -138,9 +210,22 @@ export function useDrawioSocket(
           { onExportProgress: undefined },
         );
 
-        console.log(`[自动版本] 已创建版本快照: ${nextSubVersion}`);
+        logger.info("已创建版本快照", {
+          projectId: project?.uuid,
+          version: nextSubVersion,
+          requestId: request.requestId,
+        });
+
+        latestMainVersionRef.current = latestMainVersion;
+        latestSubVersionRef.current = nextSubVersion;
       } catch (error) {
-        console.error("[自动版本] 创建失败:", error);
+        logger.error("自动版本创建失败", {
+          projectId: currentProjectRef.current?.uuid,
+          error,
+        });
+        resetVersionCache();
+      } finally {
+        isCreatingSnapshotRef.current = false;
       }
     };
 
@@ -156,25 +241,27 @@ export function useDrawioSocket(
 
     // 连接事件
     socket.on("connect", () => {
-      console.log("[Socket.IO Client] 已连接到服务器, ID:", socket.id);
+      logger.info("Socket 已连接到服务器", { socketId: socket.id });
       setIsConnected(true);
     });
 
     socket.on("disconnect", (reason: string) => {
-      console.log("[Socket.IO Client] 已断开连接, 原因:", reason);
+      logger.warn("Socket 已断开连接", { reason, socketId: socket.id });
       setIsConnected(false);
     });
 
     socket.on("connect_error", (error: Error) => {
-      console.error("[Socket.IO Client] 连接错误:", error.message);
+      logger.error("Socket 连接错误", { error: error.message });
       setIsConnected(false);
     });
 
     // 监听工具执行请求
     socket.on("tool:execute", async (request: ToolCallRequest) => {
-      console.log(
-        `[Socket.IO Client] 收到工具调用请求: ${request.toolName} (${request.requestId})`,
-      );
+      logger.debug("收到工具调用请求", {
+        toolName: request.toolName,
+        requestId: request.requestId,
+        projectId: currentProjectRef.current?.uuid,
+      });
 
       try {
         const originalTool =
@@ -230,9 +317,11 @@ export function useDrawioSocket(
         };
 
         socket.emit("tool:result", response);
-        console.log(
-          `[Socket.IO Client] 已返回工具执行结果: ${request.toolName}, success: ${result.success}`,
-        );
+        logger.debug("已返回工具执行结果", {
+          toolName: request.toolName,
+          success: result.success,
+          requestId: request.requestId,
+        });
       } catch (error) {
         // 返回错误结果
         const response: ToolCallResult = {
@@ -242,13 +331,17 @@ export function useDrawioSocket(
         };
 
         socket.emit("tool:result", response);
-        console.error(`[Socket.IO Client] 工具执行失败:`, error);
+        logger.error("工具执行失败", {
+          toolName: request.toolName,
+          requestId: request.requestId,
+          error,
+        });
       }
     });
 
     // 清理函数
     return () => {
-      console.log("[Socket.IO Client] 断开连接");
+      logger.info("Socket 客户端清理，断开连接");
       socket.disconnect();
     };
   }, [createHistoricalVersion, getAllXMLVersions, getSetting, editorRef]);

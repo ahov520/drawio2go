@@ -20,6 +20,9 @@ import {
   prepareXmlContext,
   type XmlContext,
 } from "./storage/writers";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("DrawIO Tools");
 
 // 内存快照：记录替换前的 XML，用于合并失败时回滚
 let _drawioXmlSnapshot: string | null = null;
@@ -66,7 +69,7 @@ export async function saveDrawioXML(xml: string): Promise<void> {
     }
     await saveDrawioXMLInternal(context);
   } catch (error) {
-    console.error("[DrawIO Tools] 保存 XML 失败:", error);
+    logger.error("保存 XML 失败", { error });
     throw error instanceof Error ? error : new Error(String(error));
   }
 }
@@ -119,7 +122,7 @@ export async function getDrawioXML(): Promise<GetXMLResult> {
       xml: resolvedXml,
     };
   } catch (error) {
-    console.error("[DrawIO Tools] 读取 XML 失败:", error);
+    logger.error("读取 XML 失败", { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : "读取数据失败",
@@ -224,7 +227,9 @@ export async function replaceDrawioXML(
     _drawioXmlSnapshot =
       currentResult.success && currentResult.xml ? currentResult.xml : null;
     if (!_drawioXmlSnapshot) {
-      console.warn("[DrawIO Tools] 未能获取当前 XML 快照，回滚可能不可用");
+      logger.warn("未能获取当前 XML 快照，回滚可能不可用", {
+        requestId,
+      });
     }
 
     // 2) 现有验证逻辑
@@ -260,7 +265,7 @@ export async function replaceDrawioXML(
 
     // 5) 错误回滚
     if (mergeError?.error) {
-      console.error("[DrawIO Tools] DrawIO merge 错误:", mergeError);
+      logger.error("DrawIO merge 错误", { mergeError, requestId });
 
       let rollbackMessage: string;
       if (!_drawioXmlSnapshot) {
@@ -278,10 +283,10 @@ export async function replaceDrawioXML(
               },
             }),
           );
-          console.warn("[DrawIO Tools] 已回滚到替换前的 XML");
+          logger.warn("已回滚到替换前的 XML", { requestId });
           rollbackMessage = "DrawIO 报告 XML 语法错误，已自动回滚到修改前状态";
         } catch (rollbackError) {
-          console.error("[DrawIO Tools] 回滚失败:", rollbackError);
+          logger.error("回滚失败", { rollbackError, requestId });
           rollbackMessage =
             "DrawIO 报告 XML 语法错误，但回滚失败（存储不可用），数据可能已损坏，请检查项目状态";
         }

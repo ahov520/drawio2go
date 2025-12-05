@@ -109,7 +109,7 @@
 
 - 监听后端工具执行请求，自动调用 `drawio-tools.ts`
 - 通过 Socket.IO 回传执行结果/错误
-- **AI 自动版本**: AI 触发 `drawio_overwrite` 时，在设置 `autoVersionOnAIEdit=true` 情况下，阻塞式创建子版本快照后再写入 XML
+- **AI 自动版本**: AI 触发 `drawio_overwrite` 时，在设置 `autoVersionOnAIEdit=true` 情况下，串行创建子版本快照后再写入 XML；内部使用 `isCreatingSnapshotRef` 防抖 + `latestMainVersionRef/latestSubVersionRef` 增量计算下一个子版本，避免每次全量拉取版本列表
 
 #### 工作流程
 

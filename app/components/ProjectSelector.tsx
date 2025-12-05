@@ -159,10 +159,10 @@ export default function ProjectSelector({
               return (
                 <Card.Root
                   key={project.uuid}
-                  className={`cursor-pointer transition-all ${
+                  className={`project-selector-card cursor-pointer ${
                     isActive
-                      ? "border-2 border-accent bg-accent/5"
-                      : "border border-gray-200 hover:border-accent/50 hover:shadow-md"
+                      ? "project-selector-card--active"
+                      : "project-selector-card--inactive"
                   }`}
                   onClick={() => handleProjectSelect(project.uuid)}
                 >
@@ -178,11 +178,11 @@ export default function ProjectSelector({
                           )}
                         </div>
                         {project.description && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <p className="project-selector__description text-sm">
                             {project.description}
                           </p>
                         )}
-                        <p className="text-xs text-gray-400 mt-2">
+                        <p className="project-selector__meta text-xs mt-2">
                           {t("selector.createdAt", {
                             date: formatVersionTimestamp(
                               project.created_at,

@@ -7,6 +7,7 @@ import {
   type ButtonProps,
 } from "@heroui/react";
 import { useAppTranslation } from "@/app/i18n/hooks";
+import { type ReactNode } from "react";
 
 interface ChatInputActionsProps {
   isSendDisabled: boolean;
@@ -14,6 +15,7 @@ interface ChatInputActionsProps {
   onCancel?: () => void;
   onNewChat: () => void;
   onHistory: () => void;
+  modelSelector?: ReactNode;
 }
 
 export default function ChatInputActions({
@@ -22,6 +24,7 @@ export default function ChatInputActions({
   onCancel,
   onNewChat,
   onHistory,
+  modelSelector,
 }: ChatInputActionsProps) {
   const { t } = useAppTranslation("chat");
   const canCancel = Boolean(isChatStreaming && onCancel);
@@ -39,6 +42,7 @@ export default function ChatInputActions({
     <div className="chat-input-actions">
       {/* 左侧按钮组 */}
       <div className="chat-actions-left">
+        {modelSelector}
         <TooltipRoot delay={0}>
           <Button
             size="sm"

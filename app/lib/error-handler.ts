@@ -4,6 +4,9 @@ import {
   type ErrorCode,
   getErrorI18nKey,
 } from "@/app/errors/error-codes";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("ErrorHandler");
 
 type InterpolationParams = Record<string, unknown>;
 
@@ -216,8 +219,7 @@ export function createApiError(
  * 可选增强：错误日志记录
  */
 export function logError(error: unknown, context?: string): void {
-  const prefix = context ? `[${context}]` : "[Error]";
-  console.error(prefix, getErrorMessage(error), error);
+  logger.error(getErrorMessage(error), { context, error });
 }
 
 /**
