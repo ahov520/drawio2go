@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2, Sparkles } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useAppTranslation } from "@/app/i18n/hooks";
 
 interface ThinkingBlockProps {
@@ -17,10 +18,40 @@ export default function ThinkingBlock({
   onToggle,
 }: ThinkingBlockProps) {
   const { t } = useAppTranslation("chat");
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const isMountedRef = useRef(true);
   const Icon = isStreaming ? Loader2 : Sparkles;
   const iconClassName = `thinking-block-icon ${
     isStreaming ? "thinking-block-icon--spinning" : ""
   }`.trim();
+
+  useEffect(() => {
+    if (!isStreaming) return;
+
+    const start = performance.now();
+    setElapsedSeconds(0);
+
+    const intervalId = window.setInterval(() => {
+      setElapsedSeconds((performance.now() - start) / 1000);
+    }, 100);
+
+    return () => {
+      clearInterval(intervalId);
+      if (isMountedRef.current) {
+        setElapsedSeconds((performance.now() - start) / 1000);
+      }
+    };
+  }, [isStreaming]);
+
+  useEffect(
+    () => () => {
+      isMountedRef.current = false;
+    },
+    [],
+  );
+
+  const formattedElapsed = elapsedSeconds.toFixed(1);
+  const showTimer = isStreaming || elapsedSeconds > 0;
 
   return (
     <div
@@ -35,6 +66,11 @@ export default function ThinkingBlock({
           <span className={iconClassName} aria-hidden>
             <Icon size={16} />
           </span>
+          {showTimer && (
+            <span className="thinking-block-timer" aria-live="polite">
+              {t("messages.thinking.timer", { seconds: formattedElapsed })}
+            </span>
+          )}
           <span>
             {isStreaming
               ? t("messages.thinking.streaming")

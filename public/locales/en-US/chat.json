@@ -85,7 +85,8 @@
     "thinking": {
       "streaming": "Thinking...",
       "title": "Reasoning",
-      "empty": "No reasoning content"
+      "empty": "No reasoning content",
+      "timer": "Thinking for {{seconds}}s"
     },
     "emptyMessage": "(Empty message)"
   },

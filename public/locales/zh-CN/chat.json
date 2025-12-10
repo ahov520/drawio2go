@@ -82,7 +82,8 @@
     "thinking": {
       "streaming": "思考中...",
       "title": "思考过程",
-      "empty": "暂无思考内容"
+      "empty": "暂无思考内容",
+      "timer": "已思考 {{seconds}} 秒"
     },
     "emptyMessage": "（空消息）"
   },

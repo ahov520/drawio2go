@@ -1,10 +1,12 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { Skeleton } from "@heroui/react";
 import { type LLMConfig, type ChatUIMessage } from "@/app/types/chat";
 import EmptyState from "./EmptyState";
 import MessageItem from "./MessageItem";
+
+const SCROLL_BOTTOM_THRESHOLD = 50;
 
 interface MessageListProps {
   messages: ChatUIMessage[];
@@ -28,18 +30,38 @@ export default function MessageList({
   onThinkingBlockToggle,
 }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
   const skeletonItems = Array.from({ length: 3 });
 
   // 监听消息内容与流式状态变化，自动滚动到底部（支持流式追加而不改变长度的场景）
   useEffect(() => {
-    if (messages.length === 0) return;
+    if (messages.length === 0 || !isAutoScrollEnabled) return;
 
     const timer = setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      messagesEndRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [messages, status]);
+  }, [isAutoScrollEnabled, messages, status]);
+
+  const handleScroll = () => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const distanceToBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    const isNearBottom = distanceToBottom < SCROLL_BOTTOM_THRESHOLD;
+
+    setIsAutoScrollEnabled((prev) => {
+      if (isNearBottom && !prev) return true;
+      if (!isNearBottom && prev) return false;
+      return prev;
+    });
+  };
 
   // 渲染空状态
   if (configLoading) {
@@ -96,7 +118,11 @@ export default function MessageList({
 
   // 渲染消息列表
   return (
-    <div className="messages-scroll-area">
+    <div
+      className="messages-scroll-area"
+      ref={scrollContainerRef}
+      onScroll={handleScroll}
+    >
       {messages.map((message) => (
         <MessageItem
           key={message.id}
