@@ -20,10 +20,8 @@ import { formatVersionTimestamp } from "@/app/lib/format-utils";
 
 type CardRootProps = ComponentProps<typeof Card.Root>;
 
-interface PressableProjectCardProps extends Omit<
-  CardRootProps,
-  "onPress" | "role" | "tabIndex"
-> {
+interface PressableProjectCardProps
+  extends Omit<CardRootProps, "onPress" | "role" | "tabIndex"> {
   isActive: boolean;
   ariaLabel: string;
   onPress: () => void;

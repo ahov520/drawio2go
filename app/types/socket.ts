@@ -9,6 +9,10 @@ export interface ToolCallRequest {
   input: Record<string, unknown>;
   projectUuid: string;
   conversationId: string;
+  /**
+   * 工具调用的简短描述，便于日志与调试；可选保持向后兼容。
+   */
+  description?: string;
 }
 
 /**

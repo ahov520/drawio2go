@@ -5,8 +5,11 @@ import {
 import type { Message } from "@/app/lib/storage";
 import type { ChatUIMessage } from "@/app/types/chat";
 import { describe, expect, it, vi } from "vitest";
+import { AI_TOOL_NAMES } from "@/lib/constants/tool-names";
 
 const baseMeta = { modelName: "test-model", createdAt: 1_700_000_000_000 };
+const { DRAWIO_READ } = AI_TOOL_NAMES;
+const TOOL_DRAWIO_READ = `tool-${DRAWIO_READ}`;
 
 describe("convertUIMessageToCreateInput", () => {
   it("序列化包含 reasoning 的消息", () => {
@@ -33,7 +36,7 @@ describe("convertUIMessageToCreateInput", () => {
         { type: "text", text: "Hi" },
         {
           type: "dynamic-tool",
-          toolName: "drawio_read",
+          toolName: DRAWIO_READ,
           toolCallId: "call-1",
           state: "output-available",
           input: { path: "a.drawio" },
@@ -74,8 +77,8 @@ describe("convertMessageToUIMessage", () => {
       { type: "reasoning", text: "think", state: "done" },
       { type: "text", text: "answer" },
       {
-        type: "tool-drawio_read",
-        toolName: "drawio_read",
+        type: TOOL_DRAWIO_READ,
+        toolName: DRAWIO_READ,
         toolCallId: "call-2",
         state: "output-available",
         output: { foo: "bar" },
@@ -96,7 +99,7 @@ describe("convertMessageToUIMessage", () => {
     expect(ui.parts.map((p) => (p as { type: string }).type)).toEqual([
       "reasoning",
       "text",
-      "tool-drawio_read",
+      TOOL_DRAWIO_READ,
     ]);
     expect(ui.metadata).toBeDefined();
     expect(ui.metadata!.modelName).toBe("deepseek");
@@ -105,7 +108,7 @@ describe("convertMessageToUIMessage", () => {
   it("工具 part 规范化：tool-call → tool-<name>", () => {
     const rawTool = {
       type: "tool-call",
-      toolName: "drawio_read",
+      toolName: DRAWIO_READ,
       toolCallId: "call-x",
       input: { path: "diagram.xml" },
     };
@@ -129,8 +132,8 @@ describe("convertMessageToUIMessage", () => {
       input?: unknown;
     };
 
-    expect(part.type).toBe("tool-drawio_read");
-    expect(part.toolName).toBe("drawio_read");
+    expect(part.type).toBe(TOOL_DRAWIO_READ);
+    expect(part.toolName).toBe(DRAWIO_READ);
     expect(part.toolCallId).toBe("call-x");
     expect(part.state).toBe("input-available");
     expect(part.input).toEqual({ path: "diagram.xml" });
@@ -173,7 +176,7 @@ describe("往返序列化/反序列化", () => {
         { type: "text", text: "Hello" },
         {
           type: "dynamic-tool",
-          toolName: "drawio_read",
+          toolName: DRAWIO_READ,
           toolCallId: "call-rt",
           state: "output-available",
           input: {},

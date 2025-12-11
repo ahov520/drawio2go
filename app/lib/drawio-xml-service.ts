@@ -4,21 +4,30 @@ import { executeToolOnClient } from "./tool-executor";
 import { normalizeDiagramXml } from "./drawio-xml-utils";
 import { getDomParser, getXmlSerializer } from "./dom-parser-cache";
 import type {
-  DrawioEditBatchRequest,
   DrawioEditBatchResult,
-  DrawioEditOperation,
   DrawioQueryResult,
-  DrawioReadInput,
   DrawioReadResult,
   DrawioListResult,
-  InsertElementOperation,
-  InsertPosition,
 } from "@/app/types/drawio-tools";
 import type { GetXMLResult, ReplaceXMLResult } from "@/app/types/drawio-tools";
 import { createLogger } from "@/lib/logger";
 import type { ToolExecutionContext } from "@/app/types/socket";
+import type {
+  DrawioEditBatchRequest,
+  DrawioEditOperation,
+  DrawioReadInput,
+} from "./schemas/drawio-tool-schemas";
+import { AI_TOOL_NAMES, CLIENT_TOOL_NAMES } from "@/lib/constants/tool-names";
 
 const logger = createLogger("DrawIO XML Service");
+const { DRAWIO_READ } = AI_TOOL_NAMES;
+const { GET_DRAWIO_XML, REPLACE_DRAWIO_XML } = CLIENT_TOOL_NAMES;
+
+type InsertElementOperation = Extract<
+  DrawioEditOperation,
+  { type: "insert_element" }
+>;
+type InsertPosition = InsertElementOperation["position"];
 
 function ensureContext(
   context: ToolExecutionContext | undefined,
@@ -152,14 +161,15 @@ export async function executeDrawioRead(
     return { success: true, results };
   }
 
-  throw new Error("drawio_read: 未提供有效的查询参数");
+  throw new Error(`${DRAWIO_READ}: 未提供有效的查询参数`);
 }
 
 export async function executeDrawioEditBatch(
-  operations: DrawioEditBatchRequest,
+  request: DrawioEditBatchRequest,
   context: ToolExecutionContext,
 ): Promise<DrawioEditBatchResult> {
   const resolvedContext = ensureContext(context);
+  const { operations } = request;
 
   if (!operations.length) {
     return {
@@ -187,11 +197,11 @@ export async function executeDrawioEditBatch(
   const updatedXml = serializer.serializeToString(document);
 
   const replaceResult = (await executeToolOnClient(
-    "replace_drawio_xml",
-    { drawio_xml: updatedXml, _originalTool: "drawio_edit_batch" },
+    REPLACE_DRAWIO_XML,
+    { drawio_xml: updatedXml, skip_export_validation: true },
     resolvedContext.projectUuid,
     resolvedContext.conversationId,
-    60000,
+    "批量编辑 DrawIO 元素",
   )) as ReplaceXMLResult;
 
   if (!replaceResult?.success) {
@@ -212,16 +222,16 @@ export async function executeDrawioEditBatch(
 
     try {
       const rollbackResult = (await executeToolOnClient(
-        "replace_drawio_xml",
+        REPLACE_DRAWIO_XML,
         { drawio_xml: originalXml },
         resolvedContext.projectUuid,
         resolvedContext.conversationId,
-        60000,
+        "批量编辑失败回滚原始 XML",
       )) as ReplaceXMLResult;
 
       if (rollbackResult?.success) {
         rollbackSucceeded = true;
-        logger.warn("replace_drawio_xml 失败后已回滚到原始 XML");
+        logger.warn(`${REPLACE_DRAWIO_XML} 失败后已回滚到原始 XML`);
       } else {
         rollbackErrorMessage =
           rollbackResult?.error ||
@@ -258,11 +268,11 @@ export async function executeDrawioEditBatch(
 async function fetchDiagramXml(context: ToolExecutionContext): Promise<string> {
   const resolvedContext = ensureContext(context);
   const response = (await executeToolOnClient(
-    "get_drawio_xml",
+    GET_DRAWIO_XML,
     {},
     resolvedContext.projectUuid,
     resolvedContext.conversationId,
-    15000,
+    "读取 DrawIO 图表内容",
   )) as GetXMLResult;
 
   if (!response?.success || typeof response.xml !== "string") {
