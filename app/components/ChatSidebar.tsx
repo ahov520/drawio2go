@@ -1085,6 +1085,33 @@ export default function ChatSidebar({
     await submitMessage();
   };
 
+  /**
+   * 静默停止流式传输（不保存取消消息）
+   * 用于新建对话等场景
+   */
+  const stopStreamingSilently = useCallback(async () => {
+    if (!isChatStreaming) return;
+
+    logger.info("[ChatSidebar] 静默停止流式传输");
+    stop();
+
+    const targetConversationId =
+      activeConversationId ?? sendingSessionIdRef.current;
+
+    if (targetConversationId) {
+      void updateStreamingFlag(targetConversationId, false);
+    }
+
+    sendingSessionIdRef.current = null;
+    releaseLock();
+  }, [
+    activeConversationId,
+    isChatStreaming,
+    releaseLock,
+    stop,
+    updateStreamingFlag,
+  ]);
+
   const handleCancel = useCallback(async () => {
     if (!isChatStreaming) return;
 
@@ -1207,6 +1234,9 @@ export default function ChatSidebar({
   ]);
 
   const handleNewChat = useCallback(async () => {
+    // 先静默取消正在进行的流式传输
+    await stopStreamingSilently();
+
     try {
       const newConv = await createConversation(
         t("chat:messages.defaultConversation"),
@@ -1216,7 +1246,13 @@ export default function ChatSidebar({
     } catch (error) {
       logger.error("[ChatSidebar] 创建新对话失败:", error);
     }
-  }, [createConversation, currentProjectId, setActiveConversationId, t]);
+  }, [
+    stopStreamingSilently,
+    createConversation,
+    currentProjectId,
+    setActiveConversationId,
+    t,
+  ]);
 
   const handleHistory = () => {
     setCurrentView("history");
