@@ -17,6 +17,7 @@ LLM 供应商与聊天消息相关的核心类型定义。
 - **ToolInvocation/ToolInvocationState**: AI 工具调用的状态结构。
 - **ChatMessage**: 扩展 AI SDK Message 的聊天消息定义。
 - **MessageMetadata**: 消息元数据（模型名称、创建时间）。
+- **ImagePart**: 图片消息 part（持久化字段引用 Attachment，运行时字段用于 UI/视觉模型输入）。
 - **ChatUIMessage**: 基于 AI SDK UIMessage 的带元数据消息类型。
 - **ChatSession**: 聊天会话定义（ID、标题、消息列表、时间戳）。
 - **ChatSessionsData**: 会话数据管理结构。
