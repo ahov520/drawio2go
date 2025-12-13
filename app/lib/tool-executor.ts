@@ -8,6 +8,8 @@
 
 import { v4 as uuidv4 } from "uuid";
 import type { ToolCallRequest } from "@/app/types/socket-protocol";
+import { TOOL_TIMEOUT_CONFIG } from "@/lib/constants/tool-config";
+import type { ClientToolName } from "@/lib/constants/tool-names";
 import { createLogger } from "@/lib/logger";
 
 const logger = createLogger("Tool Executor");
@@ -15,22 +17,27 @@ const logger = createLogger("Tool Executor");
 /**
  * 通过 Socket.IO 在客户端执行工具
  *
- * @param toolName - 工具名称
+ * @param toolName - 工具名称（前端执行工具）
  * @param input - 工具输入参数
  * @param projectUuid - 所属项目 ID
  * @param conversationId - 当前会话 ID
- * @param timeout - 超时时间（毫秒），默认 30000ms (30秒)
+ * @param description - 工具调用描述
  * @returns Promise<unknown> - 工具执行结果
  *
  * @throws Error - 当 Socket.IO 未初始化、连接断开或执行超时时抛出错误
  */
 export async function executeToolOnClient(
-  toolName: string,
+  toolName: ClientToolName,
   input: Record<string, unknown>,
   projectUuid: string,
   conversationId: string,
-  timeout: number = 60000,
+  description?: string,
 ): Promise<unknown> {
+  const timeout =
+    TOOL_TIMEOUT_CONFIG[toolName] ??
+    (TOOL_TIMEOUT_CONFIG as Record<string, number>)[toolName] ??
+    60000;
+
   // 默认超时增加到 60 秒，以支持版本创建等耗时操作
   // 获取全局 Socket.IO 实例
   const io = global.io;
@@ -82,11 +89,12 @@ export async function executeToolOnClient(
     // 构造请求消息
     const request: ToolCallRequest = {
       requestId,
-      toolName: toolName as ToolCallRequest["toolName"],
+      toolName,
       input,
       timeout,
       projectUuid: normalizedProjectUuid,
       conversationId: normalizedConversationId,
+      description,
     };
 
     // 按项目房间投递
@@ -123,6 +131,7 @@ export async function executeToolOnClient(
       projectUuid: normalizedProjectUuid,
       conversationId: normalizedConversationId,
       connectedClients,
+      description,
     });
   });
 }

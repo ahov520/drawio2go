@@ -247,7 +247,7 @@ Accordion, Alert, Avatar, Button, Card, Checkbox, CheckboxGroup, Chip, CloseButt
   3. 前端 `useDrawioSocket` Hook 接收请求，执行实际操作
   4. 前端通过 Socket.IO 返回结果
   5. 后端 Promise resolve，返回结果给 AI
-- **超时机制**: 默认 30 秒，可配置
+- **超时机制**: 统一由 `TOOL_TIMEOUT_CONFIG` 配置（默认回退 60s，多页导出 120s）
 - **错误处理**: 前端执行失败会返回详细错误信息给 AI
 
 ### 6. 检查测试
@@ -460,7 +460,7 @@ pnpm format               # 使用 Prettier 格式化所有代码
 **Socket.IO 工具调用架构**
 
 - 双向通讯：AI 工具调用 → Socket.IO 转发前端 → 返回结果
-- 30秒超时机制，详细错误追溯
+- 超时由 `TOOL_TIMEOUT_CONFIG` 统一管理（默认回退 60s，导出 120s）
 
 **LLM 集成**
 

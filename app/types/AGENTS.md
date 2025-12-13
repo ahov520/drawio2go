@@ -28,7 +28,7 @@ Socket.IO 通讯协议的类型定义。
 
 #### 核心接口
 
-- **ToolCallRequest**: 工具调用请求结构（含 requestId、toolName、input、timeout、description、\_originalTool）
+- **ToolCallRequest**: 工具调用请求结构（含 requestId、toolName、input、timeout、description）
 - **ToolCallResult**: 工具执行结果结构（含 requestId、success、result、error）
 - **ServerToClientEvents**: Socket.IO 服务器到客户端事件类型
 - **ClientToServerEvents**: Socket.IO 客户端到服务器事件类型

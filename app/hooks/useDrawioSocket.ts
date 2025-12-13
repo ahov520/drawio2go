@@ -29,8 +29,10 @@ import {
 import { DEFAULT_FIRST_VERSION, WIP_VERSION } from "@/app/lib/storage";
 import { createLogger } from "@/lib/logger";
 import { toErrorString } from "@/lib/error-handler";
+import { CLIENT_TOOL_NAMES } from "@/lib/constants/tool-names";
 
 const logger = createLogger("Socket Client");
+const { GET_DRAWIO_XML, REPLACE_DRAWIO_XML, EXPORT_DRAWIO } = CLIENT_TOOL_NAMES;
 
 type ConnectionStatus =
   | "connecting"
@@ -202,9 +204,11 @@ export function useDrawioSocket(
         await seedVersionCache(project.uuid);
 
         const timestamp = new Date().toLocaleString("zh-CN");
-        const aiDescription = request.description || "AI 自动编辑";
-        const sourceDescription = originalToolName ?? request.toolName;
-        const versionDescription = `${sourceDescription} - ${aiDescription} (${timestamp})`;
+        const baseDescription =
+          (request.description && request.description.trim()) ||
+          originalToolName ||
+          request.toolName;
+        const versionDescription = `${baseDescription} (${timestamp})`;
 
         let latestMainVersion = latestMainVersionRef.current;
 
@@ -245,6 +249,7 @@ export function useDrawioSocket(
           parentVersion: latestMainVersion,
           nextVersion: nextSubVersion,
           requestId: request.requestId,
+          description: versionDescription,
         });
 
         await createHistoricalVersion(
@@ -259,6 +264,7 @@ export function useDrawioSocket(
           projectId: project?.uuid,
           version: nextSubVersion,
           requestId: request.requestId,
+          description: versionDescription,
         });
 
         latestMainVersionRef.current = latestMainVersion;
@@ -351,6 +357,7 @@ export function useDrawioSocket(
         projectId: currentProjectUuid,
         requestProject: request.projectUuid,
         conversationId: request.conversationId,
+        description: request.description,
       });
 
       if (!request.projectUuid) {
@@ -381,18 +388,15 @@ export function useDrawioSocket(
       }
 
       try {
-        const originalTool =
-          ((request.input as { _originalTool?: string } | undefined)
-            ?._originalTool ??
-            request._originalTool) ||
-          undefined;
-
         if (
-          request.toolName === "replace_drawio_xml" &&
-          (originalTool === "drawio_overwrite" ||
-            originalTool === "drawio_edit_batch")
+          request.toolName === REPLACE_DRAWIO_XML ||
+          request.toolName === EXPORT_DRAWIO
         ) {
-          await handleAutoVersionSnapshot(request, originalTool);
+          await handleAutoVersionSnapshot(
+            request,
+            (request.description && request.description.trim()) ||
+              request.toolName,
+          );
         }
 
         let result: {
@@ -404,7 +408,7 @@ export function useDrawioSocket(
 
         // 根据工具名称执行相应函数
         switch (request.toolName) {
-          case "get_drawio_xml":
+          case GET_DRAWIO_XML:
             result = (await getDrawioXML()) as unknown as {
               success: boolean;
               error?: string;
@@ -413,21 +417,28 @@ export function useDrawioSocket(
             };
             break;
 
-          case "replace_drawio_xml":
+          case REPLACE_DRAWIO_XML: {
             if (!request.input?.drawio_xml) {
               throw new Error("缺少 drawio_xml 参数");
             }
-            const skipExportValidation = originalTool === "drawio_edit_batch";
+            const skipExportValidation = Boolean(
+              (request.input as { skip_export_validation?: boolean })
+                ?.skip_export_validation,
+            );
             result = await replaceDrawioXML(
               request.input.drawio_xml as string,
               {
                 requestId: request.requestId,
                 editorRef,
                 skipExportValidation,
+                description:
+                  (request.description && request.description.trim()) ||
+                  request.toolName,
               },
             );
             // 事件派发已在 replaceDrawioXML 内部处理，这里避免重复派发
             break;
+          }
 
           default:
             throw new Error(`未知工具: ${request.toolName}`);
