@@ -18,6 +18,8 @@ import type {
   UpdateConversationInput,
   Message,
   CreateMessageInput,
+  Attachment,
+  CreateAttachmentInput,
 } from "@/lib/storage/types";
 import type { ToolCallRequest } from "@/app/types/socket";
 
@@ -149,6 +151,19 @@ declare global {
       createMessage: (message: CreateMessageInput) => Promise<Message>;
       deleteMessage: (id: string) => Promise<void>;
       createMessages: (messages: CreateMessageInput[]) => Promise<Message[]>;
+
+      // Attachments
+      getAttachment: (id: string) => Promise<Attachment | null>;
+      createAttachment: (
+        attachment: Omit<CreateAttachmentInput, "blob_data"> & {
+          blob_data?: ArrayBuffer;
+        },
+      ) => Promise<Attachment>;
+      deleteAttachment: (id: string) => Promise<void>;
+      getAttachmentsByMessage: (messageId: string) => Promise<Attachment[]>;
+      getAttachmentsByConversation: (
+        conversationId: string,
+      ) => Promise<Attachment[]>;
     };
   }
 }

@@ -564,3 +564,27 @@ ipcMain.handle("storage:deleteMessage", async (event, id) => {
 ipcMain.handle("storage:createMessages", async (event, messages) => {
   return storageManager.createMessages(messages);
 });
+
+// Attachments
+ipcMain.handle("storage:getAttachment", async (_event, id) => {
+  return storageManager.getAttachment(id);
+});
+
+ipcMain.handle("storage:createAttachment", async (_event, attachment) => {
+  return storageManager.createAttachment(attachment);
+});
+
+ipcMain.handle("storage:deleteAttachment", async (_event, id) => {
+  return storageManager.deleteAttachment(id);
+});
+
+ipcMain.handle("storage:getAttachmentsByMessage", async (_event, messageId) => {
+  return storageManager.getAttachmentsByMessage(messageId);
+});
+
+ipcMain.handle(
+  "storage:getAttachmentsByConversation",
+  async (_event, conversationId) => {
+    return storageManager.getAttachmentsByConversation(conversationId);
+  },
+);

@@ -86,4 +86,14 @@ contextBridge.exposeInMainWorld("electronStorage", {
   deleteMessage: (id) => ipcRenderer.invoke("storage:deleteMessage", id),
   createMessages: (messages) =>
     ipcRenderer.invoke("storage:createMessages", messages),
+
+  // Attachments
+  getAttachment: (id) => ipcRenderer.invoke("storage:getAttachment", id),
+  createAttachment: (attachment) =>
+    ipcRenderer.invoke("storage:createAttachment", attachment),
+  deleteAttachment: (id) => ipcRenderer.invoke("storage:deleteAttachment", id),
+  getAttachmentsByMessage: (messageId) =>
+    ipcRenderer.invoke("storage:getAttachmentsByMessage", messageId),
+  getAttachmentsByConversation: (conversationId) =>
+    ipcRenderer.invoke("storage:getAttachmentsByConversation", conversationId),
 });

@@ -7,9 +7,9 @@
 
 ### 数据库Schema
 - 创建attachments表用于存储媒体文件
-- 支持字段：id、conversation_id、type、mime_type、file_name、file_size、尺寸信息、blob数据、时间戳
-- 建立索引：conversation_id、type
-- 配置级联删除：删除对话时自动删除附件
+- 支持字段：id、conversation_id、message_id、type、mime_type、file_name、file_size、尺寸信息、blob数据、file_path(Electron)、时间戳
+- 建立索引：conversation_id、message_id、created_at
+- 配置级联删除：删除对话、消息、项目时自动删除附件
 - electron环境下直接存放到文件系统中
 
 ### 版本

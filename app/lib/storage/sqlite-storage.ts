@@ -12,6 +12,8 @@ import type {
   UpdateConversationInput,
   Message,
   CreateMessageInput,
+  Attachment,
+  CreateAttachmentInput,
 } from "./types";
 import { WIP_VERSION } from "./constants";
 import {
@@ -470,5 +472,54 @@ export class SQLiteStorage implements StorageAdapter {
     }
 
     return created;
+  }
+
+  // ==================== Attachments ====================
+
+  async getAttachment(id: string): Promise<Attachment | null> {
+    await this.ensureElectron();
+    return window.electronStorage!.getAttachment(id);
+  }
+
+  async createAttachment(
+    attachment: CreateAttachmentInput,
+  ): Promise<Attachment> {
+    await this.ensureElectron();
+
+    const { blob_data: blobData, ...rest } = attachment;
+    const payload: Omit<CreateAttachmentInput, "blob_data"> & {
+      blob_data?: ArrayBuffer;
+    } = { ...rest };
+
+    const data = blobData as unknown;
+    if (data instanceof Blob) {
+      payload.blob_data = await data.arrayBuffer();
+    } else if (data instanceof ArrayBuffer) {
+      payload.blob_data = data;
+    } else if (data && ArrayBuffer.isView(data)) {
+      payload.blob_data = data.buffer.slice(
+        data.byteOffset,
+        data.byteOffset + data.byteLength,
+      );
+    }
+
+    return window.electronStorage!.createAttachment(payload);
+  }
+
+  async deleteAttachment(id: string): Promise<void> {
+    await this.ensureElectron();
+    await window.electronStorage!.deleteAttachment(id);
+  }
+
+  async getAttachmentsByMessage(messageId: string): Promise<Attachment[]> {
+    await this.ensureElectron();
+    return window.electronStorage!.getAttachmentsByMessage(messageId);
+  }
+
+  async getAttachmentsByConversation(
+    conversationId: string,
+  ): Promise<Attachment[]> {
+    await this.ensureElectron();
+    return window.electronStorage!.getAttachmentsByConversation(conversationId);
   }
 }
