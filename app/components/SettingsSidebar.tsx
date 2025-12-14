@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Button } from "@heroui/react";
 import {
   type ActiveModelReference,
@@ -9,6 +9,7 @@ import {
   type ProviderConfig,
 } from "@/app/types/chat";
 import { DEFAULT_AGENT_SETTINGS } from "@/app/lib/config-utils";
+import { debounce } from "@/app/lib/utils";
 import { useStorageSettings } from "@/app/hooks/useStorageSettings";
 import SettingsNav, { type SettingsTab } from "./settings/SettingsNav";
 import ModelsSettingsPanel from "./settings/ModelsSettingsPanel";
@@ -24,6 +25,13 @@ import { createLogger } from "@/lib/logger";
 import { subscribeSidebarNavigate } from "@/app/lib/ui-events";
 
 const logger = createLogger("SettingsSidebar");
+
+type SaveStatus = "idle" | "saving" | "saved" | "failed";
+
+type FailedSave =
+  | { kind: "defaultPath"; value: string }
+  | { kind: "agentSettings"; value: AgentSettings }
+  | { kind: "versionSettings"; value: { autoVersionOnAIEdit: boolean } };
 
 interface SettingsSidebarProps {
   isOpen: boolean;
@@ -50,40 +58,22 @@ export default function SettingsSidebar({
   } = useStorageSettings();
 
   const [defaultPath, setDefaultPath] = useState("");
-  const [savedPath, setSavedPath] = useState("");
 
   const [providers, setProviders] = useState<ProviderConfig[]>([]);
-  const [savedProviders, setSavedProviders] = useState<ProviderConfig[]>([]);
   const [models, setModels] = useState<ModelConfig[]>([]);
-  const [savedModels, setSavedModels] = useState<ModelConfig[]>([]);
   const [agentSettings, setAgentSettings] = useState<AgentSettings>(
     DEFAULT_AGENT_SETTINGS,
   );
-  const [savedAgentSettings, setSavedAgentSettings] = useState<AgentSettings>(
-    DEFAULT_AGENT_SETTINGS,
-  );
   const [activeModel, setActiveModelState] =
-    useState<ActiveModelReference | null>(null);
-  const [savedActiveModel, setSavedActiveModel] =
     useState<ActiveModelReference | null>(null);
 
   const [versionSettings, setVersionSettings] = useState({
     autoVersionOnAIEdit: true,
   });
-  const [savedVersionSettings, setSavedVersionSettings] = useState({
-    autoVersionOnAIEdit: true,
-  });
 
-  const [hasChanges, setHasChanges] = useState(false);
   const { push } = useToast();
-
-  useEffect(() => {
-    return subscribeSidebarNavigate((detail) => {
-      if (detail.tab === "settings" && detail.settingsTab) {
-        setActiveTab(detail.settingsTab);
-      }
-    });
-  }, []);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [failedSave, setFailedSave] = useState<FailedSave | null>(null);
 
   const showToast = useCallback(
     (params: Parameters<typeof push>[0]) => {
@@ -91,6 +81,167 @@ export default function SettingsSidebar({
     },
     [push],
   );
+
+  const isMountedRef = useRef(false);
+  const inFlightSavesRef = useRef(0);
+  const hasFailureRef = useRef(false);
+  const hideSavedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const saveDefaultPathNowRef = useRef<(path: string) => Promise<void>>(
+    async () => {},
+  );
+  const saveAgentSettingsNowRef = useRef<
+    (settings: AgentSettings) => Promise<void>
+  >(async () => {});
+
+  const agentSettingsRef = useRef(agentSettings);
+  useEffect(() => {
+    agentSettingsRef.current = agentSettings;
+  }, [agentSettings]);
+
+  const clearHideSavedTimer = useCallback(() => {
+    if (hideSavedTimerRef.current) {
+      clearTimeout(hideSavedTimerRef.current);
+      hideSavedTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleHideSaved = useCallback(() => {
+    clearHideSavedTimer();
+    hideSavedTimerRef.current = setTimeout(() => {
+      if (!isMountedRef.current) return;
+      setSaveStatus("idle");
+    }, 2000);
+  }, [clearHideSavedTimer]);
+
+  /**
+   * 统一的保存包装器：
+   * - 维护 Saving/Saved/Failed 状态
+   * - 处理 toast 错误提示
+   * - 支持并发保存（以最后一次完成为准）
+   */
+  const runSaveTask = useCallback(
+    async (task: () => Promise<void>, failure: FailedSave) => {
+      inFlightSavesRef.current += 1;
+
+      if (isMountedRef.current) {
+        clearHideSavedTimer();
+        hasFailureRef.current = false;
+        setFailedSave(null);
+        setSaveStatus("saving");
+      }
+
+      try {
+        await task();
+      } catch (e) {
+        hasFailureRef.current = true;
+        logger.error(t("errors.saveFailed"), e);
+        showToast({
+          variant: "danger",
+          description: t("toasts.saveFailed", {
+            error: (e as Error)?.message || "unknown",
+          }),
+        });
+
+        if (isMountedRef.current) {
+          setFailedSave(failure);
+          setSaveStatus("failed");
+        }
+        return;
+      } finally {
+        inFlightSavesRef.current = Math.max(0, inFlightSavesRef.current - 1);
+      }
+
+      if (!isMountedRef.current) return;
+      if (hasFailureRef.current) return;
+      if (inFlightSavesRef.current !== 0) return;
+
+      setSaveStatus("saved");
+      scheduleHideSaved();
+    },
+    [clearHideSavedTimer, scheduleHideSaved, showToast, t],
+  );
+
+  const saveDefaultPathNow = useCallback(
+    async (path: string) => {
+      await runSaveTask(
+        async () => {
+          await saveDefaultPath(path);
+          onSettingsChange?.({ defaultPath: path });
+        },
+        { kind: "defaultPath", value: path },
+      );
+    },
+    [onSettingsChange, runSaveTask, saveDefaultPath],
+  );
+
+  const saveAgentSettingsNow = useCallback(
+    async (settings: AgentSettings) => {
+      if (!isSystemPromptValid(settings.systemPrompt)) return;
+
+      await runSaveTask(
+        async () => {
+          await saveAgentSettings(settings);
+        },
+        { kind: "agentSettings", value: settings },
+      );
+    },
+    [runSaveTask, saveAgentSettings],
+  );
+
+  const saveVersionSettingsNow = useCallback(
+    async (settings: { autoVersionOnAIEdit: boolean }) => {
+      await runSaveTask(
+        async () => {
+          await setSetting(
+            "version.autoVersionOnAIEdit",
+            settings.autoVersionOnAIEdit ? "1" : "0",
+          );
+        },
+        { kind: "versionSettings", value: settings },
+      );
+    },
+    [runSaveTask, setSetting],
+  );
+
+  useEffect(() => {
+    saveDefaultPathNowRef.current = saveDefaultPathNow;
+  }, [saveDefaultPathNow]);
+
+  useEffect(() => {
+    saveAgentSettingsNowRef.current = saveAgentSettingsNow;
+  }, [saveAgentSettingsNow]);
+
+  const debouncedSaveDefaultPath = useMemo(
+    () =>
+      debounce((path: string) => {
+        saveDefaultPathNowRef.current(path).catch(() => {});
+      }, 500),
+    [],
+  );
+
+  const debouncedSaveAgentSettings = useMemo(
+    () =>
+      debounce((settings: AgentSettings) => {
+        saveAgentSettingsNowRef.current(settings).catch(() => {});
+      }, 800),
+    [],
+  );
+
+  const flushPendingSaves = useCallback(() => {
+    debouncedSaveDefaultPath.flush();
+    debouncedSaveAgentSettings.flush();
+  }, [debouncedSaveAgentSettings, debouncedSaveDefaultPath]);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return subscribeSidebarNavigate((detail) => {
+      if (detail.tab === "settings" && detail.settingsTab) {
+        flushPendingSaves();
+        setActiveTab(detail.settingsTab);
+      }
+    });
+  }, [flushPendingSaves]);
 
   // 加载保存的设置
   useEffect(() => {
@@ -114,37 +265,26 @@ export default function SettingsSidebar({
 
         const normalizedPath = path || "";
         setDefaultPath(normalizedPath);
-        setSavedPath(normalizedPath);
 
         setProviders(loadedProviders);
-        setSavedProviders(loadedProviders);
 
         setModels(loadedModels);
-        setSavedModels(loadedModels);
 
         const agent = loadedAgent ?? DEFAULT_AGENT_SETTINGS;
         setAgentSettings(agent);
-        setSavedAgentSettings(agent);
 
         setActiveModelState(loadedActiveModel);
-        setSavedActiveModel(loadedActiveModel);
 
         const autoVersionOnAIEdit =
           versionSetting !== "0" && versionSetting !== "false";
         setVersionSettings({ autoVersionOnAIEdit });
-        setSavedVersionSettings({ autoVersionOnAIEdit });
       } catch (e) {
         logger.error(t("errors.loadFailed"), e);
         setProviders([]);
-        setSavedProviders([]);
         setModels([]);
-        setSavedModels([]);
         setAgentSettings(DEFAULT_AGENT_SETTINGS);
-        setSavedAgentSettings(DEFAULT_AGENT_SETTINGS);
         setActiveModelState(null);
-        setSavedActiveModel(null);
         setVersionSettings({ autoVersionOnAIEdit: true });
-        setSavedVersionSettings({ autoVersionOnAIEdit: true });
         showToast({
           variant: "danger",
           description: t("toasts.loadFailed", {
@@ -154,7 +294,7 @@ export default function SettingsSidebar({
       }
     };
 
-    void loadSettings();
+    loadSettings().catch(() => {});
   }, [
     getAgentSettings,
     getDefaultPath,
@@ -166,43 +306,14 @@ export default function SettingsSidebar({
     t,
   ]);
 
-  // 监听变化，检测是否有修改
+  // 组件卸载时强制 flush，确保最后一次编辑被写入存储
   useEffect(() => {
-    const pathChanged = defaultPath !== savedPath;
-    const providersChanged =
-      JSON.stringify(providers) !== JSON.stringify(savedProviders);
-    const modelsChanged =
-      JSON.stringify(models) !== JSON.stringify(savedModels);
-    const agentChanged =
-      JSON.stringify(agentSettings) !== JSON.stringify(savedAgentSettings);
-    const activeModelChanged =
-      JSON.stringify(activeModel) !== JSON.stringify(savedActiveModel);
-    const versionSettingsChanged =
-      versionSettings.autoVersionOnAIEdit !==
-      savedVersionSettings.autoVersionOnAIEdit;
-
-    setHasChanges(
-      pathChanged ||
-        providersChanged ||
-        modelsChanged ||
-        agentChanged ||
-        activeModelChanged ||
-        versionSettingsChanged,
-    );
-  }, [
-    defaultPath,
-    savedPath,
-    providers,
-    savedProviders,
-    models,
-    savedModels,
-    agentSettings,
-    savedAgentSettings,
-    activeModel,
-    savedActiveModel,
-    versionSettings,
-    savedVersionSettings,
-  ]);
+    return () => {
+      isMountedRef.current = false;
+      flushPendingSaves();
+      clearHideSavedTimer();
+    };
+  }, [clearHideSavedTimer, flushPendingSaves]);
 
   const systemPromptError = useMemo(
     () =>
@@ -212,9 +323,13 @@ export default function SettingsSidebar({
     [agentSettings.systemPrompt, t],
   );
 
-  const handleDefaultPathChange = (path: string) => {
-    setDefaultPath(path);
-  };
+  const handleDefaultPathChange = useCallback(
+    (path: string) => {
+      setDefaultPath(path);
+      debouncedSaveDefaultPath(path);
+    },
+    [debouncedSaveDefaultPath],
+  );
 
   const handleProvidersChange = (items: ProviderConfig[]) => {
     setProviders(items);
@@ -228,74 +343,132 @@ export default function SettingsSidebar({
     setActiveModelState(model);
   };
 
-  const handleAgentSystemPromptChange = (nextPrompt: string) => {
-    setAgentSettings((prev) => ({
-      ...prev,
-      systemPrompt: nextPrompt,
-      updatedAt: Date.now(),
-    }));
-  };
+  const handleAgentSystemPromptChange = useCallback(
+    (nextPrompt: string) => {
+      const nextSettings: AgentSettings = {
+        ...agentSettingsRef.current,
+        systemPrompt: nextPrompt,
+        updatedAt: Date.now(),
+      };
 
-  // 保存设置（providers/models 保存由各自面板负责，这里同步 agent/version/defaultPath 状态）
-  const handleSave = async () => {
-    if (!isSystemPromptValid(agentSettings.systemPrompt)) {
-      showToast({
-        variant: "danger",
-        description:
-          systemPromptError ??
-          t("agent.systemPrompt.errorEmpty", "系统提示词不能为空"),
-      });
-      setActiveTab("agent");
-      return;
+      setAgentSettings(nextSettings);
+
+      // 文本输入频繁，使用更长的防抖；无效内容（空）不写入存储
+      if (!isSystemPromptValid(nextSettings.systemPrompt)) {
+        debouncedSaveAgentSettings.cancel();
+        return;
+      }
+
+      debouncedSaveAgentSettings(nextSettings);
+    },
+    [debouncedSaveAgentSettings],
+  );
+
+  const handleVersionSettingsChange = useCallback(
+    (settings: { autoVersionOnAIEdit: boolean }) => {
+      setVersionSettings(settings);
+      saveVersionSettingsNow(settings).catch(() => {});
+    },
+    [saveVersionSettingsNow],
+  );
+
+  const handleTabChange = useCallback(
+    (tab: SettingsTab) => {
+      // 切换 Tab 前 flush，避免最后一次输入还在防抖队列中
+      flushPendingSaves();
+      setActiveTab(tab);
+    },
+    [flushPendingSaves],
+  );
+
+  const handleRetrySave = useCallback(() => {
+    flushPendingSaves();
+    const target = failedSave;
+    if (!target) return;
+
+    switch (target.kind) {
+      case "defaultPath":
+        saveDefaultPathNow(target.value).catch(() => {});
+        break;
+      case "agentSettings":
+        saveAgentSettingsNow(target.value).catch(() => {});
+        break;
+      case "versionSettings":
+        saveVersionSettingsNow(target.value).catch(() => {});
+        break;
+      default:
+        break;
+    }
+  }, [
+    failedSave,
+    flushPendingSaves,
+    saveAgentSettingsNow,
+    saveDefaultPathNow,
+    saveVersionSettingsNow,
+  ]);
+
+  const saveIndicatorText = useMemo(() => {
+    switch (saveStatus) {
+      case "saving":
+        return t("saveIndicator.saving", "Saving...");
+      case "saved":
+        return t("saveIndicator.saved", "Saved");
+      case "failed":
+        return t("saveIndicator.failed", "Failed");
+      default:
+        return "";
+    }
+  }, [saveStatus, t]);
+
+  const saveIndicatorDotStyle = useMemo(() => {
+    let colorVar = "var(--warning)";
+    if (saveStatus === "failed") {
+      colorVar = "var(--danger)";
+    } else if (saveStatus === "saved") {
+      colorVar = "var(--success)";
     }
 
-    try {
-      await Promise.all([
-        saveDefaultPath(defaultPath),
-        saveAgentSettings(agentSettings),
-        setSetting(
-          "version.autoVersionOnAIEdit",
-          versionSettings.autoVersionOnAIEdit ? "1" : "0",
-        ),
-      ]);
-
-      setSavedPath(defaultPath);
-      setSavedAgentSettings(agentSettings);
-      setSavedVersionSettings({ ...versionSettings });
-      setSavedProviders(providers);
-      setSavedModels(models);
-      setSavedActiveModel(activeModel);
-
-      onSettingsChange?.({ defaultPath });
-
-      showToast({ variant: "success", description: t("toasts.saveSuccess") });
-    } catch (e) {
-      logger.error(t("errors.saveFailed"), e);
-      showToast({
-        variant: "danger",
-        description: t("toasts.saveFailed", {
-          error: (e as Error)?.message || "unknown",
-        }),
-      });
-    }
-  };
-
-  // 取消修改
-  const handleCancel = () => {
-    setDefaultPath(savedPath);
-    setProviders([...savedProviders]);
-    setModels([...savedModels]);
-    setAgentSettings({ ...savedAgentSettings });
-    setActiveModelState(savedActiveModel);
-    setVersionSettings({ ...savedVersionSettings });
-  };
+    return {
+      background: colorVar,
+      boxShadow: `0 0 0 4px color-mix(in oklch, ${colorVar} 25%, transparent)`,
+    } as const;
+  }, [saveStatus]);
 
   return (
     <div className="sidebar-container settings-sidebar-new">
       <div className="settings-layout">
-        <SettingsNav activeTab={activeTab} onTabChange={setActiveTab} />
+        <SettingsNav activeTab={activeTab} onTabChange={handleTabChange} />
 
         <div className="settings-content">
+          {saveStatus !== "idle" ? (
+            <div
+              className="mb-3 flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm"
+              style={{
+                border: "1px solid var(--border-light)",
+                background: "var(--surface)",
+              }}
+              role="status"
+              aria-live="polite"
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className="inline-block h-2 w-2 rounded-full"
+                  style={saveIndicatorDotStyle}
+                  aria-hidden="true"
+                />
+                <span className="text-foreground-secondary">
+                  {saveIndicatorText}
+                </span>
+              </div>
+
+              {saveStatus === "failed" ? (
+                <Button variant="tertiary" size="sm" onPress={handleRetrySave}>
+                  {t("saveIndicator.retry", "Retry")}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+
           {activeTab === "general" && (
             <GeneralSettingsPanel
               defaultPath={defaultPath}
@@ -325,28 +498,11 @@ export default function SettingsSidebar({
           {activeTab === "version" && (
             <VersionSettingsPanel
               settings={versionSettings}
-              onChange={setVersionSettings}
+              onChange={handleVersionSettingsChange}
             />
           )}
         </div>
       </div>
-
-      {hasChanges && (
-        <div className="settings-action-bar" role="status">
-          <div className="settings-action-status">
-            <span className="status-dot" aria-hidden="true" />
-            <span className="status-text">{t("actionBar.unsavedChanges")}</span>
-          </div>
-          <div className="settings-action-buttons">
-            <Button variant="tertiary" size="sm" onPress={handleCancel}>
-              {t("actionBar.cancel")}
-            </Button>
-            <Button variant="primary" size="sm" onPress={handleSave}>
-              {t("actionBar.save")}
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

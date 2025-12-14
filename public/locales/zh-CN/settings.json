@@ -125,8 +125,8 @@
         "placeholder": "我的 OpenAI 供应商",
         "description": "用于展示的友好名称",
         "required": "供应商名称为必填项",
-        "minLength": "供应商名称至少 {min} 个字符",
-        "maxLength": "供应商名称最多 {max} 个字符"
+        "minLength": "供应商名称至少 {{min}} 个字符",
+        "maxLength": "供应商名称最多 {{max}} 个字符"
       },
       "type": {
         "label": "供应商类型",
@@ -150,7 +150,7 @@
         "label": "API Key",
         "placeholder": "sk-...",
         "description": "可选。不填则使用无认证访问",
-        "minLength": "API Key 至少 {min} 个字符"
+        "minLength": "API Key 至少 {{min}} 个字符"
       },
       "testConnection": "测试连接",
       "testModel": "测试模型",
@@ -197,36 +197,36 @@
       }
     },
     "test": {
-      "success": "测试成功（返回：{response}）",
+      "success": "测试成功（返回：{{response}}）",
       "error": "测试失败，请检查配置是否正确",
       "networkError": "网络错误，请检查配置",
       "missingModelName": "请先填写模型名称",
       "missingProvider": "未找到对应的供应商配置，请先保存供应商"
     },
     "save": {
-      "createSuccess": "供应商“{name}”已创建",
-      "updateSuccess": "供应商“{name}”已更新",
+      "createSuccess": "供应商“{{name}}”已创建",
+      "updateSuccess": "供应商“{{name}}”已更新",
       "error": "保存供应商失败",
-      "modelCreateSuccess": "模型“{name}”已创建",
-      "modelUpdateSuccess": "模型“{name}”已更新",
+      "modelCreateSuccess": "模型“{{name}}”已创建",
+      "modelUpdateSuccess": "模型“{{name}}”已更新",
       "modelError": "保存模型失败，请稍后重试"
     },
     "delete": {
       "confirmTitle": "删除供应商",
-      "confirmMessage": "确定要删除“{name}”吗？这将同时删除关联的所有模型。",
-      "success": "供应商“{name}”已删除",
-      "successWithSwitch": "供应商“{name}”已删除，已切换到“{newModel}”",
-      "successNoActiveModel": "供应商“{name}”已删除，没有可用的活动模型，请配置模型。",
+      "confirmMessage": "确定要删除“{{name}}”吗？这将同时删除关联的所有模型。",
+      "success": "供应商“{{name}}”已删除",
+      "successWithSwitch": "供应商“{{name}}”已删除，已切换到“{{newModel}}”",
+      "successNoActiveModel": "供应商“{{name}}”已删除，没有可用的活动模型，请配置模型。",
       "error": "删除供应商失败"
     },
     "deleteModel": {
       "title": "删除模型",
-      "description": "确认删除模型“{name}”吗？",
-      "success": "模型“{name}”已删除",
+      "description": "确认删除模型“{{name}}”吗？",
+      "success": "模型“{{name}}”已删除",
       "error": "删除模型失败"
     },
     "setDefault": {
-      "success": "已将“{name}”设为默认模型",
+      "success": "已将“{{name}}”设为默认模型",
       "error": "设置默认模型失败"
     }
   },
@@ -268,10 +268,11 @@
       "description": "AI 批量编辑或覆写 XML 前自动创建子版本快照"
     }
   },
-  "actionBar": {
-    "unsavedChanges": "有未保存的更改",
-    "cancel": "取消",
-    "save": "保存"
+  "saveIndicator": {
+    "saving": "保存中...",
+    "saved": "已保存",
+    "failed": "保存失败",
+    "retry": "重试"
   },
   "toasts": {
     "saveSuccess": "设置已保存",

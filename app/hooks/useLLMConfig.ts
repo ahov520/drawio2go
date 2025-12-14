@@ -215,19 +215,50 @@ export function useLLMConfig(): UseLLMConfigResult {
     ],
   );
 
+  const refreshRuntimeConfig = useCallback(async () => {
+    const currentRequestId = ++requestIdRef.current;
+
+    setConfigLoading(true);
+
+    try {
+      const currentModelId = selectedModelId;
+      const currentProviderId =
+        models.find((model) => model.id === currentModelId)?.providerId ?? null;
+
+      const runtimeConfig = await getRuntimeConfig(
+        currentProviderId ?? undefined,
+        currentModelId ?? undefined,
+      );
+
+      if (!isRequestStillValid(currentRequestId)) return;
+
+      setLlmConfig(runtimeConfig ? normalizeLLMConfig(runtimeConfig) : null);
+    } catch {
+      if (!isRequestStillValid(currentRequestId)) return;
+      setLlmConfig((prev) => prev ?? null);
+    } finally {
+      if (isRequestStillValid(currentRequestId)) setConfigLoading(false);
+    }
+  }, [getRuntimeConfig, models, selectedModelId]);
+
   useEffect(() => {
     const unsubscribe = subscribeSettingsUpdates((detail) => {
+      if (detail.type === "agent") {
+        refreshRuntimeConfig().catch(() => undefined);
+        return;
+      }
+
       if (
         detail.type === "provider" ||
         detail.type === "model" ||
         detail.type === "activeModel"
       ) {
-        void loadModelSelector({ preserveSelection: true });
+        loadModelSelector({ preserveSelection: true }).catch(() => undefined);
       }
     });
 
     return unsubscribe;
-  }, [loadModelSelector, subscribeSettingsUpdates]);
+  }, [loadModelSelector, refreshRuntimeConfig, subscribeSettingsUpdates]);
 
   const handleModelChange = useCallback(
     async (modelId: string) => {
