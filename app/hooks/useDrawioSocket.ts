@@ -40,6 +40,19 @@ type ConnectionStatus =
   | "disconnecting"
   | "disconnected";
 
+type ToolResultLike = {
+  success: boolean;
+  error?: unknown;
+  message?: unknown;
+};
+
+function resolveToolCallError(result: ToolResultLike): string | undefined {
+  if (result.success) return undefined;
+  if (result.error) return toErrorString(result.error);
+  if (result.message) return toErrorString(result.message);
+  return undefined;
+}
+
 /**
  * DrawIO Socket.IO Hook
  *
@@ -449,13 +462,7 @@ export function useDrawioSocket(
           requestId: request.requestId,
           success: result.success,
           result: result,
-          error: result.success
-            ? undefined
-            : result.error
-              ? toErrorString(result.error)
-              : result.message
-                ? toErrorString(result.message)
-                : undefined,
+          error: resolveToolCallError(result as ToolResultLike),
         };
 
         socket.emit("tool:result", response);

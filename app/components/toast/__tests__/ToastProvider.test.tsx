@@ -93,7 +93,7 @@ describe("ToastProvider", () => {
         api.push({ description: "A", variant: "info" });
         api.push({ description: "B", variant: "success" });
       });
-      expect(screen.getAllByText(/A|B/).length).toBe(2);
+      expect(screen.getAllByText(/[AB]/).length).toBe(2);
 
       act(() => api.clear());
       expect(screen.queryByText("A")).toBeNull();
@@ -167,13 +167,14 @@ describe("ToastProvider", () => {
 
       const values = [0, -1, Number.NaN];
       act(() => {
-        values.forEach((value, index) => {
+        for (let index = 0; index < values.length; index++) {
+          const value = values[index];
           api.push({
             description: `Persistent-${index}`,
             variant: "info",
             duration: value,
           });
-        });
+        }
       });
 
       act(() => {

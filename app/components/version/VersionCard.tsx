@@ -175,18 +175,19 @@ export function VersionCard({
   const effectiveExpanded = isWIP ? false : isExpanded;
 
   const versionLabel = isWIP ? "WIP" : `v${version.semantic_version}`;
-  const diffLabel = isWIP
-    ? tVersion("card.meta.wip")
-    : resolvedVersion.is_keyframe
-      ? tVersion("card.meta.keyframe")
-      : tVersion("card.meta.diffChain", {
-          depth: resolvedVersion.diff_chain_depth,
-        });
-  const diffIcon = isWIP ? null : resolvedVersion.is_keyframe ? (
-    <Key className="w-3.5 h-3.5" />
-  ) : (
-    <GitBranch className="w-3.5 h-3.5" />
-  );
+  let diffLabel: string;
+  let diffIcon: React.ReactNode = null;
+  if (isWIP) {
+    diffLabel = tVersion("card.meta.wip");
+  } else if (resolvedVersion.is_keyframe) {
+    diffLabel = tVersion("card.meta.keyframe");
+    diffIcon = <Key className="w-3.5 h-3.5" />;
+  } else {
+    diffLabel = tVersion("card.meta.diffChain", {
+      depth: resolvedVersion.diff_chain_depth,
+    });
+    diffIcon = <GitBranch className="w-3.5 h-3.5" />;
+  }
 
   const hasMultiplePages = (resolvedVersion.page_count ?? 0) > 1;
 

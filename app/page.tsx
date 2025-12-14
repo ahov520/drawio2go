@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  type ReactNode,
+} from "react";
 import { Alert, Button, Spinner } from "@heroui/react";
 import DrawioEditorNative from "./components/DrawioEditorNative"; // 使用原生 iframe 实现
 import TopBar from "./components/TopBar";
@@ -592,6 +598,38 @@ export default function Home() {
     );
   }
 
+  let editorContent: ReactNode = null;
+  if (isEditorDataReady) {
+    editorContent = (
+      <DrawioEditorNative
+        key={currentProjectUuid ?? "no-project"}
+        ref={editorRef}
+        initialXml={editorInitialXml}
+        onSave={handleAutoSave}
+        onSelectionChange={handleSelectionChange}
+      />
+    );
+  } else if (currentProjectUuid || projectLoading || isDiagramLoading) {
+    editorContent = (
+      <div className="loading-overlay">
+        <div className="loading-overlay__card">
+          <Spinner
+            size="xl"
+            color="success"
+            aria-label={tp("main.loadingProject")}
+            className="loading-overlay__spinner"
+          />
+          <h2 className="loading-overlay__title">
+            {tp("main.loadingProject")}
+          </h2>
+          <p className="loading-overlay__description">
+            {tp("main.loadingProjectDetail")}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <main className={`main-container ${isSidebarOpen ? "sidebar-open" : ""}`}>
       {/* 项目加载失败提示 */}
@@ -643,32 +681,7 @@ export default function Home() {
       <div
         className={`editor-container ${isSidebarOpen ? "sidebar-open" : ""}`}
       >
-        {isEditorDataReady ? (
-          <DrawioEditorNative
-            key={currentProjectUuid ?? "no-project"}
-            ref={editorRef}
-            initialXml={editorInitialXml}
-            onSave={handleAutoSave}
-            onSelectionChange={handleSelectionChange}
-          />
-        ) : currentProjectUuid || projectLoading || isDiagramLoading ? (
-          <div className="loading-overlay">
-            <div className="loading-overlay__card">
-              <Spinner
-                size="xl"
-                color="success"
-                aria-label={tp("main.loadingProject")}
-                className="loading-overlay__spinner"
-              />
-              <h2 className="loading-overlay__title">
-                {tp("main.loadingProject")}
-              </h2>
-              <p className="loading-overlay__description">
-                {tp("main.loadingProjectDetail")}
-              </p>
-            </div>
-          </div>
-        ) : null}
+        {editorContent}
       </div>
 
       {/* 统一侧拉栏 */}

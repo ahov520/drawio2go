@@ -330,7 +330,12 @@ function executeListMode(
 
     const isVertex = cell.getAttribute("vertex") === "1";
     const isEdge = cell.getAttribute("edge") === "1";
-    const type = isVertex ? "vertex" : isEdge ? "edge" : "unknown";
+    let type: "vertex" | "edge" | "unknown" = "unknown";
+    if (isVertex) {
+      type = "vertex";
+    } else if (isEdge) {
+      type = "edge";
+    }
 
     if (filter === "vertices" && !isVertex) continue;
     if (filter === "edges" && !isEdge) continue;

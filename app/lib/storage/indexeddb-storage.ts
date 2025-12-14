@@ -54,6 +54,15 @@ function isQuotaExceededError(error: unknown): boolean {
   return name === "QuotaExceededError";
 }
 
+function resolveMessageCreatedAt(
+  message: Pick<CreateMessageInput, "created_at" | "createdAt">,
+  fallback: number,
+): number {
+  if (typeof message.created_at === "number") return message.created_at;
+  if (typeof message.createdAt === "number") return message.createdAt;
+  return fallback;
+}
+
 /**
  * IndexedDB 存储实现（Web 环境）
  * 使用 idb 库提供 Promise 化的 IndexedDB API
@@ -419,12 +428,10 @@ export class IndexedDBStorage implements StorageAdapter {
     // 按创建时间倒序，移除大字段
     return versions
       .map((version) => {
-        const {
-          preview_svg: _ignoredPreview,
-          pages_svg: _ignoredPages,
-          ...rest
-        } = version as XMLVersion;
-        return rest as XMLVersion;
+        const rest: XMLVersion = { ...(version as XMLVersion) };
+        delete rest.preview_svg;
+        delete rest.pages_svg;
+        return rest;
       })
       .sort((a, b) => b.created_at - a.created_at);
   }
@@ -849,12 +856,7 @@ export class IndexedDBStorage implements StorageAdapter {
     const store = tx.objectStore("messages");
     const defaultTimestamp = Date.now();
 
-    const createdAt =
-      typeof message.created_at === "number"
-        ? message.created_at
-        : typeof message.createdAt === "number"
-          ? message.createdAt
-          : defaultTimestamp;
+    const createdAt = resolveMessageCreatedAt(message, defaultTimestamp);
 
     const sequenceNumber =
       typeof message.sequence_number === "number"
@@ -933,12 +935,7 @@ export class IndexedDBStorage implements StorageAdapter {
     const inserted: Message[] = [];
 
     for (const msg of messages) {
-      const createdAt =
-        typeof msg.created_at === "number"
-          ? msg.created_at
-          : typeof msg.createdAt === "number"
-            ? msg.createdAt
-            : defaultTimestamp;
+      const createdAt = resolveMessageCreatedAt(msg, defaultTimestamp);
 
       const sequenceNumber =
         typeof msg.sequence_number === "number"

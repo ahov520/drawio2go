@@ -36,14 +36,11 @@ function runSQLiteMigrations(db, logger = defaultLogger) {
   }
 
   for (let next = currentVersion + 1; next <= targetVersion; next += 1) {
-    switch (next) {
-      case 1:
-        log.info("Applying SQLite V1 migration");
-        applySQLiteV1Migration(db, log);
-        break;
-      default:
-        log.warn("No SQLite migration handler for version", { version: next });
-        break;
+    if (next === 1) {
+      log.info("Applying SQLite V1 migration");
+      applySQLiteV1Migration(db, log);
+    } else {
+      log.warn("No SQLite migration handler for version", { version: next });
     }
   }
 

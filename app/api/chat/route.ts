@@ -135,13 +135,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const getProjectUuidSource = () => {
+      if (bodyProjectUuid) return "body";
+      if (headerProjectUuid) return "header";
+      return "missing";
+    };
+
     const paramSources = {
       conversationIdSource: "body",
-      projectUuidSource: bodyProjectUuid
-        ? "body"
-        : headerProjectUuid
-          ? "header"
-          : "missing",
+      projectUuidSource: getProjectUuidSource(),
     };
 
     const isServerEnvironment = typeof window === "undefined";

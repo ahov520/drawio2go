@@ -38,6 +38,14 @@ export const DEFAULT_SYSTEM_PROMPT = `你是一个专业的 DrawIO XML 绘制助
 export const DEFAULT_API_URL = "";
 export const DEFAULT_ANTHROPIC_API_URL = "https://api.anthropic.com";
 
+export function stripTrailingSlashes(input: string): string {
+  let end = input.length;
+  while (end > 0 && input.charCodeAt(end - 1) === 47) {
+    end -= 1;
+  }
+  return end === input.length ? input : input.slice(0, end);
+}
+
 export function isProviderType(value: unknown): value is ProviderType {
   return (
     value === "openai-reasoning" ||
@@ -65,7 +73,7 @@ export const normalizeApiUrl = (
     return fallback;
   }
 
-  const withoutTrailingSlash = trimmed.replace(/\/+$/, "");
+  const withoutTrailingSlash = stripTrailingSlashes(trimmed);
 
   if (/\/v\d+($|\/)/i.test(withoutTrailingSlash)) {
     return withoutTrailingSlash;
@@ -93,15 +101,15 @@ export const normalizeAnthropicApiUrl = (
     return fallback;
   }
 
-  const withoutTrailingSlash = trimmed.replace(/\/+$/, "");
+  const withoutTrailingSlash = stripTrailingSlashes(trimmed);
 
   try {
     const parsed = new URL(withoutTrailingSlash);
-    const normalizedPath = parsed.pathname.replace(/\/+$/, "").toLowerCase();
+    const normalizedPath = stripTrailingSlashes(parsed.pathname).toLowerCase();
 
     if (parsed.hostname === "api.anthropic.com" && normalizedPath === "/v1") {
       parsed.pathname = "";
-      return parsed.toString().replace(/\/+$/, "");
+      return stripTrailingSlashes(parsed.toString());
     }
   } catch {
     // ignore invalid url, caller may validate separately

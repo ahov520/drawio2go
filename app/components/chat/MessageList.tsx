@@ -94,11 +94,12 @@ export default function MessageList({
   const shouldShowPlaceholderAI = isStreaming && lastMessage?.role === "user";
 
   // 识别当前正在流式生成的消息
-  const currentStreamingMessageId = isStreaming
-    ? lastMessage?.role === "assistant"
-      ? lastMessage.id
-      : "temp-ai-placeholder"
-    : null;
+  const getCurrentStreamingMessageId = () => {
+    if (!isStreaming) return null;
+    if (lastMessage?.role === "assistant") return lastMessage.id;
+    return "temp-ai-placeholder";
+  };
+  const currentStreamingMessageId = getCurrentStreamingMessageId();
 
   // 创建临时的空白AI消息（用于显示打字指示器）
   const placeholderAIMessage: ChatUIMessage = {

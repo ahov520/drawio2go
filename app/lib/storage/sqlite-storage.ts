@@ -25,6 +25,9 @@ import { dispatchConversationEvent } from "./event-utils";
 
 const logger = createLogger("SQLiteStorage");
 
+/** 用于 Blob 字段的联合类型（Electron 环境下可能是 Buffer/ArrayBuffer） */
+type BlobFieldValue = Blob | Buffer | ArrayBuffer | null;
+
 function parseMetadata(value: unknown): Record<string, unknown> | null {
   if (value == null) return null;
   if (typeof value === "string") {
@@ -78,16 +81,13 @@ export class SQLiteStorage implements StorageAdapter {
       ...version,
       metadata: parseMetadata((version as { metadata?: unknown }).metadata),
       preview_image: normalizeBlobField(
-        (version as { preview_image?: Blob | Buffer | ArrayBuffer | null })
-          .preview_image,
+        (version as { preview_image?: BlobFieldValue }).preview_image,
       ),
       preview_svg: normalizeBlobField(
-        (version as { preview_svg?: Blob | Buffer | ArrayBuffer | null })
-          .preview_svg,
+        (version as { preview_svg?: BlobFieldValue }).preview_svg,
       ),
       pages_svg: normalizeBlobField(
-        (version as { pages_svg?: Blob | Buffer | ArrayBuffer | null })
-          .pages_svg,
+        (version as { pages_svg?: BlobFieldValue }).pages_svg,
       ),
     };
   }
@@ -215,12 +215,10 @@ export class SQLiteStorage implements StorageAdapter {
       .map((version) => this.normalizeVersion(version))
       .filter((v): v is XMLVersion => !!v)
       .map((version) => {
-        const {
-          preview_svg: _ignoredPreview,
-          pages_svg: _ignoredPages,
-          ...rest
-        } = version;
-        return rest as XMLVersion;
+        const rest: XMLVersion = { ...version };
+        delete rest.preview_svg;
+        delete rest.pages_svg;
+        return rest;
       });
   }
 

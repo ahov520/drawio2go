@@ -96,6 +96,34 @@ const dispatchSettingsUpdated = (type: SettingsUpdatedType) => {
   );
 };
 
+const buildModelIdSet = (models: ModelConfig[]) =>
+  new Set(models.map((model) => model.id));
+
+const pruneProviderModelIds = (
+  providers: ProviderConfig[],
+  allowedModelIds: Set<string>,
+): ProviderConfig[] =>
+  providers.map((provider) => ({
+    ...provider,
+    models: provider.models.filter((modelId) => allowedModelIds.has(modelId)),
+  }));
+
+const removeModelFromProviders = (
+  providers: ProviderConfig[],
+  providerId: string,
+  modelId: string,
+  updatedAt: number,
+): ProviderConfig[] =>
+  providers.map((provider) =>
+    provider.id === providerId
+      ? {
+          ...provider,
+          models: provider.models.filter((id) => id !== modelId),
+          updatedAt,
+        }
+      : provider,
+  );
+
 export type CreateProviderInput = Pick<
   ProviderConfig,
   "displayName" | "providerType" | "apiUrl" | "apiKey"
@@ -490,12 +518,11 @@ export function useStorageSettings() {
           (model) => model.providerId !== providerId,
         );
 
-        const sanitizedProviders = remainingProviders.map((item) => ({
-          ...item,
-          models: item.models.filter((modelId) =>
-            remainingModels.some((model) => model.id === modelId),
-          ),
-        }));
+        const remainingModelIds = buildModelIdSet(remainingModels);
+        const sanitizedProviders = pruneProviderModelIds(
+          remainingProviders,
+          remainingModelIds,
+        );
 
         const shouldSwitchActive =
           activeModel?.providerId === providerId ||
@@ -738,15 +765,13 @@ export function useStorageSettings() {
           );
         }
 
+        const now = Date.now();
         const remainingModels = models.filter((item) => item.id !== modelId);
-        const updatedProviders = providers.map((item) =>
-          item.id === providerId
-            ? {
-                ...item,
-                models: item.models.filter((id) => id !== modelId),
-                updatedAt: Date.now(),
-              }
-            : item,
+        const updatedProviders = removeModelFromProviders(
+          providers,
+          providerId,
+          modelId,
+          now,
         );
 
         const shouldSwitchActive =

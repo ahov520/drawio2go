@@ -4,6 +4,12 @@
 
 封装统一存储层访问与 Socket.IO 通讯的 React Hooks，提供类型安全的状态管理接口。
 
+## Lint 约束（SonarJS）
+
+- `sonarjs/no-nested-functions`: 避免深层回调嵌套（例如 `forEach/map` 内再嵌套 `setState`/回调），优先使用 `for..of` 或提取为模块级辅助函数。
+- 若确实无法提取（如 `setState` 函数式更新必须传回调且局部闭包强依赖），允许使用 `// eslint-disable-next-line sonarjs/no-nested-functions`，并在同一行写明原因。
+- 避免用 `void` 忽略 Promise（`sonarjs/void-use` 会报错），改为显式 `await` 或使用 `.catch(...)` 链式处理。
+
 ## Hooks 清单
 
 ### 1. useStorageSettings

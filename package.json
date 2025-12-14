@@ -81,6 +81,7 @@
     "electron-builder": "^24.13.3",
     "eslint": "^9.39.1",
     "eslint-config-next": "^15.5.7",
+    "eslint-plugin-sonarjs": "^3.0.5",
     "jsdom": "^27.2.0",
     "prettier": "^3.7.4",
     "typescript": "^5.9.3",

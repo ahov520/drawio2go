@@ -423,12 +423,12 @@ class SQLiteManager {
 
   createXMLVersion(version) {
     const now = Date.now();
-    const metadataString =
-      typeof version.metadata === "string"
-        ? version.metadata
-        : version.metadata
-          ? JSON.stringify(version.metadata)
-          : null;
+    let metadataString = null;
+    if (typeof version.metadata === "string") {
+      metadataString = version.metadata;
+    } else if (version.metadata) {
+      metadataString = JSON.stringify(version.metadata);
+    }
 
     this.db
       .prepare(
@@ -537,12 +537,11 @@ class SQLiteManager {
     for (const [key, value] of entries) {
       switch (key) {
         case "metadata": {
-          const serialized =
-            value == null
-              ? null
-              : typeof value === "string"
-                ? value
-                : JSON.stringify(value);
+          let serialized = null;
+          if (value != null) {
+            serialized =
+              typeof value === "string" ? value : JSON.stringify(value);
+          }
           fields.push("metadata = ?");
           values.push(serialized);
           break;
@@ -837,12 +836,12 @@ class SQLiteManager {
   }
 
   createMessage(message) {
-    const createdAt =
-      typeof message.created_at === "number"
-        ? message.created_at
-        : typeof message.createdAt === "number"
-          ? message.createdAt
-          : Date.now();
+    let createdAt = Date.now();
+    if (typeof message.created_at === "number") {
+      createdAt = message.created_at;
+    } else if (typeof message.createdAt === "number") {
+      createdAt = message.createdAt;
+    }
 
     const upsertStmt = this.db.prepare(
       `
@@ -943,12 +942,12 @@ class SQLiteManager {
       const defaultTimestamp = Date.now();
 
       for (const msg of msgs) {
-        const createdAt =
-          typeof msg.created_at === "number"
-            ? msg.created_at
-            : typeof msg.createdAt === "number"
-              ? msg.createdAt
-              : defaultTimestamp;
+        let createdAt = defaultTimestamp;
+        if (typeof msg.created_at === "number") {
+          createdAt = msg.created_at;
+        } else if (typeof msg.createdAt === "number") {
+          createdAt = msg.createdAt;
+        }
 
         const providedSequence =
           typeof msg.sequence_number === "number" ? msg.sequence_number : null;

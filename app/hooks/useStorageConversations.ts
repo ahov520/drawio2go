@@ -305,7 +305,7 @@ export function useStorageConversations() {
         (detail.conversationId ? [detail.conversationId] : null) ??
         Array.from(messageSubscribersRef.current.keys());
 
-      targetConversationIds.forEach((conversationId) => {
+      for (const conversationId of targetConversationIds) {
         loadMessagesForConversation(conversationId).catch((eventError) => {
           logger.error("refresh message cache failed", {
             conversationId,
@@ -316,7 +316,7 @@ export function useStorageConversations() {
           );
           setError(localizedError);
         });
-      });
+      }
     };
 
     window.addEventListener("conversation-created", handleConversationEvent);

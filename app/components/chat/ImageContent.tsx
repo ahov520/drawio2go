@@ -5,6 +5,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  type ReactNode,
   type RefObject,
   type SyntheticEvent,
 } from "react";
@@ -142,6 +143,125 @@ export default function ImageContent({
   const metaFileName = part.fileName?.trim() || null;
   const metaDimensions = formatDimensions(resolvedSize);
 
+  const renderFrameContent = (): ReactNode => {
+    if (attachmentError) {
+      return (
+        <div
+          style={{
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "var(--spacing-sm)",
+            padding: "var(--spacing-lg)",
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "3rem",
+              height: "3rem",
+              borderRadius: "999px",
+              background: "color-mix(in oklch, var(--danger) 18%, transparent)",
+              color: "var(--danger)",
+            }}
+            aria-hidden="true"
+          >
+            <ImageOff size={20} />
+          </div>
+
+          <div style={{ fontSize: "0.875rem", fontWeight: 600 }}>
+            图片加载失败
+          </div>
+          <div
+            style={{
+              fontSize: "0.8125rem",
+              color: "var(--foreground-secondary)",
+              maxWidth: "36rem",
+              wordBreak: "break-word",
+            }}
+          >
+            {errorText ?? "未知错误"}
+          </div>
+
+          <Button
+            variant="secondary"
+            onPress={handleRetry}
+            className="message-image__retry"
+          >
+            <span className="flex items-center gap-2">
+              <RotateCw size={16} aria-hidden />
+              重试
+            </span>
+          </Button>
+        </div>
+      );
+    }
+
+    if (isReady) {
+      return (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          className="message-image__img"
+          src={objectUrl ?? undefined}
+          alt={altText}
+          onLoad={handleNaturalSize}
+          onClick={handleOpenPreview}
+          style={{
+            width: "100%",
+            height: "100%",
+            maxWidth: "100%",
+            objectFit: "contain",
+            cursor: "zoom-in",
+          }}
+        />
+      );
+    }
+
+    if (shouldShowLoading) {
+      return (
+        <Skeleton
+          className="h-full w-full rounded-[var(--radius-lg)]"
+          aria-label="图片加载中"
+        />
+      );
+    }
+
+    return null;
+  };
+
+  const renderMeta = (): ReactNode => {
+    if (!metaFileName && !metaDimensions) {
+      return null;
+    }
+
+    let metaDimensionsMarginLeft: string | number = 0;
+    if (metaFileName) {
+      metaDimensionsMarginLeft = "0.5rem";
+    }
+
+    return (
+      <div className="message-image__meta">
+        {metaFileName ? <span title={metaFileName}>{metaFileName}</span> : null}
+        {metaDimensions ? (
+          <span
+            style={{
+              marginLeft: metaDimensionsMarginLeft,
+              color: "var(--foreground-tertiary)",
+              fontSize: "0.8125rem",
+            }}
+          >
+            {metaDimensions}
+          </span>
+        ) : null}
+      </div>
+    );
+  };
+
   return (
     <>
       <div
@@ -166,103 +286,10 @@ export default function ImageContent({
             background: "var(--bg-secondary)",
           }}
         >
-          {attachmentError ? (
-            <div
-              style={{
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "var(--spacing-sm)",
-                padding: "var(--spacing-lg)",
-                textAlign: "center",
-              }}
-            >
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: "3rem",
-                  height: "3rem",
-                  borderRadius: "999px",
-                  background:
-                    "color-mix(in oklch, var(--danger) 18%, transparent)",
-                  color: "var(--danger)",
-                }}
-                aria-hidden="true"
-              >
-                <ImageOff size={20} />
-              </div>
-
-              <div style={{ fontSize: "0.875rem", fontWeight: 600 }}>
-                图片加载失败
-              </div>
-              <div
-                style={{
-                  fontSize: "0.8125rem",
-                  color: "var(--foreground-secondary)",
-                  maxWidth: "36rem",
-                  wordBreak: "break-word",
-                }}
-              >
-                {errorText ?? "未知错误"}
-              </div>
-
-              <Button
-                variant="secondary"
-                onPress={handleRetry}
-                className="message-image__retry"
-              >
-                <span className="flex items-center gap-2">
-                  <RotateCw size={16} aria-hidden />
-                  重试
-                </span>
-              </Button>
-            </div>
-          ) : isReady ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              className="message-image__img"
-              src={objectUrl ?? undefined}
-              alt={altText}
-              onLoad={handleNaturalSize}
-              onClick={handleOpenPreview}
-              style={{
-                width: "100%",
-                height: "100%",
-                maxWidth: "100%",
-                objectFit: "contain",
-                cursor: "zoom-in",
-              }}
-            />
-          ) : shouldShowLoading ? (
-            <Skeleton
-              className="h-full w-full rounded-[var(--radius-lg)]"
-              aria-label="图片加载中"
-            />
-          ) : null}
+          {renderFrameContent()}
         </div>
 
-        {metaFileName || metaDimensions ? (
-          <div className="message-image__meta">
-            {metaFileName ? (
-              <span title={metaFileName}>{metaFileName}</span>
-            ) : null}
-            {metaDimensions ? (
-              <span
-                style={{
-                  marginLeft: metaFileName ? "0.5rem" : 0,
-                  color: "var(--foreground-tertiary)",
-                  fontSize: "0.8125rem",
-                }}
-              >
-                {metaDimensions}
-              </span>
-            ) : null}
-          </div>
-        ) : null}
+        {renderMeta()}
       </div>
 
       <ImagePreview

@@ -71,17 +71,19 @@ export default function ChatInputActions({
     ? "danger"
     : "primary";
   const sendButtonType = canCancel ? undefined : "submit";
-  const sendButtonDisabled = canCancel
-    ? false
-    : isChatStreaming
-      ? true
-      : isSendDisabled;
+  const getSendButtonDisabled = () => {
+    if (canCancel) return false;
+    if (isChatStreaming) return true;
+    return isSendDisabled;
+  };
+  const sendButtonDisabled = getSendButtonDisabled();
   const [isModelPopoverOpen, setIsModelPopoverOpen] = useState(false);
-  const sendDisabledReason = !isSocketConnected
-    ? t("status.socketRequiredForChat")
-    : !isOnline
-      ? t("status.networkOfflineDesc")
-      : null;
+  const getSendDisabledReason = () => {
+    if (!isSocketConnected) return t("status.socketRequiredForChat");
+    if (!isOnline) return t("status.networkOfflineDesc");
+    return null;
+  };
+  const sendDisabledReason = getSendDisabledReason();
 
   useEffect(() => {
     if (isModelSelectorDisabled) {

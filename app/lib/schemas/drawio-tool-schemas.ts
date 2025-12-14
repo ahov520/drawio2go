@@ -113,7 +113,9 @@ export const operationSchema = z
         ensureNonEmptyIfProvided(operation.key, ["key"], "key 不能为空");
         break;
       }
-      case "insert_element": {
+      case "insert_element":
+      case "replace_element": {
+        // insert_element 和 replace_element 都需要 new_xml
         if (operation.new_xml === undefined) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -129,21 +131,6 @@ export const operationSchema = z
         break;
       }
       case "remove_element": {
-        break;
-      }
-      case "replace_element": {
-        if (operation.new_xml === undefined) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["new_xml"],
-            message: "new_xml 不能为空",
-          });
-        }
-        ensureNonEmptyIfProvided(
-          operation.new_xml,
-          ["new_xml"],
-          "new_xml 不能为空",
-        );
         break;
       }
       case "set_text_content": {
@@ -239,10 +226,9 @@ export type DrawioEditOperation = z.infer<typeof operationSchema>;
  */
 export type DrawioReadInput = z.infer<typeof drawioReadInputSchema>;
 /**
- * 批量编辑输入类型（operations 数组包装），兼容历史命名 DrawioEditBatchRequest。
+ * 批量编辑输入类型（operations 数组包装）。
  */
 export type DrawioEditBatchRequest = z.infer<typeof drawioEditBatchInputSchema>;
-export type DrawioEditBatchInput = DrawioEditBatchRequest;
 /**
  * 覆写 XML 的输入类型。
  */

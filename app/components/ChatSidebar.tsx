@@ -50,6 +50,40 @@ import {
 
 const logger = createLogger("ChatSidebar");
 
+const hasImageParts = (msg: unknown): boolean => {
+  if (!msg || typeof msg !== "object") return false;
+  const parts = (msg as { parts?: unknown }).parts;
+  if (!Array.isArray(parts)) return false;
+  return parts.some(
+    (part) =>
+      typeof part === "object" &&
+      part !== null &&
+      (part as { type?: unknown }).type === "image",
+  );
+};
+
+const runWithConcurrency = async <T, R>(
+  items: readonly T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> => {
+  const results: R[] = new Array(items.length) as R[];
+  let cursor = 0;
+
+  const workers = new Array(Math.min(limit, items.length))
+    .fill(0)
+    .map(async () => {
+      while (cursor < items.length) {
+        const index = cursor;
+        cursor += 1;
+        results[index] = await fn(items[index]);
+      }
+    });
+
+  await Promise.all(workers);
+  return results;
+};
+
 interface ChatSidebarProps {
   isOpen: boolean;
   onClose: () => void;
@@ -322,6 +356,7 @@ export default function ChatSidebar({
           await chatService.saveNow(parsed.conversationId, parsed.messages, {
             resolveConversationId,
             onConversationResolved: (resolvedId) => {
+              // eslint-disable-next-line sonarjs/no-nested-functions -- setState 函数式更新需要回调，且此处嵌套层级较深
               setActiveConversationId((prev) => prev ?? resolvedId);
             },
           });
@@ -341,27 +376,20 @@ export default function ChatSidebar({
   const chatTransport = useMemo(() => {
     return new DefaultChatTransport<UseChatMessage>({
       prepareSendMessagesRequest: async (options) => {
-        const maybeHasImageParts = (msg: unknown): boolean => {
-          if (!msg || typeof msg !== "object") return false;
-          const parts = (msg as { parts?: unknown }).parts;
-          if (!Array.isArray(parts)) return false;
-          return parts.some(
-            (part) =>
-              typeof part === "object" &&
-              part !== null &&
-              (part as { type?: unknown }).type === "image",
-          );
-        };
-
         const getOrCreateDataUrl = async (
           attachmentId: string,
         ): Promise<string | null> => {
           const cached = imageDataUrlCacheRef.current.get(attachmentId);
-          if (cached) return cached;
+          if (cached) {
+            return cached;
+          }
 
           const pending = imageDataUrlPendingRef.current.get(attachmentId);
-          if (pending) return await pending;
+          if (pending) {
+            return await pending;
+          }
 
+          // eslint-disable-next-line sonarjs/no-nested-functions -- 深层异步 IIFE 便于复用闭包变量并保持逻辑集中
           const request = (async () => {
             try {
               const storage = await getStorage();
@@ -398,6 +426,7 @@ export default function ChatSidebar({
           })();
 
           imageDataUrlPendingRef.current.set(attachmentId, request);
+          // eslint-disable-next-line sonarjs/no-nested-functions -- finally 回调需要捕获 attachmentId/request 做一致性清理
           request.finally(() => {
             if (imageDataUrlPendingRef.current.get(attachmentId) === request) {
               imageDataUrlPendingRef.current.delete(attachmentId);
@@ -428,27 +457,6 @@ export default function ChatSidebar({
         };
 
         const concurrency = 5;
-        const runWithConcurrency = async <T, R>(
-          items: readonly T[],
-          limit: number,
-          fn: (item: T) => Promise<R>,
-        ): Promise<R[]> => {
-          const results: R[] = new Array(items.length) as R[];
-          let cursor = 0;
-
-          const workers = new Array(Math.min(limit, items.length))
-            .fill(0)
-            .map(async () => {
-              while (cursor < items.length) {
-                const index = cursor;
-                cursor += 1;
-                results[index] = await fn(items[index]);
-              }
-            });
-
-          await Promise.all(workers);
-          return results;
-        };
 
         const missingAttachmentIds = new Set<string>();
         for (const msg of options.messages) {
@@ -484,7 +492,7 @@ export default function ChatSidebar({
 
         const nextMessages = await Promise.all(
           options.messages.map(async (msg) => {
-            if (!maybeHasImageParts(msg)) return msg;
+            if (!hasImageParts(msg)) return msg;
             const parts = (msg as { parts?: unknown }).parts;
             if (!Array.isArray(parts)) return msg;
 
@@ -610,6 +618,7 @@ export default function ChatSidebar({
             const startTime = reasoningTimersRef.current.get(key)!;
             const computedDuration = Math.max(0, Date.now() - startTime);
 
+            // eslint-disable-next-line sonarjs/no-nested-functions -- setMessages 函数式更新需要回调，且此处嵌套层级较深
             setMessages((prev) => {
               const messageIndex = prev.findIndex((item) => item.id === msg.id);
               if (messageIndex === -1) return prev;
@@ -730,8 +739,14 @@ export default function ChatSidebar({
         activeConversationId ?? sendingSessionIdRef.current;
 
       if (targetConversationId) {
-        void updateStreamingFlag(targetConversationId, false);
-        void resolveConversationId(targetConversationId)
+        updateStreamingFlag(targetConversationId, false).catch((error) => {
+          logger.error("[ChatSidebar] Socket 断开后更新流式状态失败", {
+            conversationId: targetConversationId,
+            error,
+          });
+        });
+
+        resolveConversationId(targetConversationId)
           .then((resolvedId) => markConversationAsCompleted(resolvedId))
           .catch((error) => {
             logger.error("[ChatSidebar] Socket 断开后标记对话完成失败", {
@@ -898,8 +913,14 @@ export default function ChatSidebar({
         activeConversationId ?? sendingSessionIdRef.current;
 
       if (targetConversationId) {
-        void updateStreamingFlag(targetConversationId, false);
-        void resolveConversationId(targetConversationId)
+        updateStreamingFlag(targetConversationId, false).catch((error) => {
+          logger.error("[ChatSidebar] 网络断开后更新流式状态失败", {
+            conversationId: targetConversationId,
+            error,
+          });
+        });
+
+        resolveConversationId(targetConversationId)
           .then((resolvedId) => markConversationAsCompleted(resolvedId))
           .catch((error) => {
             logger.error("[ChatSidebar] 网络断开后标记对话完成失败", {
@@ -1103,6 +1124,7 @@ export default function ChatSidebar({
         (message) =>
           message.metadata?.isDisconnected &&
           message.parts.some(
+            // eslint-disable-next-line sonarjs/no-nested-functions -- 简单谓词回调，但位于深层卸载处理逻辑中
             (part) => part.type === "text" && part.text === pageClosedText,
           ),
       );

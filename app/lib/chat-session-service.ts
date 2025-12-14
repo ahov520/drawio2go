@@ -605,8 +605,10 @@ export function fingerprintMessage(message: ChatUIMessage): string {
   // 指纹忽略时间戳，避免 ensureMessageMetadata 在缺失 createdAt 时注入的临时时间
   // 导致毫秒级抖动，从而触发无意义的同步循环。
   const { metadata } = message;
-  const { createdAt: _ignoredCreatedAt, ...restMetadata } =
-    (metadata as MessageMetadata | undefined) ?? {};
+  const restMetadata: MessageMetadata = {
+    ...((metadata as MessageMetadata | undefined) ?? {}),
+  };
+  delete restMetadata.createdAt;
 
   return JSON.stringify({
     id: message.id,
