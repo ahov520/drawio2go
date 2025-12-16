@@ -245,7 +245,7 @@ export const DEFAULT_LLM_CONFIG: RuntimeLLMConfig = Object.freeze({
   providerType: "openai-compatible" as const,
   modelName: "",
   temperature: 0.3,
-  maxToolRounds: 5,
+  maxToolRounds: 20,
   capabilities: getDefaultCapabilities(null),
   enableToolsInThinking: false,
   systemPrompt: DEFAULT_SYSTEM_PROMPT,

@@ -207,7 +207,7 @@
       },
       "maxToolRounds": {
         "label": "最大工具轮次",
-        "placeholder": "1 - 999，默认 5",
+        "placeholder": "1 - 999，默认 20",
         "description": "单次对话允许的工具调用轮数上限",
         "invalid": "最大工具轮次必须是整数",
         "outOfRange": "请输入 1 - 999 之间的数值"

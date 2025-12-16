@@ -354,6 +354,35 @@ npm run format           # 使用 Prettier 格式化所有代码
 
 ⚠️ **重要**: 不能使用 `next dev` 命令，必须使用 `npm run dev` 启动自定义服务器（包含 Socket.IO）
 
+## CI/CD 自动发布
+
+项目配置了 GitHub Actions 自动构建和发布 Electron 应用（`.github/workflows/release.yml`）。
+
+### 触发方式
+
+1. **Tag 触发**: 推送 `v*` 格式的 tag 自动触发构建和发布
+
+   ```bash
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+
+2. **手动触发**: 在 GitHub Actions 页面手动运行，可指定版本号
+
+### 构建矩阵
+
+| 平台    | 构建产物                  |
+| ------- | ------------------------- |
+| Linux   | AppImage, deb             |
+| Windows | NSIS 安装包, Portable exe |
+| macOS   | DMG, ZIP                  |
+
+### 发布说明
+
+- 版本号含 `alpha`、`beta` 或 `rc` 时自动标记为 Pre-release
+- 自动生成 Release Notes（基于 commit 历史）
+- macOS 签名需配置 `CSC_LINK` 和 `CSC_KEY_PASSWORD` secrets（可选）
+
 ## 常见问题
 
 ### HeroUI v3 相关

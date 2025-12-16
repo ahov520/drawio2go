@@ -70,7 +70,7 @@ const DEFAULT_FORM_STATE: FormState = {
   modelName: "",
   displayName: "",
   temperature: "0.3",
-  maxToolRounds: "5",
+  maxToolRounds: "20",
   capabilities: { ...getDefaultCapabilities() },
   enableToolsInThinking: false,
 };
@@ -537,7 +537,7 @@ export function ModelEditDialog({
                     }
                     placeholder={t(
                       "models.form.maxToolRounds.placeholder",
-                      "1 - 999，默认 5",
+                      "1 - 999，默认 20",
                     )}
                   />
                   <Description>

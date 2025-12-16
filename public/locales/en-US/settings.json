@@ -207,7 +207,7 @@
       },
       "maxToolRounds": {
         "label": "Max Tool Rounds",
-        "placeholder": "1 - 999, default 5",
+        "placeholder": "1 - 999, default 20",
         "description": "Maximum number of tool call rounds per conversation",
         "invalid": "Max tool rounds must be an integer",
         "outOfRange": "Please enter a value between 1 and 999"
