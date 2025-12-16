@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require("electron");
+const { safeStorage } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const https = require("https");
@@ -266,6 +267,18 @@ function createWindow() {
 
 app.whenReady().then(async () => {
   try {
+    try {
+      const available =
+        safeStorage &&
+        typeof safeStorage.isEncryptionAvailable === "function" &&
+        safeStorage.isEncryptionAvailable();
+      console.log(
+        `[Electron] safeStorage 加密可用: ${available ? "是" : "否"}`,
+      );
+    } catch (error) {
+      console.warn("[Electron] safeStorage 可用性检测失败：", error);
+    }
+
     // 初始化存储
     storageManager = new SQLiteManager();
     storageManager.initialize();

@@ -87,11 +87,36 @@ electron/
 - Conversations: `getConversation`, `createConversation`, `updateConversation`, `deleteConversation`, `batchDeleteConversations`, `exportConversations`, `getConversationsByProject`
 - Messages: `getMessagesByConversation`, `createMessage`, `deleteMessage`, `createMessages`
 
+> 注意：当 key 为 `settings.llm.providers`（或 `llm.providers`）时，`getSetting()` 返回的 JSON 中 `apiKey` 字段为**解密后的明文**（用于 UI 编辑与 API Route 调用）。
+
 #### 安全策略
 
 - **CSP 配置**: 仅允许 `embed.diagrams.net` iframe
 - **开发模式**: 宽松的安全策略，便于调试
 - **生产模式**: 严格的安全限制
+
+#### 密钥与配置安全模型（必须理解）
+
+本项目的“密钥安全”目标是：**保证密钥在磁盘上加密存储（at-rest）**，并对“解密后密钥暴露面”给出清晰边界说明。
+
+**事实与限制（架构决定）**：
+
+- `safeStorage` 的加/解密能力只能在 Electron 进程中使用（主进程/预加载脚本）。
+- LLM 调用发生在 Next.js API Route（内嵌服务器子进程）中，该进程无法直接使用 `safeStorage`。
+- 因此 API Route 所需的 `apiKey` 目前来自**渲染进程提交的请求体**（UI 读取配置后随请求传入），这意味着渲染进程必须能够拿到**解密后的** API Key。
+- 结论：我们无法在架构上彻底阻止渲染进程获取解密后的密钥；一旦渲染进程发生 XSS/任意脚本执行，就可能外传密钥（这是当前架构的安全边界）。
+
+**我们做了什么（可验证）**：
+
+- ✅ **落盘加密**：仅对设置项 `settings.llm.providers`（兼容历史 `llm.providers`）中的 `ProviderConfig[].apiKey` 做加密存储/解密读取。
+  - 具体实现位于 `electron/storage/sqlite-manager.js`（前缀 `enc:v1:` + `safeStorage.encryptString()` / `decryptString()`）。
+- ✅ **显式暴露面说明**：`electron/preload.js` 会注释说明为何 `window.electronStorage.getSetting()` 需要保留“返回解密后的 providers apiKey”的能力。
+
+**使用规范（避免扩大风险面）**：
+
+- 只在“设置面板/模型配置”场景读取 providers；不要在聊天/日志/错误上报等路径传播 `apiKey`。
+- 不要把 providers 配置（尤其是 apiKey）打印到 console、toast、logger 或持久化到其它文件。
+- 避免新增“批量导出敏感配置”的 IPC API（例如 dump / exportAll），否则会放大 XSS 的影响面。
 
 ### 2. 预加载脚本 (preload.js)
 

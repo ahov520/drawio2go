@@ -1,5 +1,5 @@
 const Database = require("better-sqlite3");
-const { app } = require("electron");
+const { app, safeStorage } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { v4: uuidv4 } = require("uuid");
@@ -12,6 +12,185 @@ const {
 const { runSQLiteMigrations } = require("./migrations");
 
 const SQLITE_DB_FILE = "drawio2go.db";
+
+const API_KEY_ENC_PREFIX = "enc:v1:";
+let safeStorageAvailableCache = null;
+let safeStorageUnavailableWarned = false;
+
+const isLlmProvidersSettingKey = (key) =>
+  key === "llm.providers" || key === "settings.llm.providers";
+
+const isSafeStorageEncryptionAvailable = () => {
+  if (safeStorageAvailableCache != null) return safeStorageAvailableCache;
+  try {
+    safeStorageAvailableCache =
+      !!safeStorage &&
+      typeof safeStorage.isEncryptionAvailable === "function" &&
+      safeStorage.isEncryptionAvailable();
+  } catch (error) {
+    safeStorageAvailableCache = false;
+    if (!safeStorageUnavailableWarned) {
+      console.warn("[SQLiteManager] safeStorage 可用性检测失败：", error);
+    }
+  }
+
+  if (!safeStorageAvailableCache && !safeStorageUnavailableWarned) {
+    safeStorageUnavailableWarned = true;
+    console.warn(
+      "[SQLiteManager] safeStorage 不可用，将回退为明文存储 API Key（建议检查系统钥匙串/Keychain 状态）",
+    );
+  }
+
+  return safeStorageAvailableCache;
+};
+
+function encryptApiKey(plainKey) {
+  if (typeof plainKey !== "string") return "";
+  const trimmed = plainKey.trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith(API_KEY_ENC_PREFIX)) return trimmed;
+
+  if (!isSafeStorageEncryptionAvailable()) {
+    return trimmed;
+  }
+
+  try {
+    const encrypted = safeStorage.encryptString(trimmed);
+    const base64 = Buffer.from(encrypted).toString("base64");
+    return `${API_KEY_ENC_PREFIX}${base64}`;
+  } catch (error) {
+    console.warn("[SQLiteManager] API Key 加密失败，已回退为明文存储：", error);
+    return trimmed;
+  }
+}
+
+function decryptApiKey(encryptedKey) {
+  if (typeof encryptedKey !== "string") return "";
+  const trimmed = encryptedKey.trim();
+  if (!trimmed) return "";
+  if (!trimmed.startsWith(API_KEY_ENC_PREFIX)) return trimmed;
+
+  if (!isSafeStorageEncryptionAvailable()) {
+    console.warn(
+      "[SQLiteManager] safeStorage 不可用，无法解密已加密的 API Key，已返回空字符串",
+    );
+    return "";
+  }
+
+  const base64 = trimmed.slice(API_KEY_ENC_PREFIX.length);
+  if (!base64) return "";
+
+  try {
+    const buffer = Buffer.from(base64, "base64");
+    return safeStorage.decryptString(buffer);
+  } catch (error) {
+    console.warn(
+      "[SQLiteManager] API Key 解密失败（数据可能已损坏），已返回空字符串：",
+      error,
+    );
+    return "";
+  }
+}
+
+const maybeEncryptLlmProvidersSettingValue = (key, value) => {
+  if (!isLlmProvidersSettingKey(key) || typeof value !== "string") return value;
+
+  let parsed;
+  try {
+    parsed = JSON.parse(value);
+  } catch (error) {
+    console.warn(
+      "[SQLiteManager] 解析 settings.llm.providers JSON 失败，已跳过 API Key 加密：",
+      error,
+    );
+    return value;
+  }
+
+  if (!Array.isArray(parsed)) {
+    console.warn(
+      "[SQLiteManager] settings.llm.providers 不是数组，已跳过 API Key 加密",
+    );
+    return value;
+  }
+
+  let changed = false;
+  const next = parsed.map((provider) => {
+    if (!provider || typeof provider !== "object") return provider;
+    if (!Object.prototype.hasOwnProperty.call(provider, "apiKey"))
+      return provider;
+
+    const apiKey = provider.apiKey;
+    if (typeof apiKey !== "string") return provider;
+
+    const encrypted = encryptApiKey(apiKey);
+    if (encrypted === apiKey) return provider;
+
+    changed = true;
+    return { ...provider, apiKey: encrypted };
+  });
+
+  if (!changed) return value;
+
+  try {
+    return JSON.stringify(next);
+  } catch (error) {
+    console.warn(
+      "[SQLiteManager] 序列化 settings.llm.providers JSON 失败，已回退为原始值：",
+      error,
+    );
+    return value;
+  }
+};
+
+const maybeDecryptLlmProvidersSettingValue = (key, value) => {
+  if (!isLlmProvidersSettingKey(key) || typeof value !== "string") return value;
+
+  let parsed;
+  try {
+    parsed = JSON.parse(value);
+  } catch (error) {
+    console.warn(
+      "[SQLiteManager] 解析 settings.llm.providers JSON 失败，已跳过 API Key 解密：",
+      error,
+    );
+    return value;
+  }
+
+  if (!Array.isArray(parsed)) {
+    console.warn(
+      "[SQLiteManager] settings.llm.providers 不是数组，已跳过 API Key 解密",
+    );
+    return value;
+  }
+
+  let changed = false;
+  const next = parsed.map((provider) => {
+    if (!provider || typeof provider !== "object") return provider;
+    if (!Object.prototype.hasOwnProperty.call(provider, "apiKey"))
+      return provider;
+
+    const apiKey = provider.apiKey;
+    if (typeof apiKey !== "string") return provider;
+
+    const decrypted = decryptApiKey(apiKey);
+    if (decrypted === apiKey) return provider;
+
+    changed = true;
+    return { ...provider, apiKey: decrypted };
+  });
+
+  if (!changed) return value;
+
+  try {
+    return JSON.stringify(next);
+  } catch (error) {
+    console.warn(
+      "[SQLiteManager] 序列化 settings.llm.providers JSON 失败，已回退为原始值：",
+      error,
+    );
+    return value;
+  }
+};
 
 const MIME_TO_EXT = {
   "image/png": ".png",
@@ -273,11 +452,13 @@ class SQLiteManager {
     const row = this.db
       .prepare("SELECT value FROM settings WHERE key = ?")
       .get(key);
-    return row ? row.value : null;
+    if (!row) return null;
+    return maybeDecryptLlmProvidersSettingValue(key, row.value);
   }
 
   setSetting(key, value) {
     const now = Date.now();
+    const normalizedValue = maybeEncryptLlmProvidersSettingValue(key, value);
     this.db
       .prepare(
         `
@@ -286,7 +467,7 @@ class SQLiteManager {
         ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = ?
       `,
       )
-      .run(key, value, now, value, now);
+      .run(key, normalizedValue, now, normalizedValue, now);
   }
 
   deleteSetting(key) {
