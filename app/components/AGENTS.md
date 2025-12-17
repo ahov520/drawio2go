@@ -157,13 +157,14 @@
 
 ### 7. ProjectSelector.tsx - 工程选择模态
 
-**Props**: `isOpen`, `onClose`, `currentProjectId`, `onSelectProject`, `projects`, `isLoading`, `onCreateProject`
+**Props**: `isOpen`, `onClose`, `currentProjectId`, `onSelectProject`, `projects`, `isLoading`, `onCreateProject`, `onUpdateProject?`, `onDeleteProject?`
 
 **核心功能**:
 
 - Skeleton 加载态（isLoading 时渲染 3 个占位卡片）
 - 空状态引导
 - 卡片样式：`Card.Root` + `Card.Content`，激活项加粗边框 + Check 图标
+- 操作区：编辑（内联表单）/ 删除（二次确认 ConfirmDialog；当前项目与默认项目禁用并 Tooltip 提示）
 - 模态关闭时重置表单
 
 ### 8. LanguageSwitcher.tsx - 语言切换器

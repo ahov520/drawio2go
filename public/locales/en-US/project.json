@@ -22,7 +22,18 @@
   },
   "buttons": {
     "cancel": "Cancel",
+    "save": "Save",
+    "edit": "Edit",
+    "delete": "Delete",
     "create": "Create",
     "new": "New Project"
+  },
+  "delete": {
+    "title": "Delete Project",
+    "description": "Are you sure you want to delete project \"{{name}}\"? This will also delete all versions, conversations, and attachments for this project, and cannot be undone.",
+    "disabled": {
+      "current": "Cannot delete the project currently in use",
+      "default": "Cannot delete the default project"
+    }
   }
 }

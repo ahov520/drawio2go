@@ -22,7 +22,18 @@
   },
   "buttons": {
     "cancel": "取消",
+    "save": "保存",
+    "edit": "编辑",
+    "delete": "删除",
     "create": "创建",
     "new": "新建项目"
+  },
+  "delete": {
+    "title": "删除项目",
+    "description": "确定要删除项目 \"{{name}}\" 吗？此操作将同时删除该项目的所有版本、对话记录和附件，且无法恢复。",
+    "disabled": {
+      "current": "无法删除正在使用的项目",
+      "default": "无法删除默认项目"
+    }
   }
 }

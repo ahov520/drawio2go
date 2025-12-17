@@ -127,6 +127,15 @@ export function useStorageProjects() {
     [updateProject],
   );
 
+  const deleteProject = useCallback(
+    async (uuid: string) => {
+      const storage = await getStorage();
+      await storage.deleteProject(uuid);
+      await getAllProjects(); // 刷新列表
+    },
+    [getAllProjects],
+  );
+
   // 初始化时加载所有工程
   useEffect(() => {
     Promise.all([getAllProjects(), getDefaultProject()])
@@ -148,6 +157,7 @@ export function useStorageProjects() {
     getProject,
     createProject,
     updateProject,
+    deleteProject,
     getDefaultProject,
     updateDefaultProject,
   };

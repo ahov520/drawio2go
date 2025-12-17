@@ -47,12 +47,15 @@ export default function Home() {
     currentProject,
     loading: projectLoading,
     switchProject,
+    refreshCurrentProject,
   } = useCurrentProject();
 
   const {
     projects,
     createProject,
     getAllProjects,
+    updateProject,
+    deleteProject,
     loading: projectsLoading,
   } = useStorageProjects();
 
@@ -555,6 +558,49 @@ export default function Home() {
     }
   };
 
+  const handleUpdateProject = useCallback(
+    async (uuid: string, name: string, description?: string) => {
+      try {
+        await updateProject(uuid, {
+          name,
+          description: description?.trim() || undefined,
+        });
+
+        if (uuid === currentProjectUuid) {
+          await refreshCurrentProject();
+        }
+      } catch (error) {
+        logger.error("更新工程失败", { uuid, error });
+        push({
+          description: t("toasts.requestFailed", {
+            error: toErrorString(error),
+          }),
+          variant: "danger",
+        });
+        throw error;
+      }
+    },
+    [currentProjectUuid, push, refreshCurrentProject, t, updateProject],
+  );
+
+  const handleDeleteProject = useCallback(
+    async (uuid: string) => {
+      try {
+        await deleteProject(uuid);
+      } catch (error) {
+        logger.error("删除工程失败", { uuid, error });
+        push({
+          description: t("toasts.requestFailed", {
+            error: toErrorString(error),
+          }),
+          variant: "danger",
+        });
+        throw error;
+      }
+    },
+    [deleteProject, push, t],
+  );
+
   const selectionLabelText = isElectronEnv
     ? (() => {
         const selectionIdsPreview = selectionInfo.cells
@@ -706,6 +752,8 @@ export default function Home() {
         projects={projects}
         isLoading={projectsLoading}
         onCreateProject={handleCreateProject}
+        onUpdateProject={handleUpdateProject}
+        onDeleteProject={handleDeleteProject}
       />
     </main>
   );
