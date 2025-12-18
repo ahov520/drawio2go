@@ -93,7 +93,6 @@ interface ChatSidebarProps {
   isOpen: boolean;
   onClose: () => void;
   currentProjectId?: string;
-  isSocketConnected?: boolean;
 }
 
 // ========== 主组件 ==========
@@ -101,7 +100,6 @@ interface ChatSidebarProps {
 export default function ChatSidebar({
   isOpen = true,
   currentProjectId,
-  isSocketConnected = true,
 }: ChatSidebarProps) {
   type UseChatMessage = UIMessage<MessageMetadata>;
 
@@ -117,8 +115,7 @@ export default function ChatSidebar({
 
   // ========== Hook 聚合 ==========
   const { t, i18n } = useI18n();
-  const isI18nReady = i18n.isInitialized && Boolean(i18n.resolvedLanguage);
-  const { open: openAlertDialog, close: closeAlertDialog } = useAlertDialog();
+  const { open: openAlertDialog } = useAlertDialog();
   const { pushErrorToast, showNotice, extractErrorMessage } =
     useOperationToast();
 
@@ -134,7 +131,6 @@ export default function ChatSidebar({
     handleModelChange,
   } = useLLMConfig();
 
-  const [showSocketRecoveryHint, setShowSocketRecoveryHint] = useState(false);
   const [showOnlineRecoveryHint, setShowOnlineRecoveryHint] = useState(false);
 
   const translate = useCallback(
@@ -145,9 +141,7 @@ export default function ChatSidebar({
   const resolvedProjectUuid = currentProjectId ?? DEFAULT_PROJECT_UUID;
   const { canChat, lockHolder, acquireLock, releaseLock } =
     useChatLock(resolvedProjectUuid);
-  const { isOnline, offlineReason } = useNetworkStatus({
-    socketConnected: isSocketConnected,
-  });
+  const { isOnline, offlineReason } = useNetworkStatus();
 
   const truncatedLockHolder = useMemo(() => {
     if (!lockHolder) return null;
@@ -164,8 +158,6 @@ export default function ChatSidebar({
           "chat:status.networkOfflinePing",
           "心跳失败（可能无外网或被防火墙拦截）",
         );
-      case "socket-disconnect":
-        return t("chat:status.networkOfflineSocket", "Socket 连接已断开");
       default:
         return null;
     }
@@ -187,12 +179,7 @@ export default function ChatSidebar({
   const imageDataUrlPendingRef = useRef<Map<string, Promise<string | null>>>(
     new Map(),
   );
-  const alertOwnerRef = useRef<
-    "socket" | "single-delete" | "batch-delete" | null
-  >(null);
-  const socketAlertSeenRef = useRef(false);
-  const socketStopHandledRef = useRef(false);
-  const previousSocketStatusRef = useRef<boolean | null>(null);
+  const alertOwnerRef = useRef<"single-delete" | "batch-delete" | null>(null);
   const pageUnloadHandledRef = useRef(false);
   const streamingFlagCacheRef = useRef<Record<string, boolean>>({});
   const forceStopReasonRef = useRef<"sidebar" | "history" | null>(null);
@@ -379,6 +366,10 @@ export default function ChatSidebar({
   }, [chatService, resolveConversationId, setActiveConversationId]);
 
   // ========== useChat 集成 ==========
+  // NOTE(Milestone 4): ChatSidebar 目前仍是“自管理”模式（内部 useChat + 存储/会话控制器）。
+  // 页面级的 useAIChat（app/page.tsx）不会向这里下传 messages/append/stop 等返回值；两者并存时务必避免把它们混用，
+  // 否则会出现“双消息源 / 双流式状态 / 双取消逻辑”的竞态与难以排查的问题。
+  // 后续整合方向：以 Provider/Context 将单一 chat state/actions 注入到 ChatSidebar，或让 ChatSidebar 直接切换到 useAIChat。
   const chatTransport = useMemo(() => {
     return new DefaultChatTransport<UseChatMessage>({
       prepareSendMessagesRequest: async (options) => {
@@ -732,161 +723,6 @@ export default function ChatSidebar({
     ],
   );
 
-  const cancelChatRunOnServer = useCallback(
-    (chatRunId: string, reason: string) => {
-      const normalizedChatRunId = chatRunId.trim();
-      const normalizedReason = reason.trim() || "user_cancelled";
-      if (!normalizedChatRunId) return;
-
-      fetch("/api/chat/cancel", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          chatRunId: normalizedChatRunId,
-          reason: normalizedReason,
-        }),
-        keepalive: true,
-      }).catch((error) => {
-        logger.debug("[ChatSidebar] 取消上报失败（可忽略）", {
-          chatRunId: normalizedChatRunId,
-          reason: normalizedReason,
-          error,
-        });
-      });
-    },
-    [],
-  );
-
-  useEffect(() => {
-    const previousSocketStatus = previousSocketStatusRef.current;
-    const socketStatusChanged = previousSocketStatus !== isSocketConnected;
-    previousSocketStatusRef.current = isSocketConnected;
-
-    const handleSocketDisconnected = () => {
-      if (socketStopHandledRef.current || !isChatStreaming) return;
-
-      socketStopHandledRef.current = true;
-      logger.warn("[ChatSidebar] Socket 断开，停止聊天请求");
-
-      const runId = sendingChatRunIdRef.current;
-      const targetConversationId =
-        activeConversationId ?? sendingSessionIdRef.current;
-
-      if (runId) {
-        cancelChatRun(runId);
-        if (targetConversationId) {
-          clearActiveChatRun(targetConversationId, runId);
-        }
-        cancelChatRunOnServer(runId, "socket_disconnected");
-      }
-
-      stop();
-      releaseLock();
-
-      if (targetConversationId) {
-        updateStreamingFlag(targetConversationId, false).catch((error) => {
-          logger.error("[ChatSidebar] Socket 断开后更新流式状态失败", {
-            conversationId: targetConversationId,
-            error,
-          });
-        });
-
-        resolveConversationId(targetConversationId)
-          .then((resolvedId) => markConversationAsCompleted(resolvedId))
-          .catch((error) => {
-            logger.error("[ChatSidebar] Socket 断开后标记对话完成失败", {
-              conversationId: targetConversationId,
-              error,
-            });
-          });
-      }
-    };
-
-    if (socketStatusChanged && !isSocketConnected) {
-      handleSocketDisconnected();
-    }
-
-    if (socketStatusChanged && isSocketConnected) {
-      socketStopHandledRef.current = false;
-    }
-
-    if (!isOpen) {
-      if (alertOwnerRef.current === "socket") {
-        alertOwnerRef.current = null;
-        closeAlertDialog();
-      }
-      socketAlertSeenRef.current = false;
-      setShowSocketRecoveryHint(false);
-      return;
-    }
-
-    if (!isI18nReady) {
-      return;
-    }
-
-    if (!isSocketConnected) {
-      const socketTitle = t(
-        "chat:status.socketDisconnected",
-        "Socket 连接已断开",
-      );
-      const socketDescription = t(
-        "chat:status.socketDisconnectedWithStop",
-        "Socket 连接已断开，正在进行的聊天已停止",
-      );
-      const confirmLabel = t("actions.confirm", "确认");
-      const cancelLabel = t("actions.cancel", "取消");
-
-      if (!socketAlertSeenRef.current) {
-        socketAlertSeenRef.current = true;
-        alertOwnerRef.current = "socket";
-        openAlertDialog({
-          status: "danger",
-          title: socketTitle,
-          description: socketDescription,
-          actionLabel: confirmLabel,
-          cancelLabel: cancelLabel,
-          isDismissable: true,
-          onAction: () => {
-            alertOwnerRef.current = null;
-          },
-          onCancel: () => {
-            alertOwnerRef.current = null;
-          },
-        });
-      }
-
-      setShowSocketRecoveryHint(false);
-      return;
-    }
-
-    socketAlertSeenRef.current = false;
-    if (alertOwnerRef.current === "socket") {
-      alertOwnerRef.current = null;
-      closeAlertDialog();
-    }
-
-    if (socketStatusChanged && previousSocketStatus === false) {
-      setShowSocketRecoveryHint(true);
-      logger.info("[ChatSidebar] Socket 已重新连接");
-    }
-  }, [
-    activeConversationId,
-    cancelChatRunOnServer,
-    closeAlertDialog,
-    isChatStreaming,
-    isI18nReady,
-    isOpen,
-    isSocketConnected,
-    markConversationAsCompleted,
-    openAlertDialog,
-    releaseLock,
-    resolveConversationId,
-    stop,
-    t,
-    offlineReasonLabel,
-    updateStreamingFlag,
-  ]);
-
   const forceStopStreaming = useCallback(
     (reason: "sidebar" | "history") => {
       if (!isChatStreaming) return;
@@ -909,10 +745,6 @@ export default function ChatSidebar({
         if (targetConversationId) {
           clearActiveChatRun(targetConversationId, runId);
         }
-        cancelChatRunOnServer(
-          runId,
-          reason === "sidebar" ? "sidebar_closed" : "switch_to_history",
-        );
         sendingChatRunIdRef.current = null;
       }
 
@@ -925,7 +757,6 @@ export default function ChatSidebar({
     },
     [
       activeConversationId,
-      cancelChatRunOnServer,
       isChatStreaming,
       releaseLock,
       stop,
@@ -947,13 +778,8 @@ export default function ChatSidebar({
 
   useEffect(() => {
     const previousOnline = previousOnlineStatusRef.current;
-    const isFirstRender = previousOnline === null;
     const onlineStatusChanged = previousOnline !== isOnline;
     previousOnlineStatusRef.current = isOnline;
-
-    if (isFirstRender && offlineReason === "socket-disconnect") {
-      return;
-    }
 
     if (!onlineStatusChanged) return;
 
@@ -975,7 +801,6 @@ export default function ChatSidebar({
         if (targetConversationId) {
           clearActiveChatRun(targetConversationId, runId);
         }
-        cancelChatRunOnServer(runId, "network_offline");
         sendingChatRunIdRef.current = null;
       }
 
@@ -1027,7 +852,6 @@ export default function ChatSidebar({
     }
   }, [
     activeConversationId,
-    cancelChatRunOnServer,
     isChatStreaming,
     isOnline,
     markConversationAsCompleted,
@@ -1036,20 +860,9 @@ export default function ChatSidebar({
     resolveConversationId,
     stop,
     t,
-    offlineReason,
     offlineReasonLabel,
     updateStreamingFlag,
   ]);
-
-  useEffect(() => {
-    if (!showSocketRecoveryHint) return;
-
-    const timer = window.setTimeout(() => {
-      setShowSocketRecoveryHint(false);
-    }, 3600);
-
-    return () => window.clearTimeout(timer);
-  }, [showSocketRecoveryHint]);
 
   useEffect(() => {
     if (!showOnlineRecoveryHint) return;
@@ -1222,24 +1035,7 @@ export default function ChatSidebar({
       // 4) 刷新待保存队列，确保 debounce 队列立即写入
       chatService.flushPending(targetConversationId);
 
-      try {
-        // 5) 优先尝试 sendBeacon（适合卸载场景）
-        if (typeof navigator !== "undefined" && navigator.sendBeacon) {
-          const payload = JSON.stringify({
-            conversationId: targetConversationId,
-            messages: nextMessages,
-          });
-          const sent = navigator.sendBeacon(
-            "/api/chat/unload",
-            new Blob([payload], { type: "application/json" }),
-          );
-          if (sent) return;
-        }
-      } catch (error) {
-        logger.error("[ChatSidebar] sendBeacon 发送失败:", error);
-      }
-
-      // 6) 回落：同步写入 localStorage，避免 beforeunload 异步中断
+      // 5) 回落：同步写入 localStorage，避免 beforeunload 异步中断
       try {
         if (typeof localStorage !== "undefined") {
           localStorage.setItem(
@@ -1315,17 +1111,6 @@ export default function ChatSidebar({
         ),
         "warning",
       );
-      return;
-    }
-
-    if (!isSocketConnected) {
-      logger.warn("[ChatSidebar] Socket 未连接，无法发送消息");
-      openAlertDialog({
-        status: "warning",
-        title: t("chat:status.socketDisconnected"),
-        description: t("chat:status.socketRequiredForChat"),
-        isDismissable: true,
-      });
       return;
     }
 
@@ -1494,7 +1279,6 @@ export default function ChatSidebar({
       if (targetConversationId) {
         clearActiveChatRun(targetConversationId, runId);
       }
-      cancelChatRunOnServer(runId, "stop_silently");
     }
 
     stop();
@@ -1512,7 +1296,6 @@ export default function ChatSidebar({
     releaseLock,
     stop,
     updateStreamingFlag,
-    cancelChatRunOnServer,
   ]);
 
   const handleCancel = useCallback(async () => {
@@ -1529,7 +1312,6 @@ export default function ChatSidebar({
       if (targetConversationId) {
         clearActiveChatRun(targetConversationId, runId);
       }
-      cancelChatRunOnServer(runId, "user_cancelled");
     }
 
     stop();
@@ -1600,7 +1382,6 @@ export default function ChatSidebar({
     stop,
     t,
     releaseLock,
-    cancelChatRunOnServer,
   ]);
 
   const handleRetry = useCallback(() => {
@@ -1902,29 +1683,6 @@ export default function ChatSidebar({
 
   const alerts = (
     <>
-      {!isSocketConnected && (
-        <div className="mb-3">
-          <Alert status="danger">
-            <Alert.Title>⚠️ {t("chat:status.socketDisconnected")}</Alert.Title>
-            <Alert.Description>
-              {t(
-                "chat:status.socketDisconnectedWithStop",
-                "Socket 连接已断开，正在进行的聊天已停止",
-              )}
-            </Alert.Description>
-          </Alert>
-        </div>
-      )}
-      {showSocketRecoveryHint && isSocketConnected && (
-        <div className="mb-3">
-          <Alert status="success">
-            <Alert.Title>{t("chat:status.socketReconnected")}</Alert.Title>
-            <Alert.Description>
-              {t("chat:status.socketReconnected")}
-            </Alert.Description>
-          </Alert>
-        </div>
-      )}
       {!isOnline && (
         <div className="mb-3">
           <Alert status="danger">
@@ -2001,7 +1759,6 @@ export default function ChatSidebar({
             canSendNewMessage={canSendNewMessage}
             lastMessageIsUser={lastMessageIsUser}
             isOnline={isOnline}
-            isSocketConnected={isSocketConnected}
             onSubmit={handleSubmit}
             onCancel={handleCancel}
             onNewChat={handleNewChat}

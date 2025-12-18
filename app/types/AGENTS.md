@@ -23,16 +23,13 @@ LLM 供应商与聊天消息相关的核心类型定义。
 - **ChatSessionsData**: 会话数据管理结构。
 - **ChatExportData**: 会话导入导出数据格式。
 
-### socket-protocol.ts
+### socket.ts
 
-Socket.IO 通讯协议的类型定义。
+工具调用请求的基础类型定义（与传输层解耦）。
 
 #### 核心接口
 
-- **ToolCallRequest**: 工具调用请求结构（含 requestId、toolName、input、timeout、description）
-- **ToolCallResult**: 工具执行结果结构（含 requestId、success、result、error）
-- **ServerToClientEvents**: Socket.IO 服务器到客户端事件类型
-- **ClientToServerEvents**: Socket.IO 客户端到服务器事件类型
+- **ToolCallRequest**: 工具调用请求结构（含 requestId、toolName、input、timeout、description 等）
 
 ### global.d.ts
 

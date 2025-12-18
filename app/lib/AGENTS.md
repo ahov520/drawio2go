@@ -195,10 +195,10 @@ const xml = await restoreXMLFromVersion("version-id", storage);
 - IndexedDB / SQLite 在初始化阶段直接建表，`DB_VERSION` / `pragma user_version` 固定为 1
 - 目前允许破坏性变更，必要时可提升版本并清库，无需编写迁移脚本
 
-## DrawIO Socket.IO 调用流程
+## DrawIO Socket.IO 调用流程（服务端保留）
 
 1. 后端工具通过 `executeToolOnClient(toolName, input, projectUuid, conversationId, description?, options?)` 获取当前 XML 或请求前端写入（必须携带项目/会话上下文；`options` 支持 `chatRunId` 与 `AbortSignal` 用于取消）
-2. 前端（`useDrawioSocket` + `drawio-tools.ts`）访问统一存储层并响应请求
+2. 前端 Socket.IO Client 已移除（2025-12-18），不再响应 Socket.IO 工具请求
 3. 服务端使用 `drawio-xml-service.ts` 对 XML 进行 XPath 查询或批量操作
 4. 编辑完成后再次通过 Socket.IO 将新 XML 写回前端（前端按 projectUuid 过滤执行）
 

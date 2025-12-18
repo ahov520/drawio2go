@@ -109,7 +109,7 @@
 
 ### 4. ChatSidebar.tsx - 聊天侧边栏
 
-**Props**: `currentProjectId?`, `isSocketConnected?`
+**Props**: `currentProjectId?`
 
 **核心功能**:
 

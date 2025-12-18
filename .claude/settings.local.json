@@ -90,7 +90,8 @@
       "Bash(node scripts/prepare-electron.js:*)",
       "mcp__codexmcp__codex",
       "Bash(npx asar:*)",
-      "Bash(npm exec tsc:*)"
+      "Bash(npm exec tsc:*)",
+      "Bash(test:*)"
     ],
     "deny": [],
     "ask": []

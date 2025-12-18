@@ -38,7 +38,6 @@ interface ChatInputAreaProps {
   canSendNewMessage: boolean;
   lastMessageIsUser: boolean;
   isOnline: boolean;
-  isSocketConnected: boolean;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onCancel?: () => void;
   onNewChat: () => void;
@@ -66,7 +65,6 @@ export default function ChatInputArea({
   canSendNewMessage,
   lastMessageIsUser,
   isOnline,
-  isSocketConnected,
   onSubmit,
   onCancel,
   onNewChat,
@@ -102,8 +100,7 @@ export default function ChatInputArea({
     !llmConfig ||
     isModelConfigMissing ||
     !canSendNewMessage ||
-    !isOnline ||
-    !isSocketConnected;
+    !isOnline;
   const isSendDisabled =
     !canSend ||
     isChatStreaming ||
@@ -111,8 +108,7 @@ export default function ChatInputArea({
     !llmConfig ||
     isModelConfigMissing ||
     !canSendNewMessage ||
-    !isOnline ||
-    !isSocketConnected;
+    !isOnline;
 
   useEffect(() => {
     onAttachmentsChange?.(attachmentItems);
@@ -279,14 +275,7 @@ export default function ChatInputArea({
           </div>
         ) : null}
 
-        {!isSocketConnected ? (
-          <div className="chat-network-status" role="status" aria-live="polite">
-            ⚠️ {t("status.socketDisconnected")} ·{" "}
-            {t("status.socketRequiredForChat")}
-          </div>
-        ) : null}
-
-        {isSocketConnected && !isOnline && (
+        {!isOnline && (
           <div className="chat-network-status" role="status" aria-live="polite">
             ⚠️ {t("status.networkOfflineShort", "网络已断开")} ·{" "}
             {t("status.networkDisconnectedHint")}
@@ -300,7 +289,6 @@ export default function ChatInputArea({
           canSendNewMessage={canSendNewMessage}
           lastMessageIsUser={lastMessageIsUser}
           isOnline={isOnline}
-          isSocketConnected={isSocketConnected}
           onCancel={onCancel}
           onNewChat={onNewChat}
           onHistory={onHistory}

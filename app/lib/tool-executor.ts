@@ -7,12 +7,17 @@
  */
 
 import { v4 as uuidv4 } from "uuid";
-import type { ToolCallRequest } from "@/app/types/socket-protocol";
+import type { ToolCallRequest as BaseToolCallRequest } from "@/app/types/socket";
 import { TOOL_TIMEOUT_CONFIG } from "@/lib/constants/tool-config";
 import type { ClientToolName } from "@/lib/constants/tool-names";
 import { createLogger } from "@/lib/logger";
 
 const logger = createLogger("Tool Executor");
+
+type ToolExecuteRequest = BaseToolCallRequest & {
+  toolName: ClientToolName;
+  timeout: number;
+};
 
 export type ExecuteToolOnClientOptions = {
   signal?: AbortSignal;
@@ -164,7 +169,7 @@ export async function executeToolOnClient(
     });
 
     // 构造请求消息
-    const request: ToolCallRequest = {
+    const request: ToolExecuteRequest = {
       requestId,
       toolName,
       input,

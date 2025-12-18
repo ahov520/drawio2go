@@ -10,10 +10,7 @@ const DEFAULT_INTERVAL = 60_000; // 60s 心跳节流
 const MAX_BACKOFF = DEFAULT_INTERVAL * 5; // 最长 5 分钟回退
 const DEFAULT_TIMEOUT = 3_000; // 3s 超时
 
-export type OfflineReason =
-  | "browser-offline"
-  | "ping-fail"
-  | "socket-disconnect";
+export type OfflineReason = "browser-offline" | "ping-fail";
 
 export interface NetworkStatusResult {
   isOnline: boolean;
@@ -24,11 +21,6 @@ export interface NetworkStatusResult {
 }
 
 interface UseNetworkStatusOptions {
-  /**
-   * 外部 Socket 连接状态（如有），用于推断更精确的离线原因。
-   * 未提供时默认视为已连接。
-   */
-  socketConnected?: boolean;
   /**
    * 心跳间隔（毫秒），默认 60 秒。
    */
@@ -45,14 +37,9 @@ const getNavigatorOnline = () =>
 const computeStatus = (
   navOnline: boolean,
   pingHealthy: boolean | null,
-  socketConnected: boolean,
 ): { isOnline: boolean; offlineReason: OfflineReason | null } => {
   if (!navOnline) {
     return { isOnline: false, offlineReason: "browser-offline" };
-  }
-
-  if (!socketConnected) {
-    return { isOnline: false, offlineReason: "socket-disconnect" };
   }
 
   if (pingHealthy === false) {
@@ -99,49 +86,24 @@ const checkRealConnectivity = async (timeoutMs: number): Promise<boolean> => {
 export function useNetworkStatus(
   options: UseNetworkStatusOptions = {},
 ): NetworkStatusResult {
-  const {
-    socketConnected = true,
-    intervalMs = DEFAULT_INTERVAL,
-    timeoutMs = DEFAULT_TIMEOUT,
-  } = options;
+  const { intervalMs = DEFAULT_INTERVAL, timeoutMs = DEFAULT_TIMEOUT } =
+    options;
 
   const [navOnline, setNavOnline] = useState<boolean>(getNavigatorOnline);
   const [pingHealthy, setPingHealthy] = useState<boolean | null>(null);
   const [lastCheckedAt, setLastCheckedAt] = useState<number | null>(null);
   const [isChecking, setIsChecking] = useState(false);
-  const socketEverConnectedRef = useRef(socketConnected);
-  const getEffectiveSocket = useCallback((rawSocketConnected: boolean) => {
-    if (rawSocketConnected) {
-      socketEverConnectedRef.current = true;
-      return true;
-    }
-    return socketEverConnectedRef.current ? rawSocketConnected : true;
-  }, []);
   const [status, setStatus] = useState(() =>
-    computeStatus(navOnline, pingHealthy, getEffectiveSocket(socketConnected)),
+    computeStatus(navOnline, pingHealthy),
   );
 
   const failuresRef = useRef(0);
   const timerRef = useRef<number | null>(null);
   const checkingPromiseRef = useRef<Promise<boolean> | null>(null);
-  const socketConnectedRef = useRef(socketConnected);
   const heartbeatRunnerRef = useRef<
     | ((reason: "manual" | "scheduled" | "online-event") => Promise<boolean>)
     | null
   >(null);
-
-  // 保持 socket 状态同步
-  useEffect(() => {
-    socketConnectedRef.current = socketConnected;
-    setStatus((prev) => {
-      const effectiveSocket = getEffectiveSocket(socketConnectedRef.current);
-      const next = computeStatus(navOnline, pingHealthy, effectiveSocket);
-      return prev.isOnline === next.isOnline &&
-        prev.offlineReason === next.offlineReason
-        ? prev
-        : next;
-    });
-  }, [getEffectiveSocket, navOnline, pingHealthy, socketConnected]);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -169,12 +131,7 @@ export function useNetworkStatus(
       nextPingHealthy: boolean | null,
       source: string,
     ) => {
-      const effectiveSocket = getEffectiveSocket(socketConnectedRef.current);
-      const next = computeStatus(
-        nextNavOnline,
-        nextPingHealthy,
-        effectiveSocket,
-      );
+      const next = computeStatus(nextNavOnline, nextPingHealthy);
 
       setStatus((prev) => {
         if (
@@ -195,7 +152,7 @@ export function useNetworkStatus(
         return next;
       });
     },
-    [getEffectiveSocket],
+    [],
   );
 
   const computeBackoff = useCallback(

@@ -24,7 +24,6 @@ interface ChatInputActionsProps {
   canSendNewMessage: boolean;
   lastMessageIsUser: boolean;
   isOnline: boolean;
-  isSocketConnected: boolean;
   onCancel?: () => void;
   onNewChat: () => void;
   onHistory: () => void;
@@ -47,7 +46,6 @@ export default function ChatInputActions({
   canSendNewMessage,
   lastMessageIsUser,
   isOnline,
-  isSocketConnected,
   onCancel,
   onNewChat,
   onHistory,
@@ -79,7 +77,6 @@ export default function ChatInputActions({
   const sendButtonDisabled = getSendButtonDisabled();
   const [isModelPopoverOpen, setIsModelPopoverOpen] = useState(false);
   const getSendDisabledReason = () => {
-    if (!isSocketConnected) return t("status.socketRequiredForChat");
     if (!isOnline) return t("status.networkOfflineDesc");
     return null;
   };

@@ -12,7 +12,8 @@ import DrawioEditorNative from "./components/DrawioEditorNative"; // 使用原�
 import TopBar from "./components/TopBar";
 import UnifiedSidebar, { type SidebarTab } from "./components/UnifiedSidebar";
 import ProjectSelector from "./components/ProjectSelector";
-import { useDrawioSocket } from "./hooks/useDrawioSocket";
+import { useLLMConfig } from "./hooks/useLLMConfig";
+import { useAIChat } from "./hooks/useAIChat";
 import { DrawioSelectionInfo } from "./types/drawio-tools";
 import { useStorageSettings } from "./hooks/useStorageSettings";
 import { useCurrentProject } from "./hooks/useCurrentProject";
@@ -25,6 +26,7 @@ import { useAppTranslation, useI18n } from "./i18n/hooks";
 import { createLogger } from "./lib/logger";
 import { toErrorString } from "./lib/error-handler";
 import { subscribeSidebarNavigate } from "./lib/ui-events";
+import { DEFAULT_LLM_CONFIG } from "./lib/config-utils";
 
 const logger = createLogger("Page");
 
@@ -114,8 +116,40 @@ export default function Home() {
     activeProjectUuidRef.current = currentProjectUuid;
   }, [currentProjectUuid]);
 
-  // 初始化 Socket.IO 连接
-  const { isConnected } = useDrawioSocket(editorRef, currentProjectUuid);
+  const { llmConfig } = useLLMConfig();
+  const [conversationId, setConversationId] = useState<string>(
+    () => `conv-${Date.now()}`,
+  );
+
+  useEffect(() => {
+    if (!currentProjectUuid) return;
+    setConversationId(`conv-${Date.now()}`);
+  }, [currentProjectUuid]);
+
+  // NOTE(Milestone 4): 这里初始化 useAIChat 仅用于“新 Hook”能力验证与占位（具备前端 DrawIO 工具执行能力）。
+  // 当前 ChatSidebar 仍然使用其内部的 useChat + /api/chat 数据流管理消息/输入/停止流式等状态，因此不向下传递
+  // useAIChat 的 messages/input/append/stop/isLoading 等返回值，避免出现“双 useChat 源”的状态竞争。
+  // 后续整合方向：抽出 ChatProvider（或在 UnifiedSidebar 内注入），让 ChatSidebar 仅消费单一来源的 chat state/actions。
+  const aiChat = useAIChat({
+    drawioRef: editorRef,
+    config: llmConfig ?? DEFAULT_LLM_CONFIG,
+    projectUuid: currentProjectUuid ?? "",
+    conversationId,
+  });
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+    logger.debug("[useAIChat] 初始化完成", {
+      conversationId,
+      hasConfig: Boolean(llmConfig),
+      projectUuid: currentProjectUuid,
+    });
+  }, [conversationId, llmConfig, currentProjectUuid]);
+
+  useEffect(() => {
+    if (!aiChat.error) return;
+    logger.warn("AI Chat 错误（占位日志）", { error: aiChat.error });
+  }, [aiChat.error]);
 
   // 确保项目有 WIP 版本
   const ensureWIPVersion = useCallback(
@@ -740,7 +774,6 @@ export default function Home() {
         projectUuid={currentProject?.uuid}
         onVersionRestore={handleVersionRestore}
         editorRef={editorRef}
-        isSocketConnected={isConnected}
       />
 
       {/* 工程选择器 */}

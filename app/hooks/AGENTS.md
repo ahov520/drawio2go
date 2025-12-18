@@ -2,7 +2,7 @@
 
 ## 概述
 
-封装统一存储层访问与 Socket.IO 通讯的 React Hooks，提供类型安全的状态管理接口。
+封装统一存储层访问与客户端状态管理的 React Hooks，提供类型安全的状态管理接口。
 
 ## Lint 约束（SonarJS）
 
@@ -109,24 +109,9 @@
   - `forceLoad=true`: `loadDiagram`（完全重载，清空历史）
   - `forceLoad=false`: `mergeDiagram`（合并模式，保留历史）
 
-### 8. useDrawioSocket
+### 8.（已移除）Socket.IO 通讯 Hook
 
-**Socket.IO 通讯 Hook** - 管理前端与后端的 Socket.IO 双向通讯
-
-#### 核心特性
-
-- 监听后端工具执行请求，自动调用 `drawio-tools.ts`
-- 通过 Socket.IO 回传执行结果/错误
-- **取消保护**: 工具请求携带 `chatRunId`，前端仅处理当前活跃 run；收到 `/api/chat/cancel` 或用户取消后会拒绝执行并回传取消结果（同时监听 `tool:cancel` best-effort 取消事件）
-- **AI 自动版本**: AI 触发 `drawio_overwrite` 时，在设置 `autoVersionOnAIEdit=true` 情况下，串行创建子版本快照后再写入 XML；内部使用 `isCreatingSnapshotRef` 防抖 + `latestMainVersionRef/latestSubVersionRef` 增量计算下一个子版本，避免每次全量拉取版本列表
-
-#### 工作流程
-
-1. 后端 AI 调用工具 → `tool-executor.ts` 发送 Socket.IO 请求
-2. 前端接收 → 调用 `drawio-tools.ts` 方法
-3. 返回结果 → 后端 Promise resolve
-
-**配置**: `autoVersionOnAIEdit` (默认 true) 控制 AI 编辑时是否自动快照
+**已移除（2025-12-18）**：前端不再使用 Socket.IO Client，因此相关 Hook 与实现文件已删除。
 
 ### 9. useChatLock
 
@@ -147,7 +132,7 @@
 **网络状态监听 Hook** - 结合浏览器 online 事件 + `/api/health` 心跳检测的真实连通性判断。
 
 - **返回值**: `{ isOnline, offlineReason, lastCheckedAt, isChecking, checkNow }`
-  - `offlineReason`: `browser-offline` | `ping-fail` | `socket-disconnect`
+  - `offlineReason`: `browser-offline` | `ping-fail`
   - `checkNow()`: 手动触发一次 3s 超时的健康检查（Promise.race）
 - **机制**: 60s 心跳节流，失败指数退避（最多 5 分钟）；恢复或 `online` 事件时立即重试
 - **默认值**: SSR 环境或缺少 navigator 时视为在线
@@ -253,7 +238,6 @@ export { useAttachmentObjectUrl } from "./useAttachmentObjectUrl";
 export { useUpdateChecker } from "./useUpdateChecker";
 
 // Other Hooks - 其他 Hooks
-export { useDrawioSocket } from "./useDrawioSocket";
 export { useDrawioEditor } from "./useDrawioEditor";
 ```
 
@@ -275,7 +259,6 @@ export { useDrawioEditor } from "./useDrawioEditor";
 
 - **存储层架构**: 详见 `app/lib/AGENTS.md` 中的存储层说明
 - **类型定义**: 详见 `app/types/AGENTS.md`
-- **Socket.IO 协议**: 详见 `app/types/socket-protocol.ts`
 
 ## 代码腐化清理记录
 

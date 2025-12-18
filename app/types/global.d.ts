@@ -54,7 +54,7 @@ declare global {
 
   /**
    * Chat 运行中的 AbortController（key = chatRunId）。
-   * 用于在用户点击“取消”时，通过 /api/chat/cancel 主动中止后端请求。
+   * 用于在用户点击“取消”时，通过 `useChat().stop()` 触发请求中断，从而中止后端流式响应与工具等待。
    */
   var chatAbortControllers: Map<string, AbortController> | undefined;
 

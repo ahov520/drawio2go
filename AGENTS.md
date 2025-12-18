@@ -103,10 +103,9 @@ app/
 ├── types/              # 类型定义 [详细文档 → app/types/AGENTS.md]
 │   ├── chat.ts                  # 聊天相关类型
 │   ├── drawio-tools.ts          # DrawIO 工具类型
-│   ├── socket-protocol.ts       # Socket.IO 协议类型
+│   ├── socket.ts                # 工具调用基础类型（与传输层解耦）
 │   └── global.d.ts              # 全局类型声明
 ├── hooks/              # React Hooks [详细文档 → app/hooks/AGENTS.md]
-│   ├── useDrawioSocket.ts       # Socket.IO 通讯 Hook
 │   ├── useStorageSettings.ts    # 设置持久化 Hook
 │   ├── useStorageProjects.ts    # 项目管理 Hook
 │   ├── useCurrentProject.ts     # 当前工程管理 Hook（超时保护 + 自动兜底）
@@ -242,7 +241,7 @@ Accordion, Alert, Avatar, Button, Card, Checkbox, CheckboxGroup, Chip, CloseButt
 - **执行流程**:
   1. AI 调用工具 → `drawio-ai-tools.ts` 的 `execute` 函数
   2. `executeToolOnClient` 生成 requestId，通过 Socket.IO 发送到前端
-  3. 前端 `useDrawioSocket` Hook 接收请求，执行实际操作
+  3. （已移除，2025-12-18）前端不再使用 Socket.IO Client 承接请求
   4. 前端通过 Socket.IO 返回结果
   5. 后端 Promise resolve，返回结果给 AI
 - **超时机制**: 统一由 `TOOL_TIMEOUT_CONFIG` 配置（默认回退 60s，多页导出 120s）
