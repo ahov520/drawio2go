@@ -2,18 +2,15 @@
 
 ## 概述
 
-汇总应用层工具函数与 AI 工具定义，负责 DrawIO XML 的读取、写入，以及（历史/过渡阶段的）Socket.IO 工具调用协调与前端工具执行。
+汇总应用层工具函数与前端工具执行能力，负责 DrawIO XML 的读取、写入与（v1.1）前端侧工具执行。
 
 ## 工具文件清单
 
 - **constants/tool-names.ts**: 工具名称常量与类型定义（AI 工具 / 前端执行工具）
 - **constants/tool-config.ts**: 工具默认超时配置（毫秒），覆盖所有工具
 - **drawio-tools.ts**: 浏览器端的 XML 存储桥接（统一存储抽象层 + 事件通知）
-- **drawio-xml-service.ts**: 服务端 XML 转接层，负责 XPath 查询与批量编辑
-- **drawio-ai-tools.ts**: AI 工具定义（`drawio_read` / `drawio_edit_batch`）
-- **frontend-tools.ts**: 前端 AI 工具定义与执行（`drawio_read` / `drawio_edit_batch` / `drawio_overwrite`），通过注入回调直接读取/写入编辑器 XML（用于逐步替代 Socket.IO 工具调用）
+- **frontend-tools.ts**: 前端 AI 工具定义与执行（`drawio_read` / `drawio_edit_batch` / `drawio_overwrite`），通过注入回调直接读取/写入编辑器 XML
 - **schemas/drawio-tool-schemas.ts**: DrawIO AI 工具参数的统一 Zod Schema 单一真源（含类型导出）
-- **tool-executor.ts**: 工具执行路由器，通过 Socket.IO 与前端通讯
 - **svg-export-utils.ts**: DrawIO 多页面 SVG 导出工具（页面拆分、单页 XML 重建、结果序列化）
 - **compression-utils.ts**: Web/Node 共享的 `CompressionStream` / `DecompressionStream` deflate-raw 压缩工具
 - **drawio-xml-utils.ts**: XML 归一化工具，支持裸 XML / data URI / Base64，并自动解压 `<diagram>` 内的 DrawIO 压缩内容（deflate + base64 + encodeURIComponent）
@@ -195,35 +192,10 @@ const xml = await restoreXMLFromVersion("version-id", storage);
 - IndexedDB / SQLite 在初始化阶段直接建表，`DB_VERSION` / `pragma user_version` 固定为 1
 - 目前允许破坏性变更，必要时可提升版本并清库，无需编写迁移脚本
 
-## DrawIO Socket.IO 调用流程（服务端保留）
+## DrawIO 工具执行（v1.1）
 
-1. 后端工具通过 `executeToolOnClient(toolName, input, projectUuid, conversationId, description?, options?)` 获取当前 XML 或请求前端写入（必须携带项目/会话上下文；`options` 支持 `chatRunId` 与 `AbortSignal` 用于取消）
-2. 前端 Socket.IO Client 已移除（2025-12-18），不再响应 Socket.IO 工具请求
-3. 服务端使用 `drawio-xml-service.ts` 对 XML 进行 XPath 查询或批量操作
-4. 编辑完成后再次通过 Socket.IO 将新 XML 写回前端（前端按 projectUuid 过滤执行）
-
-## DrawIO XML 转接层（`drawio-xml-service.ts`）
-
-- **XPath 驱动**: 所有查询与编辑通过 XPath 定位节点
-- **原子性**: 批量操作全部成功后才写回，失败时无副作用
-- **无推断**: 仅处理 XPath 与原始字符串，不做领域特化解析
-- **支持操作**: `set_attribute`, `remove_attribute`, `insert_element`, `remove_element`, `replace_element`, `set_text_content`
-- **主要函数**: `executeDrawioRead(input, context)` 查询，`executeDrawioEditBatch(operations, context)` 批量编辑（需提供 `projectUuid`/`conversationId`）
-
-## DrawIO AI 工具（`drawio-ai-tools.ts`）
-
-- **`drawio_read`**：三种模式
-  - **ls**（默认）：列出所有 mxCell，支持 `filter`=`all/vertices/edges`
-  - **xpath**：XPath 精确查询
-  - **id**：按 mxCell `id`（单个或数组）快捷定位
-- **`drawio_edit_batch`**：`operations` 数组，定位可使用 `id` 或 `xpath`（同时提供时优先 `id`），全部成功或全部回滚
-- 输入参数使用 Zod 校验并在内部调用 `drawio-xml-service.ts`
-
-## 工具执行路由器（`tool-executor.ts`）
-
-- 统一管理 Socket.IO 请求的发送与结果回传
-- 自动生成 `requestId`、处理超时与错误
-- 当前仅路由 DrawIO 相关工具（前端执行部分）
+- 后端不再执行任何 DrawIO 工具；工具执行全部迁移到前端（见 `frontend-tools.ts` 与 `hooks/useAIChat.ts`）。
+- `/api/ai-proxy` 仅负责转发到 AI Provider（纯 HTTP/BFF 代理），不注入/不执行 DrawIO 工具。
 
 ## 浏览器端存储工具（`drawio-tools.ts`）
 
@@ -354,7 +326,7 @@ LLM 决策调用工具
   ↓
 drawio_read (查询 XML) 或 drawio_edit_batch (修改 XML)
   ↓
-Socket.IO 传递到前端
+HTTP 流式响应将 tool-call 下发到前端
   ↓
 前端 drawio-tools.ts 执行
   ↓
@@ -504,15 +476,15 @@ const tools = [
 - 检查是否包含 DrawIO 压缩内容（deflate + base64）
 - 验证字符编码为 UTF-8
 
-### 跨域 Socket.IO 连接失败
+### 代理/跨域 HTTP 请求失败（v1.1）
 
-**问题**: "Socket connection failed"
-**原因**: CORS 配置或服务器离线
+**问题**: "Failed to fetch" / "NetworkError" / 502/504
+**原因**: 代理目标不可用、CORS/证书问题、网络离线或 Next.js 服务未启动
 **解决**:
 
-- 检查 Socket.IO 服务器配置
-- 确认前后端域名/端口一致
-- 查看浏览器网络标签页日志
+- 确认 `/api/chat`、`/api/ai-proxy` 可访问（必要时先看 `/api/health`）
+- 检查 Settings 中的 `apiUrl`/模型配置是否可达
+- 查看浏览器 DevTools Network 与 Console 日志定位失败原因
 
 ### 大文件导出超时
 
@@ -543,11 +515,10 @@ const tools = [
 
 ### 添加 AI 工具
 
-1. 在 `drawio-ai-tools.ts` 中定义新工具
+1. 在 `frontend-tools.ts` 中定义新工具
 2. 使用 Zod 定义参数 schema
-3. 在 `tool-executor.ts` 中注册路由
-4. 更新服务端工具处理逻辑
-5. 编写测试覆盖 success/error 路径
+3. 在 `useAIChat`（或其他前端调用方）注册/暴露工具给聊天层
+4. 编写测试覆盖 success/error 路径（如有测试体系）
 
 ## 关键注意事项
 
@@ -556,7 +527,7 @@ const tools = [
 3. **WIP 版本特殊性**: WIP (v0.0.0) 不计历史，不能被恢复，用户操作前应告知此限制
 4. **跨端行为一致性**: 存储层接口统一，Web/Electron 实现必须保证行为完全一致
 5. **迁移脚本幂等性**: 数据库迁移脚本必须可重复执行，不能因重复运行而损坏数据
-6. **Socket.IO 原子性**: `drawio_edit_batch` 操作必须全部成功或全部失败，不允许部分修改
+6. **工具原子性**: `drawio_edit_batch` 操作必须全部成功或全部失败，不允许部分修改
 7. **日志级别控制**: 生产环境应关闭 debug 级别日志，避免性能影响
 
 ## 代码腐化清理记录

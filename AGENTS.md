@@ -74,10 +74,8 @@ app/
 │   └── hooks.ts                  # 类型安全 i18n Hooks
 ├── lib/                # 工具库 [详细文档 → app/lib/AGENTS.md]
 │   ├── drawio-tools.ts          # DrawIO XML 操作工具集
-│   ├── drawio-ai-tools.ts       # DrawIO AI 工具调用接口
-│   ├── drawio-xml-service.ts    # DrawIO XML 转接层（XPath 查询）
 │   ├── drawio-xml-utils.ts      # DrawIO XML 归一化与解压工具
-│   ├── tool-executor.ts         # 工具执行路由器
+│   ├── frontend-tools.ts        # 前端工具执行（DrawIO read/edit/overwrite）
 │   ├── svg-export-utils.ts      # 多页面 SVG 导出工具
 │   ├── svg-smart-diff.ts        # SVG 智能差异对比引擎
 │   ├── config-utils.ts          # LLM 配置规范化工具
@@ -130,7 +128,7 @@ public/
 └── locales/            # 翻译资源（en-US, zh-CN，按需扩展 ja-JP）
 
 electron/               # 桌面应用 [详细文档 → electron/AGENTS.md]
-server.js              # Socket.IO 服务器 + Next.js 集成
+server.js              # Next.js 自定义 HTTP 服务器
 ```
 
 ## 开发准则
@@ -234,18 +232,15 @@ Accordion, Alert, Avatar, Button, Card, Checkbox, CheckboxGroup, Chip, CloseButt
 - **工作流程**: 先调用 `resolve-library-id` 获取包ID，再调用 `get-library-docs` 获取最新文档
 - **适用场景**: 新增包、使用包的API、版本升级、遇到兼容性问题时
 
-### 5. Socket.IO 工具调用架构
+### 5. 工具调用架构（v1.1：前端执行 + HTTP/BFF）
 
-- **DrawIO 工具**: 通过 Socket.IO 转发到前端执行（需要浏览器环境）
-- **其他工具**: 可直接在后端执行（未来扩展接口）
-- **执行流程**:
-  1. AI 调用工具 → `drawio-ai-tools.ts` 的 `execute` 函数
-  2. `executeToolOnClient` 生成 requestId，通过 Socket.IO 发送到前端
-  3. （已移除，2025-12-18）前端不再使用 Socket.IO Client 承接请求
-  4. 前端通过 Socket.IO 返回结果
-  5. 后端 Promise resolve，返回结果给 AI
-- **超时机制**: 统一由 `TOOL_TIMEOUT_CONFIG` 配置（默认回退 60s，多页导出 120s）
-- **错误处理**: 前端执行失败会返回详细错误信息给 AI
+- **目标**: 后端不再执行任何 DrawIO 工具；工具执行迁移到前端（浏览器/ Electron 渲染进程）。
+- **当前形态**:
+  - `/api/chat`：流式聊天 HTTP API（v1.1 起不注入/不执行 DrawIO 工具）
+  - `/api/ai-proxy`：纯 HTTP/BFF 代理转发（不注入 DrawIO 工具）
+  - `frontend-tools.ts`：前端执行 `drawio_read` / `drawio_edit_batch` / `drawio_overwrite`
+  - `useAIChat.ts`：前端接收 tool-call 并调用 `frontend-tools.ts` 执行，然后把结果回传给对话流
+- **（已废弃并删除）Socket.IO 工具调用架构**：v1.1 起不再提供/连接 Socket.IO，相关文档仅保留为历史背景。
 
 ### 6. 检查测试
 
@@ -337,16 +332,16 @@ Accordion, Alert, Avatar, Button, Card, Checkbox, CheckboxGroup, Chip, CloseButt
 使用 npm 作为包管理系统（因 Electron 打包兼容性需求）
 
 ```bash
-npm run dev              # Socket.IO + Next.js 开发服务器 (http://localhost:3000)
-npm run electron:dev     # Electron + Socket.IO + Next.js 开发模式
+npm run dev              # 自定义 server.js + Next.js 开发服务器 (http://localhost:3000)
+npm run electron:dev     # Electron + Next.js 开发模式
 npm run build            # 构建 Next.js 应用
-npm run start            # 生产环境启动 (Socket.IO + Next.js)
+npm run start            # 生产环境启动（自定义 server.js + Next.js）
 npm run electron:build   # 构建 Electron 应用 (输出到 dist/)
 npm run lint             # ESLint 检查 + TypeScript 类型检查
 npm run format           # 使用 Prettier 格式化所有代码
 ```
 
-⚠️ **重要**: 不能使用 `next dev` 命令，必须使用 `npm run dev` 启动自定义服务器（包含 Socket.IO）
+⚠️ **重要**: 不能使用 `next dev` 命令，必须使用 `npm run dev` 启动自定义 `server.js`。
 
 ## CI/CD 自动发布
 
@@ -401,7 +396,7 @@ npm run format           # 使用 Prettier 格式化所有代码
 | **版本管理**    | `app/components/version/AGENTS.md`  | 版本控制、对比和时间线详细文档            |
 | **国际化配置**  | `app/i18n/AGENTS.md`                | 多语言支持、翻译资源和配置详细文档        |
 | **存储层**      | `app/lib/storage/AGENTS.md`         | 统一存储架构、SQLite/IndexedDB 适配器文档 |
-| **React Hooks** | `app/hooks/AGENTS.md`               | 统一存储 Hooks 与 Socket.IO 通讯 Hook     |
+| **React Hooks** | `app/hooks/AGENTS.md`               | 统一存储 Hooks 与 AI/网络相关 Hooks       |
 | **样式系统**    | `app/styles/AGENTS.md`              | 设计令牌、Material Design 规范、最佳实践  |
 | **XML 工具集**  | `app/lib/AGENTS.md`                 | DrawIO XML 操作、工具集完整文档           |
 | **类型定义**    | `app/types/AGENTS.md`               | TypeScript 类型的完整说明                 |
@@ -483,10 +478,9 @@ npm run format           # 使用 Prettier 格式化所有代码
 - WIP 草稿独立管理：永久关键帧，时间戳实时更新，独立于 Diff 链路
 - 工程管理增强：超时保护、严格模式兼容、自动兜底机制
 
-**Socket.IO 工具调用架构**
+**（历史）Socket.IO 工具调用架构（已废弃并删除）**
 
-- 双向通讯：AI 工具调用 → Socket.IO 转发前端 → 返回结果
-- 超时由 `TOOL_TIMEOUT_CONFIG` 统一管理（默认回退 60s，导出 120s）
+- 该链路已在 v1.1 架构中废弃并删除：前端不再连接 Socket.IO，后端也不再提供 Socket.IO 服务或执行 DrawIO 工具。
 
 **LLM 集成**
 

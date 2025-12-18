@@ -171,7 +171,7 @@ drawio2go/
 │   ├── api/               # API 路由
 │   └── styles/            # 样式模块
 ├── electron/              # Electron 主进程
-└── server.js              # Socket.IO + Next.js 服务器
+└── server.js              # Next.js 自定义 HTTP 服务器
 ```
 
 ## 开发指南

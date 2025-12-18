@@ -1,9 +1,7 @@
-import { createDrawioTools } from "@/app/lib/drawio-ai-tools";
 import { normalizeLLMConfig } from "@/app/lib/config-utils";
 import { LLMConfig } from "@/app/types/chat";
 import { ErrorCodes, type ErrorCode } from "@/app/errors/error-codes";
 import { createLogger } from "@/lib/logger";
-import type { ToolExecutionContext } from "@/app/types/socket";
 import { getStorage } from "@/app/lib/storage";
 import { streamText, stepCountIs, convertToModelMessages } from "ai";
 import { NextRequest, NextResponse } from "next/server";
@@ -143,15 +141,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const toolContext: ToolExecutionContext = {
-      projectUuid,
-      conversationId,
-      chatRunId,
-      abortSignal,
-    };
-
-    const tools = createDrawioTools(toolContext);
-
     let normalizedConfig: LLMConfig;
 
     try {
@@ -192,9 +181,6 @@ export async function POST(req: NextRequest) {
 
     const modelMessages = convertToModelMessages(
       imageResult.processedMessages,
-      {
-        tools,
-      },
     );
 
     configAwareLogger.info("收到请求", {
@@ -218,7 +204,6 @@ export async function POST(req: NextRequest) {
       system: normalizedConfig.systemPrompt,
       messages: modelMessages,
       temperature: normalizedConfig.temperature,
-      tools,
       stopWhen: stepCountIs(normalizedConfig.maxToolRounds),
       abortSignal,
       ...(experimentalParams && { experimental: experimentalParams }),

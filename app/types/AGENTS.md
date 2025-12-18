@@ -25,11 +25,7 @@ LLM 供应商与聊天消息相关的核心类型定义。
 
 ### socket.ts
 
-工具调用请求的基础类型定义（与传输层解耦）。
-
-#### 核心接口
-
-- **ToolCallRequest**: 工具调用请求结构（含 requestId、toolName、input、timeout、description 等）
+（已移除）此前用于 Socket.IO 相关类型的共享定义；项目已迁移到前端工具执行架构，不再依赖该文件。
 
 ### global.d.ts
 
@@ -37,8 +33,7 @@ LLM 供应商与聊天消息相关的核心类型定义。
 
 #### 主要内容
 
-- 全局 Socket.IO 服务器实例类型（`io`）
-- 待处理工具调用请求 Map（`pendingRequests`）
+- Chat 运行控制相关全局状态（`chatAbortControllers`、`cancelledChatRunIds`）
 - 扩展的 Window 对象属性（`electron`、`electronStorage`、`electronFS` API）
 - `declare module 'xpath'`：为第三方库补充最小化声明
 - `declare module 'pako'`：压缩库类型声明
@@ -219,21 +214,18 @@ import type {
   DrawioEditOperation,
   DrawioEditBatchResult,
 } from "./drawio-tools";
-import {
-  executeDrawioRead,
-  executeDrawioEditBatch,
-} from "../lib/drawio-xml-service";
+import { createFrontendDrawioTools } from "../lib/frontend-tools";
 
 async function demo() {
-  const context = {
-    projectUuid: "demo-project",
-    conversationId: "demo-conversation",
-  };
+  const tools = createFrontendDrawioTools({
+    getDrawioXML: async () => "<mxGraphModel>...</mxGraphModel>",
+    replaceDrawioXML: async () => ({ success: true }),
+    onVersionSnapshot: () => {},
+  });
 
-  const read: DrawioReadResult = await executeDrawioRead(
-    { xpath: "//mxCell[@id='cat-head']" },
-    context,
-  );
+  const read: DrawioReadResult = await tools.drawio_read.execute({
+    xpath: "//mxCell[@id='cat-head']",
+  });
 
   const editOperations: DrawioEditOperation[] = [
     {
@@ -244,10 +236,9 @@ async function demo() {
     },
   ];
 
-  const result: DrawioEditBatchResult = await executeDrawioEditBatch(
-    editOperations,
-    context,
-  );
+  const result: DrawioEditBatchResult = await tools.drawio_edit_batch.execute({
+    operations: editOperations,
+  });
 }
 ```
 

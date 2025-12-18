@@ -4,7 +4,6 @@
  * 用于声明挂载到 global 对象上的变量
  */
 
-import type { Server } from "socket.io";
 import type {
   Setting,
   Project,
@@ -21,37 +20,8 @@ import type {
   Attachment,
   CreateAttachmentInput,
 } from "@/lib/storage/types";
-import type { ToolCallRequest } from "@/app/types/socket";
 
 declare global {
-  /**
-   * Socket.IO 服务器实例
-   * 在 server.js 中初始化，在 API Routes 中使用
-   */
-  var io: Server | undefined;
-
-  /**
-   * 待处理的工具调用请求
-   * key: requestId, value: { resolve, reject }
-   */
-  var pendingRequests:
-    | Map<
-        string,
-        {
-          resolve: (value: unknown) => void;
-          reject: (error: Error) => void;
-          projectUuid?: string;
-          conversationId?: string;
-          chatRunId?: string;
-          toolName?: string;
-        }
-      >
-    | undefined;
-  /**
-   * 统一的工具广播函数（server.js 注入），用于在广播时追加上下文日志
-   */
-  var emitToolExecute: ((request: ToolCallRequest) => void) | undefined;
-
   /**
    * Chat 运行中的 AbortController（key = chatRunId）。
    * 用于在用户点击“取消”时，通过 `useChat().stop()` 触发请求中断，从而中止后端流式响应与工具等待。

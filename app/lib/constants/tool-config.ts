@@ -4,9 +4,8 @@ import { AI_TOOL_NAMES, CLIENT_TOOL_NAMES } from "./tool-names";
 /**
  * 工具默认超时配置（毫秒）。
  *
- * - AI 工具（后端执行）：通常 30s 足以完成读取/批量编辑/覆盖。
- * - 前端执行工具（Socket.IO 转发到浏览器/Electron）：读取/写入设为 60s，
- *   多页导出可能更耗时，提升到 120s。
+ * - LLM 工具（前端执行）：通常 30s 足以完成读取/批量编辑/覆盖。
+ * - 客户端桥接工具（同样在前端执行）：读取/写入设为 60s，多页导出更耗时，提升到 120s。
  */
 export const TOOL_TIMEOUT_CONFIG = {
   [AI_TOOL_NAMES.DRAWIO_READ]: 30_000,

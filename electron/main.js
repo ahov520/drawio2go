@@ -71,7 +71,7 @@ function findAvailablePort(startPort = 3000) {
 }
 
 /**
- * 启动内嵌的 Next.js + Socket.IO 服务器
+ * 启动内嵌的 Next.js HTTP 服务器
  * @returns {Promise<number>} 服务器端口
  */
 async function startEmbeddedServer() {

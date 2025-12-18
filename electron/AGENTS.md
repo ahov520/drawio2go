@@ -208,7 +208,7 @@ if (isElectron) {
 
 ### 内嵌服务器架构（2025-12-15 更新）
 
-**生产模式**：Electron 主进程通过 `fork()` 启动内嵌的 Next.js + Socket.IO 服务器
+**生产模式**：Electron 主进程通过 `fork()` 启动内嵌的 Next.js HTTP 服务器
 
 ```javascript
 // electron/main.js

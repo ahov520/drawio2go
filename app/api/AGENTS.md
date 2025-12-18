@@ -10,7 +10,7 @@ app/api/
 ├── ai-proxy/
 │   └── route.ts        # 纯 AI 代理端点（仅转发，不含业务逻辑）
 ├── chat/
-│   └── route.ts        # 聊天 API（流式响应 + 工具调用）
+│   └── route.ts        # 聊天 API（流式响应）
 ├── health/
 │   └── route.ts        # 轻量级健康检查（在线心跳）
 └── test/
@@ -21,7 +21,7 @@ app/api/
 
 | 端点            | 方法       | 功能                       | 运行时  |
 | --------------- | ---------- | -------------------------- | ------- |
-| `/api/chat`     | POST       | 流式聊天 + DrawIO 工具调用 | Node.js |
+| `/api/chat`     | POST       | 流式聊天（无 DrawIO 工具） | Node.js |
 | `/api/ai-proxy` | POST       | 纯代理：转发到 AI Provider | Node.js |
 | `/api/test`     | POST       | LLM 配置连接测试           | Edge    |
 | `/api/health`   | HEAD / GET | 健康检查（<100ms 心跳）    | Edge    |
@@ -58,7 +58,7 @@ app/api/
 #### 注意事项
 
 - 不做会话校验/项目隔离
-- 不注入 DrawIO 工具，也不使用 Socket.IO
+- 纯 HTTP 代理转发：不注入/不执行 DrawIO 工具
 
 ### `/api/chat` - 聊天端点
 
@@ -66,7 +66,7 @@ app/api/
 
 #### 功能描述
 
-基于 Vercel AI SDK 的流式聊天 API，集成 DrawIO XML 操作工具，支持多轮工具调用循环。
+基于 Vercel AI SDK 的流式聊天 API（v1.1 起不再注入/执行 DrawIO 工具）。
 
 #### 请求格式
 
@@ -106,7 +106,7 @@ type ProviderType =
 3. 转换消息 → convertToModelMessages()
 4. 校验会话所有权 → conversationId 必须属于当前 projectUuid
 5. 创建 Provider → 根据 providerType 选择
-6. 执行流式生成 → streamText() + createDrawioTools({ projectUuid, conversationId })
+6. 执行流式生成 → streamText()
 7. 返回流响应 → toUIMessageStreamResponse()
 ```
 
@@ -200,52 +200,10 @@ interface TestRequest {
 
 ---
 
-## AI 工具集成
+## DrawIO 工具（v1.1）
 
-### DrawIO 工具定义（按请求上下文实例化）
-
-**来源**: `drawio2go/app/lib/drawio-ai-tools.ts`
-
-```typescript
-const tools = createDrawioTools({
-  projectUuid, // 必填：当前项目 ID
-  conversationId, // 必填：请求所属会话 ID
-});
-```
-
-### 工具详情
-
-| 工具名              | 功能                           | 执行位置 |
-| ------------------- | ------------------------------ | -------- |
-| `drawio_read`       | XPath 查询 DrawIO XML          | 后端     |
-| `drawio_edit_batch` | 批量 XPath 编辑（原子性回滚）  | 后端     |
-| `drawio_overwrite`  | 完整替换 XML（通过 Socket.IO） | 前端     |
-
-### 工具调用流程
-
-```
-AI 决定调用工具
-    ↓
-streamText() 检测 toolCalls
-    ↓
-execute() 执行工具逻辑
-    ├── drawio_read/edit_batch → 后端 XML 操作
-    └── drawio_overwrite → Socket.IO 转发前端
-    ↓
-返回结果到 AI
-    ↓
-继续对话循环（最多 maxToolRounds 轮）
-```
-
-### 停止条件
-
-```typescript
-stopWhen: stepCountIs(normalizedConfig.maxToolRounds);
-```
-
-当工具调用轮次达到 `maxToolRounds`（默认 5）时自动停止。
-
----
+- 后端端点（`/api/chat`、`/api/ai-proxy`）不再注入/执行任何 DrawIO 工具。
+- DrawIO 工具执行已迁移到前端：见 `app/lib/frontend-tools.ts` 与 `app/hooks/useAIChat.ts`。
 
 ## 类型定义
 
@@ -381,7 +339,7 @@ return NextResponse.json({ error: "错误描述" }, { status: 400 | 401 | 500 })
 
 ### Q: 为什么 `/api/chat` 不使用 Edge Runtime？
 
-A: 聊天 API 使用 `@xmldom/xmldom` 解析 XML，该包需要 Node.js 环境。
+A: 当前端点默认运行在 Node.js Runtime（未声明 `runtime = "edge"`），以保持现有依赖与行为一致。
 
 ### Q: 如何支持新的 LLM 提供者？
 
@@ -389,10 +347,10 @@ A: 聊天 API 使用 `@xmldom/xmldom` 解析 XML，该包需要 Node.js 环境�
 2. 在 `route.ts` 的 Provider 选择逻辑中添加分支
 3. 更新 `DEFAULT_LLM_CONFIG` 如需修改默认值
 
-### Q: 工具调用超时怎么处理？
+### Q: DrawIO 工具超时怎么处理？
 
-A: `drawio_overwrite` 工具内置 60 秒超时。如需调整，修改 `drawio-ai-tools.ts` 中的超时参数。
+A: v1.1 后端不再执行 DrawIO 工具；超时由前端工具层控制（见 `TOOL_TIMEOUT_CONFIG`）。
 
 ---
 
-_最后更新: 2025-11-23_
+_最后更新: 2025-12-18_

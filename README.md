@@ -167,7 +167,7 @@ drawio2go/
 │   ├── api/               # API routes
 │   └── styles/            # CSS modules
 ├── electron/              # Electron main process
-└── server.js              # Socket.IO + Next.js server
+└── server.js              # Next.js custom HTTP server
 ```
 
 ## Development Guide
