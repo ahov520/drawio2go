@@ -8,8 +8,6 @@
     "loadingFailedLine2": "Please refresh the page or check the browser console for details.",
     "reloadPage": "Refresh page",
     "noProjectSelected": "No project selected",
-    "socketDisconnected": "⚠️ Connection lost. AI features may be unavailable.",
-    "socketConnected": "Connected",
     "savingChanges": "Saving changes...",
     "saveSuccess": "Changes saved successfully",
     "saveFailed": "Failed to save changes",

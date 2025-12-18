@@ -222,11 +222,6 @@
     "deleteConversationsDescription": "This will delete {{count}} conversations ({{messageCount}} total). This action cannot be undone."
   },
   "status": {
-    "socketDisconnected": "Connection lost",
-    "socketReconnected": "Connection restored",
-    "socketDisconnectedWithStop": "Connection lost, ongoing chat has been stopped",
-    "socketRequiredForChat": "A stable connection is required for AI features. Please wait for reconnection.",
-    "socketWarning": "AI tool features temporarily unavailable",
     "networkOffline": "Network Offline",
     "networkOfflineDesc": "Ongoing chat requests were stopped automatically. Check your connection before retrying.",
     "networkOfflineShort": "You are offline",

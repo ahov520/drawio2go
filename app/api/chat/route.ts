@@ -179,9 +179,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const modelMessages = convertToModelMessages(
-      imageResult.processedMessages,
-    );
+    const modelMessages = convertToModelMessages(imageResult.processedMessages);
 
     configAwareLogger.info("收到请求", {
       messagesCount: modelMessages.length,

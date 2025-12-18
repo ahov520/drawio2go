@@ -8,8 +8,6 @@
     "loadingFailedLine2": "请刷新页面重试，或查看浏览器控制台以获取更多信息。",
     "reloadPage": "刷新页面",
     "noProjectSelected": "未选择项目",
-    "socketDisconnected": "⚠️ 连接已断开，AI 功能可能不可用。",
-    "socketConnected": "已连接",
     "savingChanges": "正在保存更改...",
     "saveSuccess": "更改已保存",
     "saveFailed": "保存更改失败",

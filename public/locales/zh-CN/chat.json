@@ -219,11 +219,6 @@
     "deleteConversationsDescription": "将删除 {{count}} 个会话，合计 {{messageCount}}。删除后无法恢复。"
   },
   "status": {
-    "socketDisconnected": "连接已断开",
-    "socketReconnected": "连接已恢复",
-    "socketDisconnectedWithStop": "连接已断开，正在进行的聊天已停止",
-    "socketRequiredForChat": "使用 AI 功能需要稳定的网络连接，请等待重新连接",
-    "socketWarning": "AI 工具功能暂时不可用",
     "networkOffline": "网络已断开",
     "networkOfflineDesc": "正在进行的聊天请求已自动停止，请检查网络连接后重试",
     "networkOfflineShort": "网络已断开",
