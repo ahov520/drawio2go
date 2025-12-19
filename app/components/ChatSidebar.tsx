@@ -1393,8 +1393,7 @@ export default function ChatSidebar({
       // 2) 释放聊天锁，避免遗留占用
       releaseLock();
 
-      const targetConversationId =
-        activeConversationId ?? sendingSessionId;
+      const targetConversationId = activeConversationId ?? sendingSessionId;
 
       // 3) 同步标记流式结束，避免卸载时遗留 streaming 状态
       updateStreamingFlag(targetConversationId, false, { syncOnly: true });
