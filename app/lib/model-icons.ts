@@ -38,7 +38,7 @@ const providerIconMap: Record<string, IconAsset> = {
   anthropic: { Icon: Anthropic, alt: "Anthropic" },
   claude: { Icon: Anthropic, alt: "Anthropic" },
   google: { Icon: Google, alt: "Google" },
-  gemini: { Icon: Gemini, alt: "Gemini" },
+  gemini: { Icon: Google, alt: "Google Gemini" },
   meta: { Icon: Meta, alt: "Meta" },
   llama: { Icon: Meta, alt: "Meta" },
   facebook: { Icon: Meta, alt: "Meta" },
@@ -57,7 +57,7 @@ const modelIconRules: Array<{ pattern: RegExp; asset: IconAsset }> = [
     asset: { Icon: Anthropic, alt: "Claude 3" },
   },
   {
-    pattern: /gemini[-_]?((1\.5)|(2\.0))/i,
+    pattern: /gemini[-_]?((1\.5)|(2\.0)|(2\.5)|(3))/i,
     asset: { Icon: Gemini, alt: "Gemini" },
   },
   { pattern: /llama\s?\d*/i, asset: { Icon: Meta, alt: "Llama" } },

@@ -153,6 +153,7 @@ export interface LLMConfig {
 
 ```typescript
 type ProviderType =
+  | "gemini" // Google Gemini API
   | "openai-reasoning" // OpenAI o1/o3 推理模型
   | "openai-compatible" // OpenAI 兼容接口（LM Studio 等）
   | "deepseek-native" // DeepSeek 原生 API

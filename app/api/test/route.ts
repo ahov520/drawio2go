@@ -2,6 +2,7 @@ import {
   normalizeLLMConfig,
   DEFAULT_ANTHROPIC_API_URL,
   DEFAULT_DEEPSEEK_API_URL,
+  DEFAULT_GEMINI_API_URL,
   DEFAULT_OPENAI_API_URL,
 } from "@/app/lib/config-utils";
 import { LLMConfig } from "@/app/types/chat";
@@ -9,6 +10,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createDeepSeek } from "@ai-sdk/deepseek";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { createAnthropic } from "@ai-sdk/anthropic";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { generateText } from "ai";
 import { NextRequest, NextResponse } from "next/server";
 import { createLogger } from "@/lib/logger";
@@ -101,6 +103,12 @@ export async function POST(req: NextRequest) {
         apiKey: normalizedConfig.apiKey || "dummy-key",
       });
       model = deepseekProvider(normalizedConfig.modelName);
+    } else if (normalizedConfig.providerType === "gemini") {
+      const geminiProvider = createGoogleGenerativeAI({
+        baseURL: normalizedConfig.apiUrl || DEFAULT_GEMINI_API_URL,
+        apiKey: normalizedConfig.apiKey || "dummy-key",
+      });
+      model = geminiProvider(normalizedConfig.modelName);
     } else if (normalizedConfig.providerType === "anthropic") {
       const anthropicProvider = createAnthropic({
         baseURL: normalizedConfig.apiUrl || DEFAULT_ANTHROPIC_API_URL,

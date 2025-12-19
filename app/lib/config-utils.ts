@@ -113,6 +113,8 @@ Always ensure generated XML is valid and can be properly parsed by DrawIO.`;
 export const DEFAULT_OPENAI_API_URL = "https://api.openai.com/v1";
 export const DEFAULT_DEEPSEEK_API_URL = "https://api.deepseek.com";
 export const DEFAULT_ANTHROPIC_API_URL = "https://api.anthropic.com";
+export const DEFAULT_GEMINI_API_URL =
+  "https://generativelanguage.googleapis.com/v1beta";
 // 通用默认值（用于 OpenAI 兼容类型）
 export const DEFAULT_API_URL = DEFAULT_OPENAI_API_URL;
 
@@ -129,7 +131,8 @@ export function isProviderType(value: unknown): value is ProviderType {
     value === "openai-reasoning" ||
     value === "openai-compatible" ||
     value === "deepseek-native" ||
-    value === "anthropic"
+    value === "anthropic" ||
+    value === "gemini"
   );
 }
 
@@ -197,12 +200,35 @@ export const normalizeAnthropicApiUrl = (
 };
 
 /**
+ * Gemini API 的 baseURL 规范化
+ * - 移除尾部斜杠
+ * - 不自动补 /v1（保持用户配置）
+ */
+export const normalizeGeminiApiUrl = (
+  value?: string,
+  fallback: string = DEFAULT_GEMINI_API_URL,
+): string => {
+  if (!value) {
+    return fallback;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return fallback;
+  }
+
+  return stripTrailingSlashes(trimmed);
+};
+
+/**
  * 获取指定供应商类型的默认 API URL
  */
 export const getDefaultApiUrlForProvider = (
   providerType: ProviderType,
 ): string => {
   switch (providerType) {
+    case "gemini":
+      return DEFAULT_GEMINI_API_URL;
     case "anthropic":
       return DEFAULT_ANTHROPIC_API_URL;
     case "deepseek-native":
@@ -220,6 +246,9 @@ export const normalizeProviderApiUrl = (
   fallback?: string,
 ): string => {
   const defaultUrl = fallback ?? getDefaultApiUrlForProvider(providerType);
+  if (providerType === "gemini") {
+    return normalizeGeminiApiUrl(value, defaultUrl);
+  }
   if (providerType === "anthropic") {
     return normalizeAnthropicApiUrl(value, defaultUrl);
   }

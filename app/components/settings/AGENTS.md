@@ -162,7 +162,7 @@ settings.llm.apiUrl.placeholder
 settings.llm.apiUrl.description
 settings.llm.provider.label
 settings.llm.provider.description
-settings.llm.providers.[type].label        // openai-compatible, anthropic, deepseek-native, openai-reasoning
+settings.llm.providers.[type].label        // gemini, openai-compatible, anthropic, deepseek-native, openai-reasoning
 settings.llm.providers.[type].description
 settings.llm.apiKey.label
 settings.llm.apiKey.placeholder
@@ -352,6 +352,7 @@ interface ProviderOption {
 
 const PROVIDER_OPTIONS: ProviderType[] = [
   "openai-compatible",
+  "gemini",
   "anthropic",
   "deepseek-native",
   "openai-reasoning",
@@ -370,6 +371,7 @@ const getProviderOptions = (t: TFunction): ProviderOption[] => {
 ```typescript
 type ProviderType =
   | "openai-reasoning"
+  | "gemini"
   | "openai-compatible"
   | "deepseek-native"
   | "anthropic";

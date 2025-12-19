@@ -87,6 +87,10 @@
         "label": "OpenAI Compatible",
         "description": "Works with most OpenAI-compatible services"
       },
+      "gemini": {
+        "label": "Google Gemini",
+        "description": "Official Google Gemini API with multimodal support"
+      },
       "anthropic": {
         "label": "Anthropic / Claude",
         "description": "Official Anthropic API for Claude models (vision supported)"
@@ -166,6 +170,7 @@
         "description": "Select the type of provider",
         "options": {
           "openaiCompatible": "Standard OpenAI-compatible API",
+          "gemini": "Official Google Gemini API",
           "anthropic": "Official Anthropic Claude API",
           "deepseekNative": "DeepSeek native API with reasoning support",
           "openaiReasoning": "OpenAI reasoning models (o1, o3)"

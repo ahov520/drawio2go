@@ -297,6 +297,12 @@ export function ProviderEditDialog({
                           {t("models.form.type.options.openaiCompatible")}
                         </Description>
                       </ListBox.Item>
+                      <ListBox.Item id="gemini">
+                        Google Gemini
+                        <Description>
+                          {t("models.form.type.options.gemini")}
+                        </Description>
+                      </ListBox.Item>
                       <ListBox.Item id="anthropic">
                         Anthropic
                         <Description>

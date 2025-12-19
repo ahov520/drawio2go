@@ -2,10 +2,12 @@ import type { LLMConfig } from "@/app/types/chat";
 import {
   DEFAULT_ANTHROPIC_API_URL,
   DEFAULT_DEEPSEEK_API_URL,
+  DEFAULT_GEMINI_API_URL,
   DEFAULT_OPENAI_API_URL,
 } from "@/lib/config-utils";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createDeepSeek } from "@ai-sdk/deepseek";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import type { LanguageModel } from "ai";
@@ -33,6 +35,13 @@ const FACTORIES: Record<string, ModelFactory> = {
       apiKey: config.apiKey || "",
     });
     return anthropicProvider(config.modelName);
+  },
+  gemini: (config) => {
+    const geminiProvider = createGoogleGenerativeAI({
+      baseURL: config.apiUrl || DEFAULT_GEMINI_API_URL,
+      apiKey: config.apiKey || "dummy-key",
+    });
+    return geminiProvider(config.modelName);
   },
 };
 

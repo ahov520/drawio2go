@@ -8,6 +8,7 @@ declare module "ai" {
 }
 
 export type ProviderType =
+  | "gemini"
   | "openai-reasoning"
   | "openai-compatible"
   | "deepseek-native"
