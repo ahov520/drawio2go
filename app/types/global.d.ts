@@ -20,6 +20,12 @@ import type {
   Attachment,
   CreateAttachmentInput,
 } from "@/lib/storage/types";
+import type {
+  McpConfig,
+  McpServerStatus,
+  McpToolRequest,
+  McpToolResponse,
+} from "@/app/types/mcp";
 
 declare global {
   /**
@@ -172,6 +178,51 @@ declare global {
       getAttachmentsByConversation: (
         conversationId: string,
       ) => Promise<Attachment[]>;
+    };
+
+    /**
+     * Electron MCP IPC 接口
+     * 仅在 Electron 环境下可用（由 preload.js 注入）
+     */
+    electronMcp?: {
+      /**
+       * 启动 MCP 服务器。
+       *
+       * @returns 成功时返回实际绑定的 host/port
+       */
+      start: (
+        config: McpConfig,
+      ) => Promise<{ success: boolean; host: string; port: number }>;
+
+      /**
+       * 停止 MCP 服务器。
+       */
+      stop: () => Promise<{ success: boolean; message?: string }>;
+
+      /**
+       * 查询 MCP 服务器状态。
+       */
+      getStatus: () => Promise<McpServerStatus>;
+
+      /**
+       * 获取随机可用端口（8000-9000）。
+       */
+      getRandomPort: () => Promise<number>;
+
+      /**
+       * 监听工具调用请求（主进程 -> 渲染进程）。
+       *
+       * @returns 取消监听函数
+       */
+      onToolRequest: (callback: (request: McpToolRequest) => void) => () => void;
+
+      /**
+       * 发送工具执行结果（渲染进程 -> 主进程）。
+       */
+      sendToolResponse: (
+        requestId: string,
+        result: McpToolResponse["result"],
+      ) => void;
     };
   }
 }

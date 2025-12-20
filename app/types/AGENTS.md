@@ -179,6 +179,16 @@ export interface DrawioCellInfo {
 }
 ```
 
+### mcp.ts
+
+MCP（Model Context Protocol）相关的类型定义。
+
+#### 主要内容
+
+- **McpServerStatus/McpConfig**：MCP 服务器状态与启动配置（与里程碑 2 的 Electron IPC 保持一致）
+- **McpToolRequest/McpToolResponse**：工具调用请求/响应结构（与 `mcp-tool-request` / `sendToolResponse` 对齐）
+- **McpClientType**：客户端类型标记（cursor/claude-code/codex/gemini-cli/generic）
+
 ## 类型设计原则
 
 ### 1. 完整性

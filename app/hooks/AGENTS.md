@@ -331,6 +331,14 @@
 - **通知**: 检测到新版本时推送 `variant="info"` Toast（10s），并提供打开下载页的操作按钮
 - **使用场景**: `AboutSettingsPanel`（关于面板）
 
+### 22. useMcpServer _(新增，2025-12-20)_
+
+**MCP 服务器状态管理 Hook** - 在 Electron 环境下管理 MCP 服务器启动/停止与运行状态。
+
+- **状态**: `running` / `host` / `port` / `isLoading`
+- **方法**: `startServer(config)` / `stopServer()` / `refreshStatus()`
+- **特性**: 自动检测 `window.electronMcp`，挂载时自动刷新状态，内置 Toast 成功/失败提示
+
 ## 统一导出
 
 所有 Hooks 通过 `app/hooks/index.ts` 统一导出：
@@ -356,6 +364,7 @@ export { useLLMConfig } from "./useLLMConfig";
 export { useOperationToast } from "./useOperationToast";
 export { useAttachmentObjectUrl } from "./useAttachmentObjectUrl";
 export { useUpdateChecker } from "./useUpdateChecker";
+export { useMcpServer } from "./useMcpServer";
 
 // Other Hooks - 其他 Hooks
 export { useDrawioEditor } from "./useDrawioEditor";

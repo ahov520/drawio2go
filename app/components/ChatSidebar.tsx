@@ -23,6 +23,7 @@ import {
   useChatSessionsController,
   useLLMConfig,
   useOperationToast,
+  useMcpServer,
   useChatMessages,
   useChatToolExecution,
   useChatNetworkControl,
@@ -41,6 +42,9 @@ import {
 } from "@/app/lib/frontend-tools";
 import { DrainableToolQueue } from "@/app/lib/drainable-tool-queue";
 import { ChatRunStateMachine } from "@/app/lib/chat-run-state-machine";
+import { withTimeout } from "@/app/lib/utils";
+import type { McpConfig, McpToolRequest } from "@/app/types/mcp";
+import { McpConfigDialog, McpExposureOverlay } from "@/app/components/mcp";
 import { useImageAttachments } from "@/hooks/useImageAttachments";
 import { fileToDataUrl } from "@/lib/image-message-utils";
 
@@ -108,6 +112,23 @@ const runWithConcurrency = async <T, R>(
 };
 
 const CHAT_REQUEST_TIMEOUT_MS = 10 * 60_000;
+const MCP_TOOL_TIMEOUT_MS = 25_000;
+
+async function enqueueAndWait<T>(
+  queue: DrainableToolQueue,
+  task: () => Promise<T>,
+): Promise<T> {
+  return await new Promise<T>((resolve, reject) => {
+    queue.enqueue(async () => {
+      try {
+        resolve(await task());
+      } catch (error) {
+        reject(error);
+        throw error;
+      }
+    });
+  });
+}
 
 function mergeAbortSignals(
   signals: Array<AbortSignal | undefined>,
@@ -208,6 +229,7 @@ export default function ChatSidebar({
     Record<string, boolean>
   >({});
   const [currentView, setCurrentView] = useState<"chat" | "history">("chat");
+  const [configDialogOpen, setConfigDialogOpen] = useState(false);
 
   // ========== Hooks 聚合 ==========
   const { t, i18n } = useI18n();
@@ -215,6 +237,7 @@ export default function ChatSidebar({
   const { pushErrorToast, showNotice, extractErrorMessage } =
     useOperationToast();
   const imageAttachments = useImageAttachments();
+  const mcpServer = useMcpServer();
 
   const {
     llmConfig,
@@ -237,6 +260,28 @@ export default function ChatSidebar({
   const { canChat, lockHolder, acquireLock, releaseLock } =
     useChatLock(resolvedProjectUuid);
   const { isOnline, offlineReason } = useNetworkStatus();
+
+  const handleOpenMcpConfigDialog = useCallback(() => {
+    if (mcpServer.running) return;
+    setConfigDialogOpen(true);
+  }, [mcpServer.running]);
+
+  const handleCloseMcpConfigDialog = useCallback(() => {
+    setConfigDialogOpen(false);
+  }, []);
+
+  const handleConfirmMcpConfig = useCallback(
+    async (config: McpConfig) => {
+      await mcpServer.startServer(config);
+    },
+    [mcpServer],
+  );
+
+  const handleStopMcp = useCallback(() => {
+    mcpServer.stopServer().catch((error) => {
+      logger.warn("[ChatSidebar] 停止 MCP 失败", { error });
+    });
+  }, [mcpServer]);
 
   // ========== 引用 ==========
   const imageDataUrlCacheRef = useRef<Map<string, string>>(new Map());
@@ -426,6 +471,11 @@ export default function ChatSidebar({
     () => createFrontendDrawioTools(frontendToolContext),
     [frontendToolContext],
   );
+
+  const frontendToolsRef = useRef(frontendTools);
+  useEffect(() => {
+    frontendToolsRef.current = frontendTools;
+  }, [frontendTools]);
 
   const llmConfigRef = useRef(llmConfig);
   useEffect(() => {
@@ -761,6 +811,71 @@ export default function ChatSidebar({
   useEffect(() => {
     currentToolCallIdRef.current = toolExecution.currentToolCallId;
   }, [toolExecution.currentToolCallId]);
+
+  // MCP 工具调用桥接：主进程 -> 渲染进程（执行工具）-> 主进程
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const api = window.electronMcp;
+    if (!api?.onToolRequest || !api?.sendToolResponse) return;
+
+    const handleToolRequest = (request: McpToolRequest) => {
+      const tool = frontendToolsRef.current[request.toolName];
+      const execute = tool?.execute;
+      if (!tool || typeof execute !== "function") {
+        api.sendToolResponse(request.requestId, {
+          success: false,
+          error: `未知工具: ${request.toolName}`,
+        });
+        return;
+      }
+
+      enqueueAndWait(toolExecution.toolQueue, async () => {
+        const prevToolCallId = currentToolCallIdRef.current;
+        currentToolCallIdRef.current = request.requestId;
+
+        try {
+          const output = await withTimeout(
+            Promise.resolve(
+              execute(request.args as never, {
+                toolCallId: request.requestId,
+                messages: [],
+              }),
+            ),
+            MCP_TOOL_TIMEOUT_MS,
+            `[MCP] Tool execution timeout (${MCP_TOOL_TIMEOUT_MS}ms)`,
+          );
+
+          api.sendToolResponse(request.requestId, {
+            success: true,
+            data: output,
+          });
+        } catch (error) {
+          const message =
+            extractErrorMessage(error) ??
+            (error instanceof Error ? error.message : String(error)) ??
+            "未知错误";
+          api.sendToolResponse(request.requestId, {
+            success: false,
+            error: message,
+          });
+        } finally {
+          currentToolCallIdRef.current = prevToolCallId;
+        }
+      }).catch((error) => {
+        // enqueueAndWait 会在内部 task throw 时 reject；这里仅兜底，确保不影响订阅回调
+        logger.error("[ChatSidebar] MCP 工具执行队列异常", { error });
+      });
+    };
+
+    const unsubscribe = api.onToolRequest(handleToolRequest);
+    return () => {
+      try {
+        unsubscribe?.();
+      } catch (error) {
+        logger.warn("[ChatSidebar] MCP 工具监听清理失败", { error });
+      }
+    };
+  }, [extractErrorMessage, toolExecution.toolQueue]);
 
   // 监听流式状态变化，处理 tools-pending → streaming 转换
   const prevIsChatStreamingRef = useRef(isChatStreaming);
@@ -1498,58 +1613,78 @@ export default function ChatSidebar({
   );
 
   return (
-    <ChatShell
-      view={currentView}
-      alerts={alerts}
-      chatPane={
-        <>
-          <MessagePane
-            messages={displayMessages}
-            configLoading={configLoading}
-            llmConfig={llmConfig}
-            status={status}
-            expandedToolCalls={expandedToolCalls}
-            expandedThinkingBlocks={expandedThinkingBlocks}
-            onToolCallToggle={handleToolCallToggle}
-            onThinkingBlockToggle={handleThinkingBlockToggle}
+    <>
+      <ChatShell
+        view={currentView}
+        alerts={alerts}
+        chatPane={
+          <>
+            <MessagePane
+              messages={displayMessages}
+              configLoading={configLoading}
+              llmConfig={llmConfig}
+              status={status}
+              expandedToolCalls={expandedToolCalls}
+              expandedThinkingBlocks={expandedThinkingBlocks}
+              onToolCallToggle={handleToolCallToggle}
+              onThinkingBlockToggle={handleThinkingBlockToggle}
+            />
+            <Composer
+              input={input}
+              setInput={setInput}
+              isChatStreaming={isChatStreaming}
+              configLoading={configLoading}
+              llmConfig={llmConfig}
+              canSendNewMessage={canSendNewMessage}
+              lastMessageIsUser={lastMessageIsUser}
+              isOnline={isOnline}
+              onSubmit={handleSubmit}
+              onCancel={handleCancel}
+              onNewChat={handleNewChat}
+              onHistory={handleHistory}
+              onRetry={handleRetry}
+              imageAttachments={imageAttachments}
+              modelSelectorProps={{
+                providers,
+                models,
+                selectedModelId,
+                onSelectModel: handleModelChange,
+                isDisabled: modelSelectorDisabled,
+                isLoading: selectorLoading,
+                modelLabel: selectedModelLabel,
+              }}
+              mcpButton={{
+                isActive: mcpServer.running,
+                onPress: handleOpenMcpConfigDialog,
+                isDisabled: mcpServer.isLoading,
+              }}
+            />
+          </>
+        }
+        historyPane={
+          <ChatHistoryView
+            currentProjectId={currentProjectId}
+            conversations={conversations}
+            onSelectConversation={handleSelectFromHistory}
+            onBack={handleHistoryBack}
+            onDeleteConversations={handleBatchDelete}
+            onExportConversations={handleBatchExport}
           />
-          <Composer
-            input={input}
-            setInput={setInput}
-            isChatStreaming={isChatStreaming}
-            configLoading={configLoading}
-            llmConfig={llmConfig}
-            canSendNewMessage={canSendNewMessage}
-            lastMessageIsUser={lastMessageIsUser}
-            isOnline={isOnline}
-            onSubmit={handleSubmit}
-            onCancel={handleCancel}
-            onNewChat={handleNewChat}
-            onHistory={handleHistory}
-            onRetry={handleRetry}
-            imageAttachments={imageAttachments}
-            modelSelectorProps={{
-              providers,
-              models,
-              selectedModelId,
-              onSelectModel: handleModelChange,
-              isDisabled: modelSelectorDisabled,
-              isLoading: selectorLoading,
-              modelLabel: selectedModelLabel,
-            }}
-          />
-        </>
-      }
-      historyPane={
-        <ChatHistoryView
-          currentProjectId={currentProjectId}
-          conversations={conversations}
-          onSelectConversation={handleSelectFromHistory}
-          onBack={handleHistoryBack}
-          onDeleteConversations={handleBatchDelete}
-          onExportConversations={handleBatchExport}
-        />
-      }
-    />
+        }
+      />
+
+      <McpConfigDialog
+        isOpen={configDialogOpen}
+        onClose={handleCloseMcpConfigDialog}
+        onConfirm={handleConfirmMcpConfig}
+      />
+
+      <McpExposureOverlay
+        isOpen={mcpServer.running && Boolean(mcpServer.host) && Boolean(mcpServer.port)}
+        host={mcpServer.host ?? "127.0.0.1"}
+        port={mcpServer.port ?? 8000}
+        onStop={handleStopMcp}
+      />
+    </>
   );
 }
