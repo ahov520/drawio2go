@@ -74,21 +74,6 @@ const hasImageParts = (msg: unknown): boolean => {
   );
 };
 
-const hasToolPartsInLastAssistant = (messages: UseChatMessage[]): boolean => {
-  const last = messages[messages.length - 1];
-  if (!last || last.role !== "assistant") return false;
-  const parts = (last as { parts?: unknown }).parts;
-  if (!Array.isArray(parts)) return false;
-  return parts.some((part) => {
-    if (!part || typeof part !== "object") return false;
-    const type = (part as { type?: unknown }).type;
-    return (
-      typeof type === "string" &&
-      (type === "dynamic-tool" || type.startsWith("tool-"))
-    );
-  });
-};
-
 const runWithConcurrency = async <T, R>(
   items: readonly T[],
   limit: number,
@@ -688,9 +673,7 @@ export default function ChatSidebar({
     sendAutomaticallyWhen: ({ messages: currentMessages }) =>
       lastAssistantMessageIsCompleteWithToolCalls({
         messages: currentMessages,
-      }) ||
-      (finishReasonRef.current === "tool-calls" &&
-        hasToolPartsInLastAssistant(currentMessages)),
+      }),
     onFinish: async ({
       messages: finishedMessages,
       finishReason,
@@ -712,11 +695,7 @@ export default function ChatSidebar({
         logger.info("[ChatSidebar] onFinish: 工具队列已清空");
 
         const shouldContinue =
-          lastAssistantMessageIsCompleteWithToolCalls({
-            messages: finishedMessages,
-          }) ||
-          (finishReason === "tool-calls" &&
-            hasToolPartsInLastAssistant(finishedMessages));
+          !isAbort && !isError && finishReason === "tool-calls";
 
         if (shouldContinue) {
           if (toolExecution.toolError) {
