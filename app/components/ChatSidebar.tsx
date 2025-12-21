@@ -613,11 +613,16 @@ export default function ChatSidebar({
         );
       }
 
+      const normalizedModelName = (() => {
+        if (typeof rawMetadata.modelName === "string") {
+          const trimmed = rawMetadata.modelName.trim();
+          return trimmed.length > 0 ? trimmed : null;
+        }
+        return rawMetadata.modelName ?? null;
+      })();
+
       const normalizedMetadata: MessageMetadata = {
-        modelName:
-          typeof rawMetadata.modelName === "string"
-            ? rawMetadata.modelName
-            : (rawMetadata.modelName ?? null),
+        modelName: normalizedModelName,
         createdAt:
           typeof rawMetadata.createdAt === "number"
             ? rawMetadata.createdAt
@@ -1958,6 +1963,7 @@ export default function ChatSidebar({
                 messages={displayMessages}
                 configLoading={configLoading}
                 llmConfig={llmConfig}
+                ensureMessageMetadata={ensureMessageMetadata}
                 status={status}
                 expandedToolCalls={expandedToolCalls}
                 expandedThinkingBlocks={expandedThinkingBlocks}

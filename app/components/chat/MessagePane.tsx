@@ -7,6 +7,7 @@ interface MessagePaneProps {
   messages: ChatUIMessage[];
   configLoading: boolean;
   llmConfig: LLMConfig | null;
+  ensureMessageMetadata: (message: ChatUIMessage) => ChatUIMessage;
   status: string;
   expandedToolCalls: Record<string, boolean>;
   expandedThinkingBlocks: Record<string, boolean>;
@@ -23,6 +24,7 @@ export default function MessagePane({
   messages,
   configLoading,
   llmConfig,
+  ensureMessageMetadata,
   status,
   expandedToolCalls,
   expandedThinkingBlocks,
@@ -35,6 +37,7 @@ export default function MessagePane({
         messages={messages}
         configLoading={configLoading}
         llmConfig={llmConfig}
+        ensureMessageMetadata={ensureMessageMetadata}
         status={status}
         expandedToolCalls={expandedToolCalls}
         expandedThinkingBlocks={expandedThinkingBlocks}

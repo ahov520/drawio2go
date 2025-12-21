@@ -186,6 +186,10 @@ function toErrorMessage(error: unknown): string {
   return "未知错误";
 }
 
+function normalizeToError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(toErrorMessage(error));
+}
+
 /**
  * 创建中止错误
  *
@@ -415,42 +419,40 @@ export function useChatToolExecution(
         );
 
         // 7. 添加工具结果（成功）
-        // AI SDK 5.0: 不要在 onToolCall 中 await addToolResult，否则会死锁
-        // https://ai-sdk.dev/docs/migration-guides/migration-guide-5-0
-        addToolResult({
-          tool: toolName,
-          toolCallId,
-          output,
-        }).catch((error) => {
-          const normalizedError =
-            error instanceof Error ? error : new Error(toErrorMessage(error));
+        try {
+          await addToolResult({
+            tool: toolName,
+            toolCallId,
+            output,
+          });
+        } catch (submitError) {
+          const normalizedError = normalizeToError(submitError);
           logger.error("[useChatToolExecution] 提交工具结果失败（success）", {
             error: normalizedError,
             tool: toolName,
             toolCallId,
           });
           setToolError(normalizedError);
-        });
+        }
       } catch (error) {
         // 8. 处理中止错误
         if (isAbortError(error)) {
-          addToolResult({
-            state: "output-error",
-            tool: toolName,
-            toolCallId,
-            errorText: "已取消",
-          }).catch((submitError) => {
-            const normalizedError =
-              submitError instanceof Error
-                ? submitError
-                : new Error(toErrorMessage(submitError));
+          try {
+            await addToolResult({
+              state: "output-error",
+              tool: toolName,
+              toolCallId,
+              errorText: "已取消",
+            });
+          } catch (submitError) {
+            const normalizedError = normalizeToError(submitError);
             logger.error("[useChatToolExecution] 提交工具结果失败（abort）", {
               error: normalizedError,
               tool: toolName,
               toolCallId,
             });
             setToolError(normalizedError);
-          });
+          }
           return;
         }
 
@@ -458,23 +460,22 @@ export function useChatToolExecution(
         const errorText = toErrorMessage(error);
         setToolError(error instanceof Error ? error : new Error(errorText));
 
-        addToolResult({
-          state: "output-error",
-          tool: toolName,
-          toolCallId,
-          errorText,
-        }).catch((submitError) => {
-          const normalizedError =
-            submitError instanceof Error
-              ? submitError
-              : new Error(toErrorMessage(submitError));
+        try {
+          await addToolResult({
+            state: "output-error",
+            tool: toolName,
+            toolCallId,
+            errorText,
+          });
+        } catch (submitError) {
+          const normalizedError = normalizeToError(submitError);
           logger.error("[useChatToolExecution] 提交工具结果失败（error）", {
             error: normalizedError,
             tool: toolName,
             toolCallId,
           });
           setToolError(normalizedError);
-        });
+        }
       } finally {
         // 10. 清理中止控制器和当前工具调用 ID
         if (activeToolAbortRef.current === abortController) {
