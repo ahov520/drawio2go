@@ -128,7 +128,7 @@ export default function ChatInputActions({
         } finally {
           setIsSelecting(false);
         }
-      }, 150);
+      }, 300);
     },
     [isSelecting, onSelectModel, push, t],
   );

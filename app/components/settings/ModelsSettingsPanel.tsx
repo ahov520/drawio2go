@@ -159,8 +159,21 @@ export default function ModelsSettingsPanel({
     setTimeout(() => {
       setEditingProvider(provider);
       setIsEditDialogOpen(true);
-    }, 150);
+    }, 300);
   }, []);
+
+  const handleRequestDeleteProvider = useCallback(
+    (provider: ProviderConfig) => {
+      // 延迟执行，让 Dropdown 有时间完成关闭动画
+      setTimeout(() => {
+        setDeleteProviderState({
+          isOpen: true,
+          provider,
+        });
+      }, 300);
+    },
+    [],
+  );
 
   const handleCloseDialog = useCallback(() => {
     setIsEditDialogOpen(false);
@@ -238,7 +251,7 @@ export default function ModelsSettingsPanel({
         providerId: model.providerId,
         model,
       });
-    }, 150);
+    }, 300);
   }, []);
 
   const handleModelDialogOpenChange = useCallback((open: boolean) => {
@@ -335,6 +348,26 @@ export default function ModelsSettingsPanel({
     [models, refreshSettings, showToast, t, updateModel],
   );
 
+  const handleSetDefaultModelDelayed = useCallback(
+    (providerId: string, model: ModelConfig) => {
+      // 延迟执行，让 Dropdown 有时间完成关闭动画
+      setTimeout(() => {
+        void handleSetDefaultModel(providerId, model);
+      }, 300);
+    },
+    [handleSetDefaultModel],
+  );
+
+  const handleDeleteModelDelayed = useCallback(
+    (providerId: string, model: ModelConfig) => {
+      // 延迟执行，让 Dropdown 有时间完成关闭动画
+      setTimeout(() => {
+        handleDeleteModel(providerId, model);
+      }, 300);
+    },
+    [handleDeleteModel],
+  );
+
   return (
     <div className="settings-panel">
       <h3 className="section-title">{t("nav.models")}</h3>
@@ -410,10 +443,7 @@ export default function ModelsSettingsPanel({
                           if (key === "edit") {
                             handleEditProvider(provider);
                           } else if (key === "delete") {
-                            setDeleteProviderState({
-                              isOpen: true,
-                              provider,
-                            });
+                            handleRequestDeleteProvider(provider);
                           }
                         }}
                       >
@@ -660,12 +690,12 @@ export default function ModelsSettingsPanel({
                                                 } else if (
                                                   key === "set-default"
                                                 ) {
-                                                  void handleSetDefaultModel(
+                                                  handleSetDefaultModelDelayed(
                                                     provider.id,
                                                     model,
                                                   );
                                                 } else if (key === "delete") {
-                                                  handleDeleteModel(
+                                                  handleDeleteModelDelayed(
                                                     provider.id,
                                                     model,
                                                   );

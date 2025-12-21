@@ -196,7 +196,7 @@ export function McpConfigDialog({
       } finally {
         setIsSubmitting(false);
       }
-    }, 150);
+    }, 300);
   }, [canUseMcp, host, isBusy, onConfirm, onOpenChange, port]);
 
   const handleSubmit = useCallback(
