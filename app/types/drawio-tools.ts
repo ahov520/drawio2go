@@ -2,32 +2,69 @@
  * DrawIO XML 操作工具的类型定义
  */
 
+import type { ToolResult } from "./tool-errors";
+
 /**
  * 获取 XML 的返回结果（前端存储访问）
  */
-export interface GetXMLResult {
-  success: boolean;
-  xml?: string;
-  error?: string;
-}
+export type GetXMLResult = ToolResult<{
+  xml: string;
+}>;
 
 /**
  * 替换 XML 的返回结果（前端存储访问）
  */
-export interface ReplaceXMLResult {
-  success: boolean;
+export type ReplaceXMLResult = ToolResult<{
   message: string;
-  error?: string;
   xml?: string;
+}>;
+
+/**
+ * DrawIO merge 事件上下文（用于调试与错误定位）
+ */
+export interface DrawioMergeEventContext {
+  operation: "merge";
+  timestamp: number;
+}
+
+/**
+ * DrawIO merge 失败事件 detail（通过 CustomEvent("drawio-merge-error") 派发）
+ *
+ * - `error`：原始错误（可能是对象/字符串）
+ * - `errorText`：对 `error` 的可读序列化结果（用于展示/日志）
+ * - `message`：DrawIO 返回的消息（如有）
+ * - `requestId`：请求 ID（用于串联 merge 请求与回调）
+ * - `context`：上下文信息（操作类型、时间戳）
+ */
+export interface DrawioMergeErrorEventDetail {
+  error?: unknown;
+  errorText?: string;
+  message?: string;
+  requestId?: string;
+  context?: DrawioMergeEventContext;
+}
+
+/**
+ * DrawIO merge 成功事件 detail（通过 CustomEvent("drawio-merge-success") 派发）
+ */
+export interface DrawioMergeSuccessEventDetail {
+  requestId?: string;
+  context?: DrawioMergeEventContext;
 }
 
 /**
  * XML 验证结果
  */
-export interface XMLValidationResult {
-  valid: boolean;
-  error?: string;
+export interface XmlErrorLocation {
+  line: number;
+  column: number;
+  lineText: string;
+  pointer: string;
 }
+
+export type XMLValidationResult =
+  | { valid: true }
+  | { valid: false; error: string; location?: XmlErrorLocation };
 
 /**
  * drawio_read 查询结果的统一类型
@@ -79,29 +116,18 @@ export interface DrawioListResult {
  * - ls 模式：返回 DrawioListResult[]
  */
 export type DrawioReadResult =
-  | {
-      success: true;
+  | ToolResult<{
       results: DrawioQueryResult[];
       list?: undefined;
-      error?: undefined;
-    }
-  | {
-      success: true;
+    }>
+  | ToolResult<{
       list: DrawioListResult[];
       results?: undefined;
-      error?: undefined;
-    }
-  | {
-      success: false;
-      error: string;
-      results?: undefined;
-      list?: undefined;
-    };
+    }>;
 
-export interface DrawioEditBatchResult {
-  success: true;
+export type DrawioEditBatchResult = ToolResult<{
   operations_applied: number;
-}
+}>;
 
 /**
  * DrawIO 选中元素信息

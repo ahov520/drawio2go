@@ -2,9 +2,12 @@ import { tool, type Tool } from "ai";
 
 import { AI_TOOL_NAMES } from "@/lib/constants/tool-names";
 import { createLogger } from "@/lib/logger";
+import { XMLSerializer as XmldomSerializer } from "@xmldom/xmldom";
+import * as xpath from "xpath";
 
 import { normalizeDiagramXml, validateXMLFormat } from "./drawio-xml-utils";
 import { toErrorString } from "./error-handler";
+import { formatXmlParseError, tryParseXmlWithLocator } from "./xml-parse-utils";
 import {
   filterNodesByPages,
   isGlobalNode,
@@ -28,9 +31,19 @@ import type {
   DrawioReadResult,
   ReplaceXMLResult,
 } from "@/app/types/drawio-tools";
+import type {
+  ToolDrawioOperationErrorDetails,
+  ToolErrorDetails,
+  ToolErrorResult,
+  ToolPageFilterErrorDetails,
+  ToolReplaceXmlErrorDetails,
+  ToolXmlParseErrorDetails,
+  ToolXpathErrorDetails,
+} from "@/app/types/tool-errors";
 
 const logger = createLogger("Frontend DrawIO Tools");
 const { DRAWIO_READ, DRAWIO_EDIT_BATCH, DRAWIO_OVERWRITE } = AI_TOOL_NAMES;
+const xmlSerializer = new XmldomSerializer();
 
 type InsertPosition = "append_child" | "prepend_child" | "before" | "after";
 type NodeSelectionOptions = {
@@ -57,42 +70,63 @@ export interface FrontendToolContext {
   getPageFilterContext?: () => PageFilterContext | null;
 }
 
-function ensureDomParser(): DOMParser {
-  const parser = globalThis.DOMParser ? new globalThis.DOMParser() : null;
-  if (!parser) {
-    throw new Error(
-      "DOMParser not available in current environment. This tool must run in a browser-like runtime.",
-    );
-  }
-  return parser;
-}
-
-function ensureXmlSerializer(): XMLSerializer {
-  const serializer = globalThis.XMLSerializer
-    ? new globalThis.XMLSerializer()
-    : null;
-  if (!serializer) {
-    throw new Error(
-      "XMLSerializer not available in current environment. This tool must run in a browser-like runtime.",
-    );
-  }
-  return serializer;
-}
-
 function parseXml(xml: string): Document {
-  const parser = ensureDomParser();
-  const document = parser.parseFromString(xml, "text/xml");
-  const parseErrors =
-    document.getElementsByTagName?.("parsererror") ??
-    (document as unknown as Document).querySelectorAll?.("parsererror");
-  if (parseErrors && parseErrors.length > 0) {
-    const message =
-      parseErrors[0]?.textContent?.trim() || "Invalid XML structure";
-    throw new Error(
-      `XML parsing failed: ${message}. Ensure the XML is well-formed.`,
+  const parsed = tryParseXmlWithLocator(xml, "text/xml");
+  if (!parsed.success) {
+    const err = new Error(
+      `${parsed.formatted}\nEnsure the XML is well-formed.`,
     );
+    (err as Error & { errorCode?: string }).errorCode = "xml_parse";
+    (err as Error & { errorDetails?: ToolXmlParseErrorDetails }).errorDetails =
+      {
+        kind: "xml_parse",
+        error: parsed.error,
+        rawError: parsed.rawError,
+        location: parsed.location,
+        formatted: parsed.formatted,
+        stage: "diagram_xml",
+      };
+    throw err;
   }
-  return document;
+  return parsed.document;
+}
+
+function buildToolErrorResult(params: {
+  error: string;
+  message: string;
+  errorDetails?: ToolErrorDetails;
+}): ToolErrorResult {
+  return {
+    success: false,
+    error: params.error,
+    message: params.message,
+    errorDetails: params.errorDetails,
+  };
+}
+
+function normalizeUnknownToToolErrorResult(error: unknown): ToolErrorResult {
+  const record =
+    typeof error === "object" && error !== null
+      ? (error as Record<string, unknown>)
+      : null;
+
+  const errorCode =
+    (record && typeof record.errorCode === "string" && record.errorCode) ||
+    "unknown";
+
+  const details =
+    record && "errorDetails" in record
+      ? (record.errorDetails as unknown)
+      : null;
+
+  return buildToolErrorResult({
+    error: errorCode,
+    message: toErrorString(error) || "未知错误",
+    errorDetails:
+      details && typeof details === "object"
+        ? (details as ToolErrorDetails)
+        : undefined,
+  });
 }
 
 function getAllowedPageIdsOrNull(
@@ -107,9 +141,18 @@ function getAllowedPageIdsOrNull(
 
   const validation = validatePageIds(xml, filterContext.selectedPageIds);
   if (!validation.valid) {
-    throw new Error(
+    const err = new Error(
       `页面过滤失败：检测到不存在的页面 ID：${validation.invalidIds.join(", ")}`,
     );
+    (err as Error & { errorCode?: string }).errorCode = "page_filter";
+    (
+      err as Error & { errorDetails?: ToolPageFilterErrorDetails }
+    ).errorDetails = {
+      kind: "page_filter",
+      selectedPageIds: filterContext.selectedPageIds,
+      invalidPageIds: validation.invalidIds,
+    };
+    throw err;
   }
 
   return new Set(filterContext.selectedPageIds);
@@ -174,45 +217,25 @@ function resolveLocator(locator: { xpath?: string; id?: string }): string {
   );
 }
 
-function evaluateXPath(document: Document, expression: string): XPathResult {
-  try {
-    const resolver = document.documentElement
-      ? document.createNSResolver(document.documentElement)
-      : null;
-    return document.evaluate(
-      expression,
-      document,
-      resolver,
-      XPathResult.ANY_TYPE,
-      null,
-    );
-  } catch (error) {
-    const errorMsg = toErrorString(error);
-    throw new Error(`Invalid XPath expression: "${expression}". ${errorMsg}`);
-  }
-}
-
 function selectNodes(
   document: Document,
   expression: string,
   options?: NodeSelectionOptions,
 ): Node[] {
   try {
-    const resolver = document.documentElement
-      ? document.createNSResolver(document.documentElement)
-      : null;
-    const snapshot = document.evaluate(
-      expression,
-      document,
-      resolver,
-      XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
-      null,
-    );
+    const selected = xpath.select(expression, document);
 
     let nodes: Node[] = [];
-    for (let i = 0; i < snapshot.snapshotLength; i++) {
-      const item = snapshot.snapshotItem(i);
-      if (item) nodes.push(item);
+    if (Array.isArray(selected)) {
+      nodes = selected;
+    } else if (xpath.isNodeLike(selected)) {
+      nodes = [selected];
+    } else if (selected == null) {
+      nodes = [];
+    } else {
+      throw new Error(
+        `XPath expression did not return node-set results (returned ${typeof selected}).`,
+      );
     }
 
     if (
@@ -220,9 +243,16 @@ function selectNodes(
       nodes.length > 0 &&
       nodes.some(isGlobalNode)
     ) {
-      throw new Error(
+      const err = new Error(
         "当前仅选中部分页面，禁止匹配全局节点（不属于任何页面，例如 <mxfile>）。请将 XPath 限定在页面（<diagram>）范围内，或切换为“全选页面”。",
       );
+      (err as Error & { errorCode?: string }).errorCode = "page_filter";
+      (err as Error & { errorDetails?: ToolErrorDetails }).errorDetails = {
+        kind: "page_filter",
+        reason: "reject_global_nodes",
+        expression,
+      };
+      throw err;
     }
 
     if (options?.allowedPageIds) {
@@ -238,7 +268,16 @@ function selectNodes(
       throw error;
     }
     const errorMsg = toErrorString(error);
-    throw new Error(`Invalid XPath expression: "${expression}". ${errorMsg}`);
+    const err = new Error(
+      `Invalid XPath expression: "${expression}". ${errorMsg}`,
+    );
+    (err as Error & { errorCode?: string }).errorCode = "xpath_error";
+    (err as Error & { errorDetails?: ToolXpathErrorDetails }).errorDetails = {
+      kind: "xpath_error",
+      expression,
+      error: errorMsg,
+    };
+    throw err;
   }
 }
 
@@ -335,7 +374,6 @@ function getTextNodeIndex(node: Node): number {
 }
 
 function convertNodeToResult(node: Node): DrawioQueryResult | null {
-  const serializer = ensureXmlSerializer();
   const matchedXPath = buildXPathForNode(node);
 
   switch (node.nodeType) {
@@ -345,7 +383,7 @@ function convertNodeToResult(node: Node): DrawioQueryResult | null {
         type: "element",
         tag_name: element.tagName,
         attributes: collectAttributes(element),
-        xml_string: serializer.serializeToString(element),
+        xml_string: xmlSerializer.serializeToString(element),
         matched_xpath: matchedXPath,
       };
     }
@@ -392,66 +430,98 @@ function executeQueryById(
 
 function executeQueryByXpath(
   document: Document,
-  xpath: string,
+  xpathExpression: string,
   nodeSelectionOptions?: NodeSelectionOptions,
 ): DrawioQueryResult[] {
-  const trimmedXpath = xpath.trim();
-  const evaluation = evaluateXPath(document, trimmedXpath);
+  const trimmedXpath = xpathExpression.trim();
+  let selected: xpath.SelectReturnType;
+  try {
+    selected = xpath.select(trimmedXpath, document);
+  } catch (error) {
+    const errorMsg = toErrorString(error);
+    const err = new Error(
+      `Invalid XPath expression: "${trimmedXpath}". ${errorMsg}`,
+    );
+    (err as Error & { errorCode?: string }).errorCode = "xpath_error";
+    (err as Error & { errorDetails?: ToolXpathErrorDetails }).errorDetails = {
+      kind: "xpath_error",
+      expression: trimmedXpath,
+      error: errorMsg,
+    };
+    throw err;
+  }
 
-  const results: DrawioQueryResult[] = [];
+  if (!Array.isArray(selected)) {
+    if (
+      typeof selected === "string" ||
+      typeof selected === "number" ||
+      typeof selected === "boolean"
+    ) {
+      return [
+        {
+          type: "text",
+          value: String(selected),
+          matched_xpath: trimmedXpath,
+        },
+      ];
+    }
 
-  switch (evaluation.resultType) {
-    case XPathResult.STRING_TYPE: {
-      const value = evaluation.stringValue ?? "";
-      results.push({ type: "text", value, matched_xpath: trimmedXpath });
-      return results;
+    if (selected == null) {
+      return [];
     }
-    case XPathResult.NUMBER_TYPE: {
-      results.push({
-        type: "text",
-        value: String(evaluation.numberValue),
-        matched_xpath: trimmedXpath,
-      });
-      return results;
-    }
-    case XPathResult.BOOLEAN_TYPE: {
-      results.push({
-        type: "text",
-        value: String(evaluation.booleanValue),
-        matched_xpath: trimmedXpath,
-      });
-      return results;
-    }
-    case XPathResult.ANY_UNORDERED_NODE_TYPE:
-    case XPathResult.FIRST_ORDERED_NODE_TYPE: {
-      const node = evaluation.singleNodeValue;
-      if (
-        nodeSelectionOptions?.rejectGlobalNodes &&
-        node &&
-        isGlobalNode(node)
-      ) {
-        throw new Error(
+
+    if (xpath.isNodeLike(selected)) {
+      const node = selected;
+      if (nodeSelectionOptions?.rejectGlobalNodes && isGlobalNode(node)) {
+        const err = new Error(
           "当前仅选中部分页面，禁止读取全局节点（不属于任何页面，例如 <mxfile>）。请将 XPath 限定在页面（<diagram>）范围内，或切换为“全选页面”。",
         );
+        (err as Error & { errorCode?: string }).errorCode = "page_filter";
+        (err as Error & { errorDetails?: ToolErrorDetails }).errorDetails = {
+          kind: "page_filter",
+          reason: "reject_global_nodes",
+          expression: trimmedXpath,
+        };
+        throw err;
       }
 
       if (
         nodeSelectionOptions?.allowedPageIds &&
-        node &&
         !isNodeInAllowedPages(node, nodeSelectionOptions.allowedPageIds)
       ) {
         return [];
       }
 
-      const converted = node ? convertNodeToResult(node) : null;
+      const converted = convertNodeToResult(node);
       return converted ? [converted] : [];
     }
-    default:
-      break;
+
+    return [];
   }
 
-  // Node-set results (iterator/snapshot)
-  const nodes = selectNodes(document, trimmedXpath, nodeSelectionOptions);
+  let nodes: Node[] = selected;
+  if (
+    nodeSelectionOptions?.rejectGlobalNodes &&
+    nodes.length > 0 &&
+    nodes.some(isGlobalNode)
+  ) {
+    const err = new Error(
+      "当前仅选中部分页面，禁止读取全局节点（不属于任何页面，例如 <mxfile>）。请将 XPath 限定在页面（<diagram>）范围内，或切换为“全选页面”。",
+    );
+    (err as Error & { errorCode?: string }).errorCode = "page_filter";
+    (err as Error & { errorDetails?: ToolErrorDetails }).errorDetails = {
+      kind: "page_filter",
+      reason: "reject_global_nodes",
+      expression: trimmedXpath,
+    };
+    throw err;
+  }
+
+  if (nodeSelectionOptions?.allowedPageIds) {
+    nodes = filterNodesByPages(nodes, nodeSelectionOptions.allowedPageIds);
+  }
+
+  const results: DrawioQueryResult[] = [];
   for (const node of nodes) {
     const converted = convertNodeToResult(node);
     if (converted) results.push(converted);
@@ -460,19 +530,25 @@ function executeQueryByXpath(
 }
 
 function createElementFromXml(document: Document, xml: string): Element {
-  const parser = ensureDomParser();
-  const fragment = parser.parseFromString(xml, "text/xml");
-  const parseErrors =
-    fragment.getElementsByTagName?.("parsererror") ??
-    (fragment as unknown as Document).querySelectorAll?.("parsererror");
-  if (parseErrors && parseErrors.length > 0) {
-    const message = parseErrors[0]?.textContent?.trim() || "Invalid XML";
-    throw new Error(
-      `Failed to parse new_xml: ${message}. Ensure the XML fragment is well-formed.`,
+  const parsed = tryParseXmlWithLocator(xml, "text/xml");
+  if (!parsed.success) {
+    const err = new Error(
+      `Failed to parse new_xml.\n${parsed.formatted}\nEnsure the XML fragment is well-formed.`,
     );
+    (err as Error & { errorCode?: string }).errorCode = "xml_parse";
+    (err as Error & { errorDetails?: ToolXmlParseErrorDetails }).errorDetails =
+      {
+        kind: "xml_parse",
+        error: parsed.error,
+        rawError: parsed.rawError,
+        location: parsed.location,
+        formatted: parsed.formatted,
+        stage: "new_xml",
+      };
+    throw err;
   }
 
-  const element = fragment.documentElement;
+  const element = parsed.document.documentElement;
   if (!element) {
     throw new Error(
       "new_xml must contain a root element node. Received empty or text-only content.",
@@ -793,185 +869,268 @@ async function executeDrawioReadFrontend(
   input: DrawioReadInput & { description?: string },
   context: FrontendToolContext,
 ): Promise<DrawioReadResult> {
-  const { xpath, id, filter = "all", description } = input ?? {};
+  try {
+    const { xpath, id, filter = "all", description } = input ?? {};
 
-  const xmlString = await fetchCurrentDiagramXml(context);
-  const document = parseXml(xmlString);
-  const allowedPageIds = getAllowedPageIdsOrNull(context, xmlString);
-  const xpathSelectionOptions: NodeSelectionOptions | undefined = allowedPageIds
-    ? { allowedPageIds, rejectGlobalNodes: true }
-    : undefined;
+    const xmlString = await fetchCurrentDiagramXml(context);
+    const document = parseXml(xmlString);
+    const allowedPageIds = getAllowedPageIdsOrNull(context, xmlString);
+    const xpathSelectionOptions: NodeSelectionOptions | undefined =
+      allowedPageIds ? { allowedPageIds, rejectGlobalNodes: true } : undefined;
 
-  const trimmedXpath = xpath?.trim() || undefined;
-  const finalDescription = description?.trim() || "Read diagram content";
-  logger.debug("drawio_read", { description: finalDescription });
+    const trimmedXpath = xpath?.trim() || undefined;
+    const finalDescription = description?.trim() || "Read diagram content";
+    logger.debug("drawio_read", { description: finalDescription });
 
-  if (!trimmedXpath && !id) {
-    return executeListMode(document, filter, allowedPageIds ?? undefined);
+    if (!trimmedXpath && !id) {
+      return executeListMode(document, filter, allowedPageIds ?? undefined);
+    }
+
+    if (id) {
+      const results = executeQueryById(
+        document,
+        id,
+        allowedPageIds ? { allowedPageIds } : undefined,
+      );
+      return { success: true, results };
+    }
+
+    if (trimmedXpath) {
+      const results = executeQueryByXpath(
+        document,
+        trimmedXpath,
+        xpathSelectionOptions,
+      );
+      return { success: true, results };
+    }
+
+    return buildToolErrorResult({
+      error: "invalid_input",
+      message: `${DRAWIO_READ}: No valid query parameters provided. Use 'id', 'xpath', or leave empty for ls mode.`,
+      errorDetails: { kind: "unknown" },
+    });
+  } catch (error) {
+    return normalizeUnknownToToolErrorResult(error);
   }
-
-  if (id) {
-    const results = executeQueryById(
-      document,
-      id,
-      allowedPageIds ? { allowedPageIds } : undefined,
-    );
-    return { success: true, results };
-  }
-
-  if (trimmedXpath) {
-    const results = executeQueryByXpath(
-      document,
-      trimmedXpath,
-      xpathSelectionOptions,
-    );
-    return { success: true, results };
-  }
-
-  throw new Error(
-    `${DRAWIO_READ}: No valid query parameters provided. Use 'id', 'xpath', or leave empty for ls mode.`,
-  );
 }
 
 async function executeDrawioEditBatchFrontend(
   request: DrawioEditBatchRequest & { description?: string },
   context: FrontendToolContext,
 ): Promise<DrawioEditBatchResult> {
-  const { operations, description } = request;
+  try {
+    const { operations, description } = request;
 
-  if (!operations.length) {
-    return { success: true, operations_applied: 0 };
-  }
-
-  const originalXml = await fetchCurrentDiagramXml(context);
-  const document = parseXml(originalXml);
-  const allowedPageIds = getAllowedPageIdsOrNull(context, originalXml);
-  const nodeSelectionOptions: NodeSelectionOptions | undefined = allowedPageIds
-    ? { allowedPageIds, rejectGlobalNodes: true }
-    : undefined;
-
-  for (let index = 0; index < operations.length; index++) {
-    const operation = operations[index];
-    try {
-      applyOperation(document, operation, nodeSelectionOptions);
-    } catch (error) {
-      const errorMsg = toErrorString(error) || "Unknown error";
-      const locatorInfo = operation.id
-        ? `id="${operation.id}"`
-        : `xpath="${operation.xpath}"`;
-      throw new Error(
-        `Operation ${index + 1}/${operations.length} failed (${operation.type}): ${errorMsg}. ` +
-          `Locator: ${locatorInfo}. ` +
-          `All changes have been rolled back.`,
-      );
+    if (!operations.length) {
+      return { success: true, operations_applied: 0 };
     }
-  }
 
-  const serializer = ensureXmlSerializer();
-  const updatedXml = serializer.serializeToString(document);
+    const originalXml = await fetchCurrentDiagramXml(context);
+    const document = parseXml(originalXml);
+    const allowedPageIds = getAllowedPageIdsOrNull(context, originalXml);
+    const nodeSelectionOptions: NodeSelectionOptions | undefined =
+      allowedPageIds ? { allowedPageIds, rejectGlobalNodes: true } : undefined;
 
-  const finalDescription = description?.trim() || "Batch edit diagram";
-  await context.onVersionSnapshot?.(finalDescription);
+    for (let index = 0; index < operations.length; index++) {
+      const operation = operations[index];
+      try {
+        applyOperation(document, operation, nodeSelectionOptions);
+      } catch (innerError) {
+        const errorMsg = toErrorString(innerError) || "Unknown error";
+        const details: ToolDrawioOperationErrorDetails = {
+          kind: "drawio_operation",
+          operationIndex: index,
+          operationsTotal: operations.length,
+          operationType: operation.type,
+          locator: {
+            id: typeof operation.id === "string" ? operation.id : undefined,
+            xpath:
+              typeof operation.xpath === "string" ? operation.xpath : undefined,
+          },
+          allowNoMatch: Boolean(operation.allow_no_match),
+          error: errorMsg,
+        };
 
-  const replaceResult = await context.replaceDrawioXML(updatedXml, {
-    description: finalDescription,
-  });
-
-  if (!replaceResult?.success) {
-    logger.error("Batch edit write-back failed", { replaceResult });
-
-    let rollbackSucceeded = false;
-    let rollbackErrorMessage: string | undefined;
-
-    try {
-      const rollbackResult = await context.replaceDrawioXML(originalXml, {
-        description: "Rollback after batch edit failure",
-      });
-      rollbackSucceeded = Boolean(rollbackResult?.success);
-      if (!rollbackSucceeded) {
-        rollbackErrorMessage =
-          rollbackResult?.error || "Unknown rollback failure reason";
+        const err = new Error(
+          `Operation ${index + 1}/${operations.length} failed (${operation.type}): ${errorMsg}. ` +
+            `Locator: ${buildLocatorLabel({ xpath: operation.xpath, id: operation.id })}. ` +
+            `All changes have been rolled back.`,
+        );
+        (err as Error & { errorCode?: string }).errorCode = "drawio_operation";
+        (
+          err as Error & { errorDetails?: ToolDrawioOperationErrorDetails }
+        ).errorDetails = details;
+        throw err;
       }
-    } catch (rollbackError) {
-      rollbackErrorMessage =
-        rollbackError instanceof Error
-          ? rollbackError.message
-          : String(rollbackError);
     }
 
-    const originalError =
-      replaceResult?.error ||
-      "Frontend XML replacement failed (unknown reason)";
+    const updatedXml = xmlSerializer.serializeToString(document);
 
-    const errorMessage = rollbackSucceeded
-      ? `Batch edit failed: ${originalError}. Successfully rolled back to previous state.`
-      : `Batch edit failed: ${originalError}. Rollback also failed: ${rollbackErrorMessage ?? "unknown reason"}. Diagram may be in inconsistent state.`;
+    const finalDescription = description?.trim() || "Batch edit diagram";
+    await context.onVersionSnapshot?.(finalDescription);
 
-    throw new Error(errorMessage);
+    const replaceResult = await context.replaceDrawioXML(updatedXml, {
+      description: finalDescription,
+    });
+
+    if (!replaceResult?.success) {
+      logger.error("Batch edit write-back failed", { replaceResult });
+
+      let rollbackSucceeded = false;
+      let rollbackErrorMessage: string | undefined;
+
+      try {
+        const rollbackResult = await context.replaceDrawioXML(originalXml, {
+          description: "Rollback after batch edit failure",
+        });
+        rollbackSucceeded = Boolean(rollbackResult?.success);
+        if (!rollbackSucceeded) {
+          rollbackErrorMessage =
+            (rollbackResult as { error?: string } | undefined)?.error ||
+            "Unknown rollback failure reason";
+        }
+      } catch (rollbackError) {
+        rollbackErrorMessage =
+          rollbackError instanceof Error
+            ? rollbackError.message
+            : String(rollbackError);
+      }
+
+      const originalError =
+        (replaceResult as { error?: string } | undefined)?.error ||
+        "Frontend XML replacement failed (unknown reason)";
+
+      const errorMessage = rollbackSucceeded
+        ? `Batch edit failed: ${originalError}. Successfully rolled back to previous state.`
+        : `Batch edit failed: ${originalError}. Rollback also failed: ${rollbackErrorMessage ?? "unknown reason"}. Diagram may be in inconsistent state.`;
+
+      const err = new Error(errorMessage);
+      const details: ToolReplaceXmlErrorDetails = {
+        kind: "replace_xml",
+        error: originalError,
+        message: errorMessage,
+        isRollback: false,
+        rollbackSucceeded,
+        rollbackErrorMessage,
+      };
+      (err as Error & { errorCode?: string }).errorCode = "replace_xml";
+      (
+        err as Error & { errorDetails?: ToolReplaceXmlErrorDetails }
+      ).errorDetails = details;
+      throw err;
+    }
+
+    return { success: true, operations_applied: operations.length };
+  } catch (error) {
+    return normalizeUnknownToToolErrorResult(error);
   }
-
-  return { success: true, operations_applied: operations.length };
 }
 
 async function executeDrawioOverwriteFrontend(
   input: DrawioOverwriteInput,
   context: FrontendToolContext,
 ): Promise<ReplaceXMLResult> {
-  const { drawio_xml, description } = input;
-  const validation = validateXMLFormat(drawio_xml);
-  if (!validation.valid) {
-    throw new Error(validation.error || "XML validation failed");
-  }
-
-  const finalDescription = description?.trim() || "Overwrite entire diagram";
-  const filterContext = context.getPageFilterContext?.() ?? null;
-  const selectedPageIds =
-    filterContext && !filterContext.isMcpContext
-      ? (filterContext.selectedPageIds ?? [])
-      : [];
-
-  const shouldMergePartialPages = selectedPageIds.length > 0;
-  let finalXmlToWrite = drawio_xml;
-  if (shouldMergePartialPages) {
-    const originalXml = await fetchCurrentDiagramXml(context);
-    const pageValidation = validatePageIds(originalXml, selectedPageIds);
-    if (!pageValidation.valid) {
-      throw new Error(
-        `页面过滤失败：检测到不存在的页面 ID：${pageValidation.invalidIds.join(", ")}`,
+  try {
+    const { drawio_xml, description } = input;
+    const validation = validateXMLFormat(drawio_xml);
+    if (!validation.valid) {
+      const err = new Error(
+        formatXmlParseError({
+          error: validation.error,
+          location: validation.location,
+        }),
       );
+      (err as Error & { errorCode?: string }).errorCode = "xml_parse";
+      (
+        err as Error & { errorDetails?: ToolXmlParseErrorDetails }
+      ).errorDetails = {
+        kind: "xml_parse",
+        error: validation.error,
+        location: validation.location,
+        formatted: formatXmlParseError({
+          error: validation.error,
+          location: validation.location,
+        }),
+        stage: "drawio_overwrite",
+      };
+      throw err;
     }
 
-    const merged = mergePartialPagesXml(
-      originalXml,
-      drawio_xml,
-      selectedPageIds,
-    );
-    if (!merged.success) {
-      throw new Error(`部分页面覆盖失败：${merged.error}`);
+    const finalDescription = description?.trim() || "Overwrite entire diagram";
+    const filterContext = context.getPageFilterContext?.() ?? null;
+    const selectedPageIds =
+      filterContext && !filterContext.isMcpContext
+        ? (filterContext.selectedPageIds ?? [])
+        : [];
+
+    const shouldMergePartialPages = selectedPageIds.length > 0;
+    let finalXmlToWrite = drawio_xml;
+    if (shouldMergePartialPages) {
+      const originalXml = await fetchCurrentDiagramXml(context);
+      const pageValidation = validatePageIds(originalXml, selectedPageIds);
+      if (!pageValidation.valid) {
+        const err = new Error(
+          `页面过滤失败：检测到不存在的页面 ID：${pageValidation.invalidIds.join(", ")}`,
+        );
+        (err as Error & { errorCode?: string }).errorCode = "page_filter";
+        (
+          err as Error & { errorDetails?: ToolPageFilterErrorDetails }
+        ).errorDetails = {
+          kind: "page_filter",
+          selectedPageIds,
+          invalidPageIds: pageValidation.invalidIds,
+        };
+        throw err;
+      }
+
+      const merged = mergePartialPagesXml(
+        originalXml,
+        drawio_xml,
+        selectedPageIds,
+      );
+      if (!merged.success) {
+        const err = new Error(`部分页面覆盖失败：${merged.error}`);
+        (err as Error & { errorCode?: string }).errorCode = "page_filter";
+        (err as Error & { errorDetails?: ToolErrorDetails }).errorDetails = {
+          kind: "page_filter",
+          selectedPageIds,
+          reason: merged.error,
+        };
+        throw err;
+      }
+
+      finalXmlToWrite = merged.xml;
     }
 
-    finalXmlToWrite = merged.xml;
-  }
+    await context.onVersionSnapshot?.(finalDescription);
 
-  await context.onVersionSnapshot?.(finalDescription);
+    const result = await context.replaceDrawioXML(finalXmlToWrite, {
+      description: finalDescription,
+    });
 
-  const result = await context.replaceDrawioXML(finalXmlToWrite, {
-    description: finalDescription,
-  });
+    if (!result.success) {
+      const details: ToolReplaceXmlErrorDetails = {
+        kind: "replace_xml",
+        error:
+          (result as { error?: string } | undefined)?.error || "replace_failed",
+        message: (result as { error?: string } | undefined)?.error,
+      };
 
-  if (!result.success) {
+      return buildToolErrorResult({
+        error: details.error || "replace_failed",
+        message: "操作失败",
+        errorDetails: details,
+      });
+    }
+
     return {
-      success: false,
-      message: "操作失败",
-      error: result.error || "replace_failed",
+      success: true,
+      message: "XML 已替换",
+      xml: finalXmlToWrite,
     };
+  } catch (error) {
+    return normalizeUnknownToToolErrorResult(error);
   }
-
-  return {
-    success: true,
-    message: "XML 已替换",
-    xml: finalXmlToWrite,
-  };
 }
 
 function createDrawioReadTool(context: FrontendToolContext) {

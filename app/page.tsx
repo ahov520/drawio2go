@@ -24,6 +24,7 @@ import { useAppTranslation, useI18n } from "./i18n/hooks";
 import { createLogger } from "./lib/logger";
 import { toErrorString } from "./lib/error-handler";
 import { subscribeSidebarNavigate } from "./lib/ui-events";
+import type { DrawioMergeErrorEventDetail } from "./types/drawio-tools";
 
 const logger = createLogger("Page");
 
@@ -36,6 +37,91 @@ type PendingSaveEntry = {
   xml: string;
   timeout: ReturnType<typeof setTimeout> | null;
 };
+
+function pickDrawioMergeHint(t: (key: string) => string, message: string) {
+  const lower = message.toLowerCase();
+  if (lower.includes("timeout") || lower.includes("超时")) {
+    return t("toasts.diagramUpdateFailedHintTimeout");
+  }
+  if (
+    lower.includes("xml") ||
+    lower.includes("parse") ||
+    lower.includes("invalid") ||
+    lower.includes("格式") ||
+    lower.includes("解析")
+  ) {
+    return t("toasts.diagramUpdateFailedHintInvalidXml");
+  }
+  return t("toasts.diagramUpdateFailedHintGeneral");
+}
+
+function truncateText(value: string, limit: number) {
+  return value.length > limit ? `${value.slice(0, limit)}…(truncated)` : value;
+}
+
+function safeStringifyForClipboard(value: unknown) {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return toErrorString(value);
+  }
+}
+
+function buildDrawioMergeCopyDetailsText(params: {
+  requestId?: string;
+  messageText?: string;
+  errorText?: string;
+  context?: DrawioMergeErrorEventDetail["context"];
+  rawError?: unknown;
+}) {
+  const timestamp =
+    typeof params.context?.timestamp === "number"
+      ? params.context.timestamp
+      : 0;
+
+  const payload = {
+    kind: "drawio-merge-error",
+    requestId: params.requestId ?? null,
+    message: params.messageText ?? null,
+    errorText: params.errorText || null,
+    context: params.context ?? null,
+    timestampISO: new Date(timestamp || Date.now()).toISOString(),
+    userAgent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+    rawError: params.rawError ?? null,
+  };
+
+  return truncateText(safeStringifyForClipboard(payload), 12_000);
+}
+
+async function copyTextToClipboard(text: string) {
+  const copyFallback = () => {
+    try {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "absolute";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      const succeeded = document.execCommand("copy");
+      document.body.removeChild(textarea);
+      return succeeded;
+    } catch {
+      return false;
+    }
+  };
+
+  if (navigator?.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      return copyFallback();
+    }
+  }
+
+  return copyFallback();
+}
 
 export default function Home() {
   // 存储 Hook
@@ -232,26 +318,52 @@ export default function Home() {
   // 监听 DrawIO 合并错误并展示提示
   useEffect(() => {
     const handleMergeError = (event: Event) => {
-      const customEvent = event as CustomEvent<{
-        error?: unknown;
-        message?: string;
-      }>;
-      const { error, message } = customEvent.detail || {};
+      const customEvent = event as CustomEvent<DrawioMergeErrorEventDetail>;
+      const detail = customEvent.detail || {};
+      const { error, message, requestId, context } = detail;
 
-      const mergedMessage =
-        (typeof message === "string" && message.trim()) ||
-        (error instanceof Error && error.message) ||
-        (typeof error === "string" && error.trim()) ||
-        tp("main.unknownError");
+      const errorText =
+        (typeof detail.errorText === "string" && detail.errorText.trim()) ||
+        toErrorString(error);
+
+      const messageText =
+        (typeof message === "string" && message.trim()) || undefined;
+
+      const mergedMessage = messageText || errorText || tp("main.unknownError");
+
+      const hint = pickDrawioMergeHint(t, mergedMessage);
+
+      const requestIdSuffix = requestId ? ` (requestId: ${requestId})` : "";
+      const summaryForToast = `${mergedMessage}${requestIdSuffix}；${hint}`;
+
+      const copyDetailsText = buildDrawioMergeCopyDetailsText({
+        requestId,
+        messageText,
+        errorText,
+        context,
+        rawError: error,
+      });
 
       logger.error("[DrawIO] 图表更新失败", {
+        requestId,
+        context,
+        message: messageText,
+        errorText,
         error,
-        message,
       });
+
       push({
         variant: "danger",
         title: t("toasts.diagramUpdateFailedTitle"),
-        description: t("toasts.diagramUpdateFailed", { error: mergedMessage }),
+        description: t("toasts.diagramUpdateFailed", {
+          error: summaryForToast,
+        }),
+        action: {
+          label: t("toast.copyDetails"),
+          onPress: async () => {
+            await copyTextToClipboard(copyDetailsText);
+          },
+        },
       });
     };
 

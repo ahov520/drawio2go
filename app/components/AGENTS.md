@@ -74,6 +74,10 @@
 - URL: `https://embed.diagrams.net/?embed=1&proto=json&ui=kennedy`
 - 消息协议：`{action: 'load'|'merge'|'export', ...}`
 - 安全检查：验证 `event.origin.includes('diagrams.net')`
+- merge 回调事件：
+  - 失败：`window.dispatchEvent(new CustomEvent("drawio-merge-error", { detail }))`
+  - 成功：`window.dispatchEvent(new CustomEvent("drawio-merge-success", { detail }))`
+  - detail 会包含 `requestId`、`context.timestamp`，并提供 `errorText`（对象型 error 的可读序列化）
 
 **Ref API**:
 

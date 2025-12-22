@@ -28,7 +28,8 @@
   "toast": {
     "close": "关闭通知",
     "copy": "复制通知内容",
-    "copied": "已复制"
+    "copied": "已复制",
+    "copyDetails": "复制详情"
   },
   "toasts": {
     "noContentToSave": "没有可保存的内容",
@@ -57,6 +58,9 @@
     "versionExportFailed": "版本 {{version}} 导出失败：{{error}}",
     "diagramUpdateFailedTitle": "图表更新失败",
     "diagramUpdateFailed": "图表更新失败：{{error}}。已自动回滚到修改前状态",
+    "diagramUpdateFailedHintTimeout": "建议：等待编辑器加载完成后重试，或刷新页面。",
+    "diagramUpdateFailedHintInvalidXml": "建议：检查/撤销最近修改，或导出后重新导入文件。",
+    "diagramUpdateFailedHintGeneral": "建议：刷新编辑器后重试；若持续发生，请导出文件并重启应用。",
     "operationFailedTitle": "操作失败",
     "operationSuccessTitle": "操作成功",
     "operationWarningTitle": "提示",

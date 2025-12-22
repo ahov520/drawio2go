@@ -43,24 +43,20 @@ DrawIO XML 操作的完整类型定义。
 
 #### 前端桥接类型
 
-**GetXMLResult** - 获取 XML 的返回结果
+**GetXMLResult** - 获取 XML 的返回结果（统一 ToolResult）
 
 ```typescript
-export interface GetXMLResult {
-  success: boolean;
-  xml?: string;
-  error?: string;
-}
+export type GetXMLResult =
+  | { success: true; xml: string }
+  | { success: false; error: string; message: string; errorDetails?: unknown };
 ```
 
-**ReplaceXMLResult** - 替换 XML 的返回结果
+**ReplaceXMLResult** - 替换 XML 的返回结果（统一 ToolResult）
 
 ```typescript
-export interface ReplaceXMLResult {
-  success: boolean;
-  message: string;
-  error?: string;
-}
+export type ReplaceXMLResult =
+  | { success: true; message: string; xml?: string }
+  | { success: false; error: string; message: string; errorDetails?: unknown };
 ```
 
 **XMLValidationResult** - XML 验证结果
@@ -89,13 +85,13 @@ export type DrawioQueryResult =
   | { type: "text"; value: string; matched_xpath: string };
 ```
 
-**DrawioReadResult** - 查询响应
+**DrawioReadResult** - 查询响应（失败时携带 errorDetails）
 
 ```typescript
 export type DrawioReadResult =
   | { success: true; results: DrawioQueryResult[] }
   | { success: true; list: DrawioListResult[] }
-  | { success: false; error: string };
+  | { success: false; error: string; message: string; errorDetails?: unknown };
 ```
 
 **DrawioReadInput** - 查询输入（支持 xpath/id 以及 ls 筛选）

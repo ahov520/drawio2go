@@ -9,6 +9,7 @@ import type {
   MessageMetadata,
   ToolInvocationState,
 } from "@/app/types/chat";
+import { isToolErrorResult } from "@/app/types/tool-errors";
 import { createLogger, type Logger } from "@/lib/logger";
 import { toErrorString } from "./error-handler";
 
@@ -258,6 +259,7 @@ interface CanonicalToolPart {
   input?: unknown;
   output?: unknown;
   errorText?: string;
+  errorDetails?: unknown;
   providerExecuted?: boolean;
   callProviderMetadata?: unknown;
   preliminary?: boolean;
@@ -271,6 +273,7 @@ function extractToolFields(part: Record<string, unknown>): {
   input?: unknown;
   output?: unknown;
   errorText?: string;
+  errorDetails?: unknown;
   providerExecuted?: boolean;
   callProviderMetadata?: unknown;
   preliminary?: unknown;
@@ -348,6 +351,12 @@ function extractToolFields(part: Record<string, unknown>): {
         (part as { data?: unknown }).data)
       : undefined);
 
+  const errorDetails =
+    (source as { errorDetails?: unknown }).errorDetails ??
+    (source !== part
+      ? (part as { errorDetails?: unknown }).errorDetails
+      : undefined);
+
   const errorTextCandidates: unknown[] = [
     (source as { errorText?: unknown }).errorText,
     (source as { error?: unknown }).error,
@@ -406,6 +415,7 @@ function extractToolFields(part: Record<string, unknown>): {
     input,
     output,
     errorText,
+    errorDetails,
     providerExecuted,
     callProviderMetadata,
     preliminary,
@@ -421,6 +431,10 @@ function inferToolState(params: {
   errorText?: string;
 }): ToolInvocationState {
   const { rawState, type, output, errorText } = params;
+
+  if (isToolErrorResult(output)) {
+    return "output-error";
+  }
 
   const fallback: ToolInvocationState = (() => {
     if (type === "tool-result") {
@@ -473,6 +487,7 @@ function buildCanonicalToolPart(
     input,
     output,
     errorText,
+    errorDetails,
     providerExecuted,
     callProviderMetadata,
     preliminary,
@@ -495,6 +510,10 @@ function buildCanonicalToolPart(
     errorText,
   });
 
+  const derivedErrorText =
+    errorText ??
+    (isToolErrorResult(output) ? output.message || output.error : undefined);
+
   const canonical: CanonicalToolPart = {
     type: canonicalType,
     toolName,
@@ -506,7 +525,8 @@ function buildCanonicalToolPart(
 
   addIfDefined(canonicalRecord, "input", input);
   addIfDefined(canonicalRecord, "output", output);
-  addIfDefined(canonicalRecord, "errorText", errorText);
+  addIfDefined(canonicalRecord, "errorText", derivedErrorText);
+  addIfDefined(canonicalRecord, "errorDetails", errorDetails);
   addIfDefined(canonicalRecord, "providerExecuted", providerExecuted);
   addIfDefined(canonicalRecord, "callProviderMetadata", callProviderMetadata);
   addIfDefined(canonicalRecord, "preliminary", preliminary);

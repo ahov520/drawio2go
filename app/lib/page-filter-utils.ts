@@ -1,5 +1,6 @@
 import { extractPagesFromXml } from "@/lib/storage/page-metadata";
-import { getDomParser, getXmlSerializer } from "./dom-parser-cache";
+import { XMLSerializer as XmldomSerializer } from "@xmldom/xmldom";
+import { tryParseXmlWithLocator } from "./xml-parse-utils";
 
 function normalizePageId(value: string | null | undefined): string | null {
   const trimmed = value?.trim();
@@ -88,24 +89,12 @@ function getDirectChildDiagrams(mxfile: Element): Element[] {
 function parseXmlDocument(
   xml: string,
 ): { success: true; document: Document } | { success: false; error: string } {
-  const parser = getDomParser();
-  if (!parser) {
-    return { success: false, error: "当前环境不支持 DOMParser，无法解析 XML" };
-  }
-
   try {
-    const document = parser.parseFromString(xml, "text/xml");
-    const parseErrors =
-      document.getElementsByTagName?.("parsererror") ??
-      (document as unknown as Document).querySelectorAll?.("parsererror");
-
-    if (parseErrors && parseErrors.length > 0) {
-      const message =
-        parseErrors[0]?.textContent?.trim() || "XML 格式错误，解析失败";
-      return { success: false, error: message };
+    const parsed = tryParseXmlWithLocator(xml, "text/xml");
+    if (!parsed.success) {
+      return { success: false, error: parsed.formatted };
     }
-
-    return { success: true, document };
+    return { success: true, document: parsed.document };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return { success: false, error: message || "XML 解析异常" };
@@ -414,13 +403,7 @@ export function mergePartialPagesXml(
     return { success: false, error: validateIds.error };
   }
 
-  const serializer = getXmlSerializer();
-  if (!serializer) {
-    return {
-      success: false,
-      error: "当前环境不支持 XMLSerializer，无法序列化 XML",
-    };
-  }
+  const serializer = new XmldomSerializer();
 
   const originalDiagramMapResult = buildOriginalDiagramMap(originalRoot);
   if (!originalDiagramMapResult.success) {

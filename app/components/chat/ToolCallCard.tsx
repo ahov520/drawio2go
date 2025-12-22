@@ -11,6 +11,7 @@ import {
 } from "./utils/toolUtils";
 import { useAppTranslation } from "@/app/i18n/hooks";
 import { createLogger } from "@/lib/logger";
+import { isToolErrorResult } from "@/app/types/tool-errors";
 
 const logger = createLogger("ToolCallCard");
 
@@ -20,10 +21,67 @@ const I18N_KEYS = {
   collapse: "toolCalls.actions.collapse",
   copyInput: "toolCalls.actions.copyInput",
   copyOutput: "toolCalls.actions.copyOutput",
+  copyError: "toolCalls.actions.copyError",
   error: "toolCalls.error",
   parameters: "toolCalls.parameters",
   result: "toolCalls.result",
 } as const;
+
+function formatZodValidationDetails(details: Record<string, unknown>): string {
+  const issuesRaw = (details as { issues?: unknown }).issues;
+  const issues = Array.isArray(issuesRaw)
+    ? (issuesRaw as Array<Record<string, unknown>>)
+    : [];
+
+  if (issues.length === 0) {
+    return JSON.stringify(details, null, 2);
+  }
+
+  return issues
+    .map((issue) => {
+      const path = Array.isArray(issue.path)
+        ? (issue.path as Array<string | number>).map(String).join(".")
+        : "";
+      const label = path ? path : "(root)";
+      const msg =
+        typeof issue.message === "string"
+          ? issue.message
+          : JSON.stringify(issue);
+      return `- ${label}: ${msg}`;
+    })
+    .join("\n");
+}
+
+function formatXmlParseDetails(
+  details: Record<string, unknown>,
+): string | null {
+  const formatted =
+    typeof (details as { formatted?: unknown }).formatted === "string"
+      ? ((details as { formatted?: string }).formatted as string)
+      : null;
+  return formatted || null;
+}
+
+function formatToolErrorDetails(errorDetails: unknown): string | null {
+  if (errorDetails == null) return null;
+
+  if (typeof errorDetails !== "object") {
+    return JSON.stringify(errorDetails, null, 2);
+  }
+
+  const details = errorDetails as Record<string, unknown>;
+  const kind = typeof details.kind === "string" ? details.kind : "";
+
+  if (kind === "zod_validation") {
+    return formatZodValidationDetails(details);
+  }
+
+  if (kind === "xml_parse") {
+    return formatXmlParseDetails(details) ?? JSON.stringify(details, null, 2);
+  }
+
+  return JSON.stringify(details, null, 2);
+}
 
 interface ToolCallCardProps {
   part: ToolMessagePart;
@@ -38,18 +96,27 @@ export default function ToolCallCard({
 }: ToolCallCardProps) {
   const { t } = useAppTranslation("chat");
   const title = getToolTitle(part.type, t);
-  const meta = getToolStatusMeta(part.state, t);
+  const toolErrorResult = isToolErrorResult(part.output) ? part.output : null;
+  const effectiveState = toolErrorResult ? "output-error" : part.state;
+  const meta = getToolStatusMeta(effectiveState, t);
   const StatusIcon = meta.Icon;
   const [copiedInput, setCopiedInput] = useState(false);
   const [copiedOutput, setCopiedOutput] = useState(false);
   const [copiedError, setCopiedError] = useState(false);
 
-  const showInput = Boolean(part.input);
-  const showOutput = Boolean(part.output);
+  const showInput = part.input !== undefined;
+  const showOutput = part.output !== undefined;
+
+  const errorSummary =
+    part.errorText ?? toolErrorResult?.message ?? t(I18N_KEYS.error);
+  const errorDetails =
+    part.errorDetails ?? toolErrorResult?.errorDetails ?? undefined;
+  const errorDetailsText = formatToolErrorDetails(errorDetails);
 
   // 判断是否为进行中状态（正在调用或等待执行）
   const isInProgress =
-    part.state === "input-streaming" || part.state === "input-available";
+    effectiveState === "input-streaming" ||
+    effectiveState === "input-available";
 
   // 通用复制处理函数
   const handleCopy = async (
@@ -75,8 +142,21 @@ export default function ToolCallCard({
     handleCopy(JSON.stringify(part.output, null, 2), setCopiedOutput, "output");
 
   // 复制错误信息
-  const handleCopyError = () =>
-    handleCopy(part.errorText ?? t(I18N_KEYS.error), setCopiedError, "error");
+  const handleCopyError = () => {
+    const payload: Record<string, unknown> = {
+      type: part.type,
+      state: part.state,
+      toolCallId: part.toolCallId,
+      errorText: errorSummary,
+    };
+    if (errorDetails !== undefined) payload.errorDetails = errorDetails;
+    if (part.output !== undefined) payload.output = part.output;
+    return handleCopy(
+      JSON.stringify(payload, null, 2),
+      setCopiedError,
+      "error",
+    );
+  };
 
   const { pressProps: togglePressProps } = usePress({ onPress: onToggle });
   const { pressProps: copyErrorPressProps } = usePress({
@@ -129,11 +209,13 @@ export default function ToolCallCard({
           </svg>
         </div>
       </button>
-      <div className="tool-call-summary">{getToolSummary(part, t)}</div>
+      <div className="tool-call-summary">
+        {getToolSummary({ ...part, state: effectiveState }, t)}
+      </div>
       {expanded ? (
         <div className="tool-call-body">
           {/* 错误信息区块 */}
-          {part.state === "output-error" && (
+          {effectiveState === "output-error" && (
             <div className="tool-call-section">
               <div className="tool-call-section-header">
                 <div className="tool-call-section-title">
@@ -143,19 +225,20 @@ export default function ToolCallCard({
                   type="button"
                   className="tool-call-copy-icon-button"
                   title={
-                    copiedError ? t(I18N_KEYS.copied) : t(I18N_KEYS.copyOutput)
+                    copiedError ? t(I18N_KEYS.copied) : t(I18N_KEYS.copyError)
                   }
                   aria-label={
-                    copiedError ? t(I18N_KEYS.copied) : t(I18N_KEYS.copyOutput)
+                    copiedError ? t(I18N_KEYS.copied) : t(I18N_KEYS.copyError)
                   }
                   {...copyErrorPressProps}
                 >
                   {copiedError ? <Check size={14} /> : <Copy size={14} />}
                 </button>
               </div>
-              <div className="tool-call-error-text">
-                {part.errorText ?? t(I18N_KEYS.error)}
-              </div>
+              <div className="tool-call-error-text">{errorSummary}</div>
+              {errorDetailsText && (
+                <pre className="tool-call-json">{errorDetailsText}</pre>
+              )}
             </div>
           )}
 

@@ -1,4 +1,5 @@
 import type { UIDataTypes, UIMessage, UIMessagePart, UITools } from "ai";
+import type { ToolErrorDetails } from "./tool-errors";
 
 declare module "ai" {
   interface ReasoningOutput {
@@ -111,6 +112,11 @@ export interface ToolInvocation {
   input?: unknown;
   output?: unknown;
   errorText?: string;
+  /**
+   * 可选的结构化错误详情（与 output 可共存）
+   * - 推荐：将规范化错误放在 output（ToolErrorResult），此字段可作为兼容/冗余存储
+   */
+  errorDetails?: ToolErrorDetails;
   providerExecuted?: boolean;
   preliminary?: boolean;
   dynamic?: boolean;

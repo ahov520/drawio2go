@@ -11,6 +11,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { AI_TOOL_NAMES } from "@/lib/constants/tool-names";
+import type { ToolErrorDetails } from "@/app/types/tool-errors";
 
 const { DRAWIO_READ, DRAWIO_EDIT_BATCH, DRAWIO_OVERWRITE } = AI_TOOL_NAMES;
 const TOOL_PREFIX = "tool-" as const;
@@ -67,5 +68,6 @@ export interface ToolMessagePart {
   input?: unknown;
   output?: unknown;
   errorText?: string;
+  errorDetails?: ToolErrorDetails;
   [key: string]: unknown;
 }

@@ -28,7 +28,8 @@
   "toast": {
     "close": "Close notification",
     "copy": "Copy notification",
-    "copied": "Copied"
+    "copied": "Copied",
+    "copyDetails": "Copy details"
   },
   "toasts": {
     "noContentToSave": "Nothing to save.",
@@ -57,6 +58,9 @@
     "versionExportFailed": "Version {{version}} export failed: {{error}}",
     "diagramUpdateFailedTitle": "Diagram update failed",
     "diagramUpdateFailed": "Diagram update failed: {{error}}. Changes were rolled back.",
+    "diagramUpdateFailedHintTimeout": "Suggestion: wait for the editor to finish loading, then try again or refresh the page.",
+    "diagramUpdateFailedHintInvalidXml": "Suggestion: check/undo recent changes, or export and re-import the file.",
+    "diagramUpdateFailedHintGeneral": "Suggestion: refresh the editor and try again. If it keeps happening, export your file and restart the app.",
     "operationFailedTitle": "Action failed",
     "operationSuccessTitle": "Success",
     "operationWarningTitle": "Notice",

@@ -8,7 +8,7 @@
 
 - **constants/tool-names.ts**: 工具名称常量与类型定义（AI 工具 / 前端执行工具）
 - **constants/tool-config.ts**: 工具默认超时配置（毫秒），覆盖所有工具
-- **drawio-tools.ts**: 浏览器端的 XML 存储桥接（统一存储抽象层 + 事件通知）
+- **drawio-tools.ts**: 浏览器端的 XML 存储桥接（统一存储抽象层 + 事件通知），包含 `waitForMergeValidation()`（返回含 `requestId/context/rawError` 的 merge 结果）
 - **frontend-tools.ts**: 前端 AI 工具定义与执行（`drawio_read` / `drawio_edit_batch` / `drawio_overwrite`），通过注入回调直接读取/写入编辑器 XML
 - **schemas/drawio-tool-schemas.ts**: DrawIO AI 工具参数的统一 Zod Schema 单一真源（含类型导出）
 - **svg-export-utils.ts**: DrawIO 多页面 SVG 导出工具（页面拆分、单页 XML 重建、结果序列化）

@@ -33,6 +33,7 @@ import {
   useChatLifecycle,
   usePageSelection,
 } from "@/app/hooks";
+import type { AddToolResultFn } from "@/app/hooks/useChatToolExecution";
 import { useAlertDialog } from "@/app/components/alert";
 import { useI18n } from "@/app/i18n/hooks";
 import {
@@ -145,8 +146,10 @@ async function createDrawioXmlSnapshot(
   }
 
   const storageResult = await getDrawioXML();
-  if (storageResult.success && storageResult.xml) return storageResult.xml;
-  throw new Error(storageResult.error || "无法获取 DrawIO XML 快照");
+  if (storageResult.success) return storageResult.xml;
+  throw new Error(
+    storageResult.message || storageResult.error || "无法获取 DrawIO XML 快照",
+  );
 }
 
 async function enqueueAndWait<T>(
@@ -374,8 +377,10 @@ async function getDrawioXmlFromRef(
   }
 
   const storageResult = await getDrawioXML();
-  if (storageResult.success && storageResult.xml) return storageResult.xml;
-  throw new Error(storageResult.error || "无法获取 DrawIO XML");
+  if (storageResult.success) return storageResult.xml;
+  throw new Error(
+    storageResult.message || storageResult.error || "无法获取 DrawIO XML",
+  );
 }
 
 async function replaceDrawioXmlFromRef(
@@ -1273,7 +1278,7 @@ export default function ChatSidebar({
   // 工具执行 Hook
   const toolExecution = useChatToolExecution({
     frontendTools,
-    addToolResult,
+    addToolResult: addToolResult as unknown as AddToolResultFn,
   });
 
   // 同步 currentToolCallId

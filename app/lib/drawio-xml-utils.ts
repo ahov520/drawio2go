@@ -1,8 +1,8 @@
 import { inflateRaw } from "pako";
 import { ErrorCodes, type ErrorCode } from "@/app/errors/error-codes";
 import type { XMLValidationResult } from "@/app/types/drawio-tools";
-import { getDomParser } from "./dom-parser-cache";
 import { toErrorString } from "./error-handler";
+import { tryParseXmlWithLocator } from "./xml-parse-utils";
 
 const DATA_URI_PREFIX = "data:image/svg+xml;base64,";
 const DIAGRAM_TAG_REGEX = /<diagram\b([^>]*)>([\s\S]*?)<\/diagram>/gi;
@@ -15,24 +15,14 @@ const buildXmlError = (code: ErrorCode, message: string) =>
  * 验证 XML 格式是否合法
  */
 export function validateXMLFormat(xml: string): XMLValidationResult {
-  const parser = getDomParser();
-  if (!parser) {
-    return {
-      valid: false,
-      error: "当前环境不支持 DOMParser，无法验证 XML",
-    };
-  }
-
   try {
-    const doc = parser.parseFromString(xml, "text/xml");
-    const parseErrors =
-      doc.getElementsByTagName?.("parsererror") ??
-      (doc as unknown as Document).querySelectorAll?.("parsererror");
-
-    if (parseErrors && parseErrors.length > 0) {
-      const message =
-        parseErrors[0]?.textContent?.trim() || "XML 格式错误，解析失败";
-      return { valid: false, error: message };
+    const parsed = tryParseXmlWithLocator(xml, "text/xml");
+    if (!parsed.success) {
+      return {
+        valid: false,
+        error: parsed.error || "XML 格式错误，解析失败",
+        location: parsed.location,
+      };
     }
 
     return { valid: true };

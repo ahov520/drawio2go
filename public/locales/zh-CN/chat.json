@@ -153,6 +153,7 @@
       "expand": "展开详情",
       "collapse": "收起详情",
       "copyInput": "复制输入",
+      "copyError": "复制错误",
       "copyOutput": "复制输出",
       "retry": "重试执行"
     },

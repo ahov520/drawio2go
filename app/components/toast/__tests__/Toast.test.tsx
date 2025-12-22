@@ -187,8 +187,11 @@ describe("Toast", () => {
       await vi.advanceTimersByTimeAsync(10);
 
       expect(timer.pause).toHaveBeenCalledWith(toast.id);
-      expect(timer.getRemaining()).toBeGreaterThanOrEqual(999);
-      expect(timer.getRemaining()).toBeLessThanOrEqual(1001);
+      const expectedRemaining = duration - 1000;
+      expect(timer.getRemaining()).toBeGreaterThanOrEqual(
+        expectedRemaining - 100,
+      );
+      expect(timer.getRemaining()).toBeLessThanOrEqual(expectedRemaining + 100);
 
       onDismiss.mockClear();
 

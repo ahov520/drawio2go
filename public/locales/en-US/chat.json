@@ -153,6 +153,7 @@
       "expand": "Expand details",
       "collapse": "Collapse details",
       "copyInput": "Copy input",
+      "copyError": "Copy error",
       "copyOutput": "Copy output",
       "retry": "Retry call"
     },

@@ -10,6 +10,7 @@ import {
   type ToolStatusMeta,
   type ToolStatusMetaDefinition,
 } from "../constants/toolConstants";
+import { isToolErrorResult } from "@/app/types/tool-errors";
 
 const getByteLength = (value: unknown): number => {
   if (value === undefined || value === null) return 0;
@@ -54,7 +55,10 @@ export const getToolSummary = (part: ToolMessagePart, t: TFunction): string => {
     }
     case "output-error":
       return t("toolCalls.summary.error", {
-        message: part.errorText ?? t("toolCalls.error"),
+        message:
+          part.errorText ??
+          (isToolErrorResult(part.output) ? part.output.message : undefined) ??
+          t("toolCalls.error"),
       });
     default:
       return t("toolCalls.status.default");

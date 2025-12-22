@@ -183,6 +183,48 @@ describe("convertMessageToUIMessage", () => {
     expect(part.input).toEqual({ path: "diagram.xml" });
   });
 
+  it("工具 output 为 ToolErrorResult：强制 state=output-error，并派生 errorText", () => {
+    const parts = [
+      {
+        type: TOOL_DRAWIO_READ,
+        toolName: DRAWIO_READ,
+        toolCallId: "call-err",
+        state: "output-available",
+        output: {
+          success: false,
+          error: "xpath_error",
+          message: "Invalid XPath",
+          errorDetails: {
+            kind: "xpath_error",
+            expression: "///",
+            error: "boom",
+          },
+        },
+      },
+    ];
+
+    const msg: Message = {
+      id: "m-err",
+      conversation_id: "conv-err",
+      role: "assistant",
+      parts_structure: JSON.stringify(parts),
+      created_at: 123,
+      sequence_number: 1,
+      model_name: "deepseek",
+    };
+
+    const ui = convertMessageToUIMessage(msg);
+    const part = ui.parts[0] as {
+      state?: string;
+      errorText?: string;
+      output?: unknown;
+    };
+
+    expect(part.state).toBe("output-error");
+    expect(part.errorText).toBe("Invalid XPath");
+    expect(part.output).toMatchObject({ success: false, error: "xpath_error" });
+  });
+
   it("无效 JSON 与空字符串返回空 parts 并记录错误", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
 

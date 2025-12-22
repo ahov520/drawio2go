@@ -15,6 +15,7 @@ import { WIP_VERSION } from "./storage/constants";
 import { resolveCurrentProjectUuid } from "./storage/current-project";
 import { createDefaultDiagramXml } from "./storage/default-diagram-xml";
 import { normalizeDiagramXml, validateXMLFormat } from "./drawio-xml-utils";
+import { formatXmlParseError } from "./xml-parse-utils";
 import {
   persistWipVersion,
   prepareXmlContext,
@@ -25,6 +26,11 @@ import { createLogger } from "@/lib/logger";
 import { toErrorString } from "./error-handler";
 import type { RefObject } from "react";
 import type { DrawioEditorRef } from "@/app/components/DrawioEditorNative";
+import type {
+  DrawioMergeErrorEventDetail,
+  DrawioMergeEventContext,
+  DrawioMergeSuccessEventDetail,
+} from "@/app/types/drawio-tools";
 
 const logger = createLogger("DrawIO Tools");
 
@@ -68,8 +74,10 @@ export async function saveDrawioXML(xml: string): Promise<void> {
     const validation = validateXMLFormat(context.normalizedXml);
     if (!validation.valid) {
       throw new Error(
-        validation.error ||
-          `[${ErrorCodes.XML_INVALID_FORMAT}] Decoded result is not valid XML`,
+        `[${ErrorCodes.XML_INVALID_FORMAT}] ${formatXmlParseError({
+          error: validation.error,
+          location: validation.location,
+        })}`,
       );
     }
     await saveDrawioXMLInternal(context);
@@ -86,7 +94,8 @@ export async function getDrawioXML(): Promise<GetXMLResult> {
   if (typeof window === "undefined") {
     return {
       success: false,
-      error: `[${ErrorCodes.XML_ENV_NOT_SUPPORTED}] This function can only be used in browser environment`,
+      error: String(ErrorCodes.XML_ENV_NOT_SUPPORTED),
+      message: `[${ErrorCodes.XML_ENV_NOT_SUPPORTED}] This function can only be used in browser environment`,
     };
   }
 
@@ -99,7 +108,8 @@ export async function getDrawioXML(): Promise<GetXMLResult> {
     if (!project) {
       return {
         success: false,
-        error: `[${ErrorCodes.STORAGE_PROJECT_NOT_FOUND}] Project not found: ${projectUuid}`,
+        error: String(ErrorCodes.STORAGE_PROJECT_NOT_FOUND),
+        message: `[${ErrorCodes.STORAGE_PROJECT_NOT_FOUND}] Project not found: ${projectUuid}`,
       };
     }
 
@@ -128,9 +138,11 @@ export async function getDrawioXML(): Promise<GetXMLResult> {
     };
   } catch (error) {
     logger.error("读取 XML 失败", { error });
+    const message = toErrorString(error) || "读取数据失败";
     return {
       success: false,
-      error: toErrorString(error) || "读取数据失败",
+      error: "read_failed",
+      message,
     };
   }
 }
@@ -193,7 +205,10 @@ export async function replaceDrawioXML(
       return {
         success: false,
         message: `[${ErrorCodes.XML_INVALID_FORMAT}] Decoded result is not valid XML`,
-        error: validation.error,
+        error: formatXmlParseError({
+          error: validation.error,
+          location: validation.location,
+        }),
       };
     }
 
@@ -356,28 +371,25 @@ export async function replaceDrawioXML(
 }
 
 // 等待 DrawIO merge 结果（包含成功/失败），超时视为失败
-export const waitForMergeValidation = (
-  currentRequestId: string,
-  timeoutMs = 10500,
-): Promise<{
+export type WaitForMergeValidationResult = {
   error?: string;
   message?: string;
   requestId?: string;
   success?: boolean;
-} | null> => {
+  rawError?: unknown;
+  context?: DrawioMergeEventContext;
+};
+
+export const waitForMergeValidation = (
+  currentRequestId: string,
+  timeoutMs = 10500,
+): Promise<WaitForMergeValidationResult | null> => {
   return new Promise((resolve) => {
     const controller = new AbortController();
     const { signal } = controller;
     let settled = false;
 
-    const finish = (
-      payload: {
-        error?: string;
-        message?: string;
-        requestId?: string;
-        success?: boolean;
-      } | null,
-    ) => {
+    const finish = (payload: WaitForMergeValidationResult | null) => {
       if (settled) return;
       settled = true;
       controller.abort();
@@ -385,17 +397,16 @@ export const waitForMergeValidation = (
     };
 
     const timer = window.setTimeout(() => {
-      finish({ error: "timeout", message: "等待 DrawIO 响应超时" });
+      finish({
+        error: "timeout",
+        message: "等待 DrawIO 响应超时",
+        requestId: currentRequestId || undefined,
+        context: { operation: "merge", timestamp: Date.now() },
+      });
     }, timeoutMs);
 
     const onMergeError = (event: Event) => {
-      const detail = (
-        event as CustomEvent<{
-          error?: string;
-          message?: string;
-          requestId?: string;
-        }>
-      ).detail;
+      const detail = (event as CustomEvent<DrawioMergeErrorEventDetail>).detail;
       const eventRequestId = detail?.requestId;
 
       if (currentRequestId) {
@@ -408,22 +419,26 @@ export const waitForMergeValidation = (
         window.clearTimeout(timer);
       }
 
-      const errorStr = toErrorString(detail?.error ?? "drawio_merge_error");
-      const messageStr =
-        typeof detail?.message === "string" ? detail.message : undefined;
+      const rawError = detail?.error;
+      const errorStr =
+        (typeof detail?.errorText === "string" && detail.errorText.trim()) ||
+        toErrorString(rawError ?? "drawio_merge_error");
+      const messageStr = detail?.message;
       finish({
         error: errorStr,
         message: messageStr,
         requestId: detail?.requestId,
+        rawError,
+        context: detail?.context ?? {
+          operation: "merge",
+          timestamp: Date.now(),
+        },
       });
     };
 
     const onMergeSuccess = (event: Event) => {
-      const detail = (
-        event as CustomEvent<{
-          requestId?: string;
-        }>
-      ).detail;
+      const detail = (event as CustomEvent<DrawioMergeSuccessEventDetail>)
+        .detail;
       const eventRequestId = detail?.requestId;
 
       if (currentRequestId) {
@@ -436,7 +451,14 @@ export const waitForMergeValidation = (
         window.clearTimeout(timer);
       }
 
-      finish({ success: true, requestId: eventRequestId });
+      finish({
+        success: true,
+        requestId: eventRequestId,
+        context: detail?.context ?? {
+          operation: "merge",
+          timestamp: Date.now(),
+        },
+      });
     };
 
     signal.addEventListener("abort", () => {

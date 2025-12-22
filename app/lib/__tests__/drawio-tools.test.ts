@@ -295,6 +295,9 @@ describe("replaceDrawioXML - 回滚错误处理", () => {
     const result = await replaceDrawioXML(INVALID_XML, { editorRef });
 
     expect(result.success).toBe(false);
+    if (result.success) {
+      throw new Error("expected replaceDrawioXML to fail");
+    }
     expect(result.error).toBe("merge_failed");
     expect(result.message).toBe("DrawIO 响应超时。已自动回滚到修改前状态");
     expect(editorRef.current.loadDiagram).toHaveBeenCalled();
@@ -361,6 +364,9 @@ describe("replaceDrawioXML - 回滚错误处理", () => {
     const result = await replaceDrawioXML(INVALID_XML, { editorRef });
 
     expect(result.success).toBe(false);
+    if (result.success) {
+      throw new Error("expected replaceDrawioXML to fail");
+    }
     expect(result.error).toBe("merge_failed");
     expect(editorRef.current.loadDiagram).toHaveBeenCalled();
   });
@@ -413,6 +419,9 @@ describe("replaceDrawioXML - 回滚错误处理", () => {
     const result = await replaceDrawioXML(INVALID_XML, { editorRef });
 
     expect(result.success).toBe(false);
+    if (result.success) {
+      throw new Error("expected replaceDrawioXML to fail");
+    }
     expect(result.error).toBe("merge_failed");
     expect(editorRef.current.loadDiagram).toHaveBeenCalled();
   });
