@@ -12,8 +12,8 @@
 
 ```typescript
 export interface CreateSnapshotOptions {
-  enabled: boolean                                      // 是否启用快照功能
-  drawioEditorRef: React.RefObject<HTMLIFrameElement | null>
+  enabled: boolean; // 是否启用快照功能
+  drawioEditorRef: React.RefObject<HTMLIFrameElement | null>;
 }
 
 /**
@@ -22,8 +22,8 @@ export interface CreateSnapshotOptions {
 export async function createConversationSnapshot(
   conversationId: string,
   projectUuid: string,
-  options: CreateSnapshotOptions
-): Promise<string | null>
+  options: CreateSnapshotOptions,
+): Promise<string | null>;
 ```
 
 **核心逻辑**：
@@ -50,8 +50,8 @@ export async function createConversationSnapshot(
  * 从 drawio 编辑器导出第一页 SVG
  */
 export async function exportFirstPageSVG(
-  editorRef: React.RefObject<HTMLIFrameElement | null>
-): Promise<string | null>
+  editorRef: React.RefObject<HTMLIFrameElement | null>,
+): Promise<string | null>;
 ```
 
 **实现思路**：
@@ -69,12 +69,12 @@ export async function exportFirstPageSVG(
 /**
  * 压缩 SVG 文本为 Blob
  */
-export async function compressSVG(svgText: string): Promise<Blob>
+export async function compressSVG(svgText: string): Promise<Blob>;
 
 /**
  * 解压 SVG Blob 为文本
  */
-export async function decompressSVG(blob: Blob | Buffer): Promise<string>
+export async function decompressSVG(blob: Blob | Buffer): Promise<string>;
 ```
 
 **使用库**：
@@ -91,26 +91,29 @@ export async function decompressSVG(blob: Blob | Buffer): Promise<string>
 
 ```typescript
 // 导入依赖
-import { createConversationSnapshot } from "@/app/lib/storage/conversation-snapshot"
-import { useStorageSettings } from "@/app/hooks/useStorageSettings"
+import { createConversationSnapshot } from "@/app/lib/storage/conversation-snapshot";
+import { useStorageSettings } from "@/app/hooks/useStorageSettings";
 
 // 在组件中
-const { getVersionSettings } = useStorageSettings()
+const { getVersionSettings } = useStorageSettings();
 
 // 在 onFinish 回调中
-const finalId = resolvedConversationId ?? ctx.conversationId
+const finalId = resolvedConversationId ?? ctx.conversationId;
 
-await updateStreamingFlag(finalId, false)
+await updateStreamingFlag(finalId, false);
 
 // ===== 新增：创建对话快照 =====
 try {
-  const versionSettings = await getVersionSettings()
+  const versionSettings = await getVersionSettings();
   await createConversationSnapshot(finalId, currentProjectId, {
     enabled: versionSettings.conversationSnapshot,
-    drawioEditorRef
-  })
+    drawioEditorRef,
+  });
 } catch (snapshotError) {
-  logger.warn("创建对话快照失败", { conversationId: finalId, error: snapshotError })
+  logger.warn("创建对话快照失败", {
+    conversationId: finalId,
+    error: snapshotError,
+  });
 }
 // ===============================
 ```
@@ -126,6 +129,7 @@ try {
 **文件**：确认删除对话的位置
 
 可能的位置：
+
 - `/app/components/chat/ChatHistoryView.tsx` 的 `onDeleteConversations`
 - 或其父组件的删除处理逻辑
 
@@ -134,21 +138,21 @@ try {
 ```typescript
 const handleDeleteConversations = async (conversationIds: string[]) => {
   try {
-    const storage = await getStorage()
+    const storage = await getStorage();
 
     // 删除对话快照
-    await storage.deleteConversationSnapshots(conversationIds)
+    await storage.deleteConversationSnapshots(conversationIds);
 
     // 删除对话本身
-    await storage.deleteConversations(conversationIds)
+    await storage.deleteConversations(conversationIds);
 
     // 更新 UI
     // ...
   } catch (error) {
-    logger.error("删除对话失败", { conversationIds, error })
+    logger.error("删除对话失败", { conversationIds, error });
     // 错误处理
   }
-}
+};
 ```
 
 **顺序说明**：
@@ -192,8 +196,8 @@ const editorRef = useContext(DrawioEditorContext)
 
 ```typescript
 if (!firstPageSvgText) {
-  logger.warn("导出第一页 SVG 失败,跳过快照", { conversationId })
-  return null
+  logger.warn("导出第一页 SVG 失败,跳过快照", { conversationId });
+  return null;
 }
 ```
 
@@ -201,10 +205,10 @@ if (!firstPageSvgText) {
 
 ```typescript
 try {
-  const compressedBlob = await compressSVG(firstPageSvgText)
+  const compressedBlob = await compressSVG(firstPageSvgText);
 } catch (error) {
-  logger.error("压缩 SVG 失败", { conversationId, error })
-  return null
+  logger.error("压缩 SVG 失败", { conversationId, error });
+  return null;
 }
 ```
 
@@ -226,8 +230,8 @@ logger.info("对话快照已创建", {
   conversationId,
   snapshotId,
   originalSize: firstPageSvgText.length,
-  compressedSize: compressedBlob.size
-})
+  compressedSize: compressedBlob.size,
+});
 ```
 
 ## 验收标准

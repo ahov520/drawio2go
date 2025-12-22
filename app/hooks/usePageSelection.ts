@@ -87,7 +87,9 @@ export function usePageSelection(
         for (const id of currentPageIds) nextSelected.add(id);
       }
 
-      return areSetsEqual(prevSelected, nextSelected) ? prevSelected : nextSelected;
+      return areSetsEqual(prevSelected, nextSelected)
+        ? prevSelected
+        : nextSelected;
     });
 
     prevPageIdsRef.current = new Set(currentPageIds);
@@ -118,7 +120,9 @@ export function usePageSelection(
   const selectAll = useCallback(() => {
     setSelectedPageIdsInternal((prevSelected) => {
       const nextSelected = new Set(pageIdSet);
-      return areSetsEqual(prevSelected, nextSelected) ? prevSelected : nextSelected;
+      return areSetsEqual(prevSelected, nextSelected)
+        ? prevSelected
+        : nextSelected;
     });
   }, [pageIdSet]);
 

@@ -53,15 +53,15 @@ Conversation → conversation_id → XMLVersion(conversation_id).preview_svg
 
 ## 里程碑列表
 
-| 里程碑 | 文件                        | 说明                       |
-| ------ | --------------------------- | -------------------------- |
-| M0     | `m0-database-and-settings.md` | 数据库扩展和设置系统       |
-| M1     | `m1-snapshot-hook.md`       | 对话快照加载 Hook          |
-| M2     | `m2-thumbnail-component.md` | 缩略图展示组件             |
-| M3     | `m3-list-integration.md`    | 集成到历史记录列表         |
-| M4     | `m4-styles.md`              | 样式完善                   |
-| M5     | `m5-i18n.md`                | 国际化支持                 |
-| M6     | `m6-snapshot-generation.md` | 快照生成和级联删除         |
+| 里程碑 | 文件                          | 说明                 |
+| ------ | ----------------------------- | -------------------- |
+| M0     | `m0-database-and-settings.md` | 数据库扩展和设置系统 |
+| M1     | `m1-snapshot-hook.md`         | 对话快照加载 Hook    |
+| M2     | `m2-thumbnail-component.md`   | 缩略图展示组件       |
+| M3     | `m3-list-integration.md`      | 集成到历史记录列表   |
+| M4     | `m4-styles.md`                | 样式完善             |
+| M5     | `m5-i18n.md`                  | 国际化支持           |
+| M6     | `m6-snapshot-generation.md`   | 快照生成和级联删除   |
 
 ## 依赖的现有 API
 
@@ -92,6 +92,7 @@ Conversation → conversation_id → XMLVersion(conversation_id).preview_svg
 ### 新增字段
 
 `xml_versions` 表添加字段：
+
 - `conversation_id` TEXT NULL - 对话 ID（对话快照专用）
 
 ### 新增索引

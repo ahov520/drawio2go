@@ -12,9 +12,9 @@
 
 ```typescript
 interface ConversationThumbnailProps {
-  svgDataUrl: string | null   // 预览图 Data URL
-  loading?: boolean            // 是否加载中
-  alt?: string                 // 图片 alt 文本
+  svgDataUrl: string | null; // 预览图 Data URL
+  loading?: boolean; // 是否加载中
+  alt?: string; // 图片 alt 文本
 }
 ```
 
@@ -29,21 +29,25 @@ interface ConversationThumbnailProps {
 ### 1. 加载中
 
 ```tsx
-{loading && (
-  <Skeleton className="conversation-thumbnail-skeleton">
-    <div className="h-16 w-24 rounded bg-default-200" />
-  </Skeleton>
-)}
+{
+  loading && (
+    <Skeleton className="conversation-thumbnail-skeleton">
+      <div className="h-16 w-24 rounded bg-default-200" />
+    </Skeleton>
+  );
+}
 ```
 
 ### 2. 无预览图
 
 ```tsx
-{!loading && !svgDataUrl && (
-  <div className="conversation-thumbnail-placeholder">
-    <FileQuestion size={20} className="text-default-400" />
-  </div>
-)}
+{
+  !loading && !svgDataUrl && (
+    <div className="conversation-thumbnail-placeholder">
+      <FileQuestion size={20} className="text-default-400" />
+    </div>
+  );
+}
 ```
 
 - 虚线边框
@@ -53,14 +57,16 @@ interface ConversationThumbnailProps {
 ### 3. 有预览图
 
 ```tsx
-{!loading && svgDataUrl && (
-  <img
-    src={svgDataUrl}
-    alt={alt || "对话预览图"}
-    className="conversation-thumbnail"
-    loading="lazy"
-  />
-)}
+{
+  !loading && svgDataUrl && (
+    <img
+      src={svgDataUrl}
+      alt={alt || "对话预览图"}
+      className="conversation-thumbnail"
+      loading="lazy"
+    />
+  );
+}
 ```
 
 - `loading="lazy"` - 浏览器原生懒加载
@@ -81,15 +87,15 @@ interface ConversationThumbnailProps {
 ## 使用示例
 
 ```tsx
-import { useConversationSnapshot } from "@/app/hooks/useConversationSnapshot"
-import { ConversationThumbnail } from "./ConversationThumbnail"
+import { useConversationSnapshot } from "@/app/hooks/useConversationSnapshot";
+import { ConversationThumbnail } from "./ConversationThumbnail";
 
 function ConversationCard({ conv }) {
   const preview = useConversationSnapshot(
     conv.id,
     conv.active_xml_version_id,
-    projectUuid
-  )
+    projectUuid,
+  );
 
   return (
     <ConversationThumbnail
@@ -97,7 +103,7 @@ function ConversationCard({ conv }) {
       loading={!preview}
       alt={conv.title}
     />
-  )
+  );
 }
 ```
 

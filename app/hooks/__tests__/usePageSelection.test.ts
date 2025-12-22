@@ -4,9 +4,7 @@ import { usePageSelection } from "../usePageSelection";
 
 function buildXml(pages: Array<{ id: string; name: string }>) {
   const diagrams = pages
-    .map(
-      (page) => `<diagram id="${page.id}" name="${page.name}"></diagram>`,
-    )
+    .map((page) => `<diagram id="${page.id}" name="${page.name}"></diagram>`)
     .join("");
   return `<mxfile>${diagrams}</mxfile>`;
 }
@@ -33,7 +31,9 @@ describe("usePageSelection", () => {
   it("空 XML：回退到默认单页面，并默认全选", () => {
     const { result } = renderHook(() => usePageSelection({ xml: null }));
 
-    expect(result.current.pages).toEqual([{ id: "page-1", name: "Page 1", index: 0 }]);
+    expect(result.current.pages).toEqual([
+      { id: "page-1", name: "Page 1", index: 0 },
+    ]);
     expect(sortIds(result.current.selectedPageIds)).toEqual(["page-1"]);
     expect(result.current.isAllSelected).toBe(true);
     expect(result.current.selectedPageIndices).toEqual([]);

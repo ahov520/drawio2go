@@ -15,7 +15,7 @@
 ```typescript
 export interface XMLVersion {
   // ... 现有字段
-  conversation_id?: string | null;  // 对话 ID（对话快照专用）
+  conversation_id?: string | null; // 对话 ID（对话快照专用）
 }
 ```
 
@@ -55,17 +55,18 @@ export const STORAGE_VERSION = 2; // 从 1 升级到 2
 **文件**：`/app/lib/config-utils.ts`
 
 ```typescript
-export const STORAGE_KEY_CONVERSATION_SNAPSHOT = "settings.version.conversationSnapshot"
+export const STORAGE_KEY_CONVERSATION_SNAPSHOT =
+  "settings.version.conversationSnapshot";
 
 export interface VersionSettings {
-  autoVersionOnAIEdit: boolean
-  conversationSnapshot: boolean  // 新增
+  autoVersionOnAIEdit: boolean;
+  conversationSnapshot: boolean; // 新增
 }
 
 export const DEFAULT_VERSION_SETTINGS: VersionSettings = {
   autoVersionOnAIEdit: true,
-  conversationSnapshot: true  // 默认开启
-}
+  conversationSnapshot: true, // 默认开启
+};
 ```
 
 ### 6. 扩展 useStorageSettings Hook
@@ -152,6 +153,7 @@ deleteConversationSnapshots(conversationIds: string[]): Promise<void>
 **文件**：`/app/lib/storage/indexeddb-storage.ts`
 
 实现三个新方法：
+
 - `getConversationSnapshot`：通过 conversation_id 索引查询
 - `upsertConversationSnapshot`：检查是否存在，覆盖或新建
 - `deleteConversationSnapshots`：批量删除

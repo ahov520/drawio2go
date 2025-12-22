@@ -13,9 +13,9 @@
 ### 1. 导入依赖
 
 ```typescript
-import { useConversationSnapshot } from "@/app/hooks/useConversationSnapshot"
-import { ConversationThumbnail } from "./ConversationThumbnail"
-import { useCurrentProject } from "@/app/hooks/useCurrentProject"  // 获取当前项目
+import { useConversationSnapshot } from "@/app/hooks/useConversationSnapshot";
+import { ConversationThumbnail } from "./ConversationThumbnail";
+import { useCurrentProject } from "@/app/hooks/useCurrentProject"; // 获取当前项目
 ```
 
 ### 2. 修改 renderConversationCard 函数
@@ -24,21 +24,24 @@ import { useCurrentProject } from "@/app/hooks/useCurrentProject"  // 获取当�
 
 ```typescript
 const renderConversationCard = (conv: Conversation, index: number) => {
-  const fallbackTitle = t("conversations.defaultName", { number: index + 1 })
-  const title = conv.title || fallbackTitle
-  const isSelected = selectedIds.has(conv.id)
-  const relativeTime = formatRelativeTime(conv.updated_at ?? conv.created_at, t)
+  const fallbackTitle = t("conversations.defaultName", { number: index + 1 });
+  const title = conv.title || fallbackTitle;
+  const isSelected = selectedIds.has(conv.id);
+  const relativeTime = formatRelativeTime(
+    conv.updated_at ?? conv.created_at,
+    t,
+  );
 
   // 新增：加载对话快照
-  const currentProject = useCurrentProject()
+  const currentProject = useCurrentProject();
   const preview = useConversationSnapshot(
     conv.id,
-    conv.active_xml_version_id,  // 需确认字段名
-    currentProject?.uuid ?? "default"
-  )
+    conv.active_xml_version_id, // 需确认字段名
+    currentProject?.uuid ?? "default",
+  );
 
   // ... 渲染逻辑
-}
+};
 ```
 
 ### 3. 修改卡片布局
@@ -94,10 +97,10 @@ const renderConversationCard = (conv: Conversation, index: number) => {
 如果不存在直接字段，需要：
 
 ```typescript
-const messages = await getMessages(conv.id)
+const messages = await getMessages(conv.id);
 const lastVersionId = messages
   .reverse()
-  .find(m => m.xml_version_id)?.xml_version_id
+  .find((m) => m.xml_version_id)?.xml_version_id;
 ```
 
 ### 2. 虚拟滚动兼容
