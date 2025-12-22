@@ -199,13 +199,26 @@
 
 **附件 Object URL 生命周期 Hook** - 用于 Milestone 5 图片展示的懒加载与缓存管理。
 
-- **输入**: `attachmentId`（可为空），`options.enabled` 控制是否加载
-- **输出**: `objectUrl` / `isLoading` / `error` / `retry`
-- **特性**:
-  - Promise 去重：同一 `attachmentId` 并发请求共享同一个读取 Promise
-  - 引用计数：多个组件引用同一图片时复用 Object URL，最后一个卸载后延迟 30 秒 `revoke`
-  - LRU 缓存：最多缓存 50 张图片，超出时淘汰最久未使用且未被引用的条目
-  - 跨端读取：Web 端从 IndexedDB Blob 生成 URL；Electron 端通过 `file_path` + `window.electronFS.readFile()` 读取二进制生成 URL
+### 18. usePageSelection _(新增，2025-12-22)_
+
+**页面范围选择状态 Hook** - 管理 DrawIO 页面列表与多选状态（默认全选），并在 XML 变化时智能同步选中项（保留仍存在项、自动选中新页面、选中项全失效时回退全选）。
+
+- **输入**: `xml: string | null`
+- **输出**:
+  - `pages: DrawioPageInfo[]` - 当前页面列表
+  - `selectedPageIds: Set<string>` - 选中的页面 ID 集合
+  - `setSelectedPageIds: (ids: Set<string>) => void` - 设置选中页面
+  - `isAllSelected: boolean` - 是否全选
+  - `selectedPageIndices: number[]` - 选中页面索引数组（全选时为 []）
+  - `selectAll: () => void` - 重置为全选
+  - `togglePage: (pageId: string) => void` - 切换单个页面选中状态（禁止全不选）
+  - `toggleAll: () => void` - 切换全选状态
+- **核心特性**:
+  - 默认全选所有页面
+  - XML 变化时智能同步：保留仍存在项、自动选中新页面、选中项全失效时回退全选
+  - 禁止全不选：至少保留一页被选中
+  - Set 克隆保护：防止外部修改影响内部状态
+  - 全选时 `selectedPageIndices` 返回 `[]` 以表示全部页面（符合 M4 语义）
 
 ### 18. useChatToolExecution _(新增，2025-12-19)_
 
