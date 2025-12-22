@@ -18,49 +18,62 @@
 
 ---
 
-A modern DrawIO editor application dedicated to building better **human-AI collaborative** modeling tools with AI assistance. User-centered, not seeking simple replacement, but exploring how to best complement each other with AI.
+A modern DrawIO editor application dedicated to building better **human-AI collaborative** modeling tools with AI assistance. User-centered, not seeking simple replacement, but exploring how to best complement each other with AI. Provides out-of-the-box applications (Windows/Linux/Mac OS) or deployment as a web page.
 
 <div align="center">
 <img alt="image" src="https://github.com/user-attachments/assets/4ede9b64-dfe0-4aa7-be5c-4440ca520db7" width="60%" />
 </div>
-
 <div align="center">
 <table width="100%">
   <tr>
-    <td width="50%" valign="top" align="center">
+    <td width="33.33%" valign="top" align="center">
       <h3>Version Management</h3>
-      <p>Manual creation of major versions + automatic sub-versions on AI modifications</p>
+      <p>Manually create versions / AI automatically creates versions</p>
       <img src="https://github.com/user-attachments/assets/59d8c33a-af5c-4433-ae94-99827509e632" alt="Version Control" width="60%" />
       <br />
     </td>
-    <td width="50%" valign="top" align="center">
-      <h3>Multi-Provider Management</h3>
-      <p>Support for multiple LLM providers/models switching</p>
-      <img src="https://github.com/user-attachments/assets/eeda8d0e-0d80-45c6-a51b-104724bf2094" alt="Multi-Provider Control" width="50%" />
+    <td width="33.33%" valign="top" align="center">
+      <h3>AI-Powered Modification</h3>
+      <p>XPath-based precise deletion, modification, and query tool, effective and token-saving</p>
+      <img src="https://github.com/user-attachments/assets/db4c17b7-49f9-407d-a046-227092e70708" alt="Demo" width="60%" />
       <br />
-      <sub>Currently only supports OpenAI/DeepSeek/Anthropic formats</sub>
+    </td>
+    <td width="33.33%" valign="top" align="center">
+      <h3>MCP Service</h3>
+      <p>Start an MCP service with version management to connect with other applications</p>
+      <img src="https://github.com/user-attachments/assets/2109487f-b597-41b6-881a-8ac69a3d787c" alt="MCP" />
+      <br />
     </td>
   </tr>
-    <tr>
-    <td width="50%" valign="top" align="center">
-      <h3>Version Comparison</h3>
-      <p>Easily compare/rollback differences between modified versions</p>
-      <img src="https://github.com/user-attachments/assets/b264ee8f-dedd-429d-8501-fb02efe12b44" alt="Comparison Page" width="100%" />
-      <br />
-      <sub>Smart comparison is currently in beta, may have suboptimal effects/slow rendering</sub>
+  <tr>
+    <td width="33.33%" valign="top" align="center">
+      <h3>Multi-Vendor Management</h3>
+      <p>Supports multiple LLM vendors / multiple model switching*</p>
+      <img src="https://github.com/user-attachments/assets/eeda8d0e-0d80-45c6-a51b-104724bf2094" alt="Multi-Vendor Control" width="50%" />
       <br />
     </td>
-    <td width="50%" valign="top" align="center">
-      <h3>AI-Powered Editing</h3>
-      <p>Precise modification tools based on XPath/DrawIO element IDs</p>
-      <img src="https://github.com/user-attachments/assets/db4c17b7-49f9-407d-a046-227092e70708" alt="Demo" width="60%" />
+    <td width="33.33%" valign="top" align="center">
+      <h3>Version Comparison</h3>
+      <p>Easily compare / rollback differences between different modified versions</p>
+      <img src="https://github.com/user-attachments/assets/b264ee8f-dedd-429d-8501-fb02efe12b44" alt="Comparison Page" width="100%" />
+      <br />
+      <br />
+    </td>
+    <td width="33.33%" valign="top" align="center">
+      <h3>Canvas Context</h3>
+      <p>No longer need to describe "the few xxx on the far right", simply drag-select with the mouse, automatically parsing elements as context**</p>
+      <img src="https://github.com/user-attachments/assets/07ec5631-21bc-4a11-853a-62058061c49f" alt="Context" width="100%" />
+      <br />
       <br />
     </td>
   </tr>
 </table>
 </div>
-
-Provides ready-to-use Electron APP. Can also be deployed as a web application, see the Quick Start section below for details.
+<sub>* Currently supports Openai/Deepseek/Anthropic/Gemini formats</sub>
+<br />
+<sub>** Limited by Web API restrictions, mouse selection perception is not available in the web. But Web still has compressed canvas content context injection functionality.</sub>
+<br />
+<br />
 
 Here are some actual demos and their prompts:
 
