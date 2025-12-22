@@ -67,9 +67,9 @@ export interface UseChatLifecycleOptions {
   stateMachine: React.MutableRefObject<ChatRunStateMachine>;
 
   /**
-   * 工具队列引用
+   * 工具队列实例
    */
-  toolQueue: React.MutableRefObject<DrainableToolQueue>;
+  toolQueue: DrainableToolQueue;
 
   /**
    * 获取聊天锁
@@ -308,7 +308,7 @@ export function useChatLifecycle(
         reason,
         currentState,
         conversationId: ctx?.conversationId,
-        pendingToolCount: toolQueue.current.getPendingCount(),
+        pendingToolCount: toolQueue.getPendingCount(),
         isChatStreaming,
         shouldMarkErrored,
       });
@@ -321,14 +321,14 @@ export function useChatLifecycle(
       }
 
       // 2) 丢弃未开始的工具任务
-      const cancelledCount = toolQueue.current.cancel();
+      const cancelledCount = toolQueue.cancel();
       if (cancelledCount > 0) {
         logger.info("[forceReset] 已丢弃未开始的工具任务", { cancelledCount });
       }
 
       // 3) 等待工具队列尽快清空（避免遗留任务继续写入）
       try {
-        await toolQueue.current.drain(2000);
+        await toolQueue.drain(2000);
       } catch (error) {
         logger.warn("[forceReset] 工具队列未能在超时内清空（已继续）", {
           error,
@@ -702,7 +702,7 @@ export function useChatLifecycle(
     // 4. 等待工具队列清空（确保工具不会继续执行）
     try {
       logger.info("[handleCancel] 等待工具队列清空");
-      await toolQueue.current.drain();
+      await toolQueue.drain();
       logger.info("[handleCancel] 工具队列已清空");
     } catch (error) {
       logger.warn("[handleCancel] 工具队列清空失败", { error });

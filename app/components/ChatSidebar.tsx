@@ -573,8 +573,7 @@ export default function ChatSidebar({
   const reasoningTimersRef = useRef<Map<string, number>>(new Map());
   const finishReasonRef = useRef<string | null>(null);
 
-  // 工具执行队列和状态机
-  const toolQueue = useRef(new DrainableToolQueue());
+  // 状态机
   const stateMachine = useRef(new ChatRunStateMachine());
   const activeRequestAbortRef = useRef<AbortController | null>(null);
 
@@ -1157,6 +1156,27 @@ export default function ChatSidebar({
             throw new Error(`工具执行失败: ${toolErrorMessage}`);
           }
 
+          // 工具轮次也要落盘：避免多轮工具调用中间过程丢失（崩溃/刷新会丢）
+          try {
+            await chatService.saveNow(
+              ctx.conversationId,
+              finishedMessages as unknown as ChatUIMessage[],
+              {
+                forceTitleUpdate: false,
+                resolveConversationId,
+                onConversationResolved: (resolvedId) => {
+                  ctx.conversationId = resolvedId;
+                  setActiveConversationId(resolvedId);
+                },
+              },
+            );
+            logger.info("[ChatSidebar] onFinish: 工具轮次中间保存成功");
+          } catch (saveError) {
+            logger.error("[ChatSidebar] onFinish: 工具轮次保存失败", {
+              saveError,
+            });
+          }
+
           logger.info("[ChatSidebar] onFinish: 工具需要继续，等待下一轮");
           // 状态机转换：streaming → tools-pending（如果当前是 streaming）
           safeTransition("finish-with-tools", "onFinish/shouldContinue");
@@ -1205,6 +1225,33 @@ export default function ChatSidebar({
         logger.info("[ChatSidebar] onFinish: 会话已最终化");
       } catch (error) {
         logger.error("[ChatSidebar] onFinish: 发生错误", { error });
+
+        // 即使失败也要保存消息（保留失败现场：工具调用输入/输出/错误信息）
+        try {
+          await chatService.saveNow(
+            ctx.conversationId,
+            finishedMessages as unknown as ChatUIMessage[],
+            {
+              forceTitleUpdate: false,
+              resolveConversationId,
+              onConversationResolved: (resolvedId) => {
+                ctx.conversationId = resolvedId;
+                setActiveConversationId(resolvedId);
+              },
+            },
+          );
+          logger.info("[ChatSidebar] onFinish/catch: 已保存失败现场");
+        } catch (saveError) {
+          logger.error("[ChatSidebar] onFinish/catch: 保存消息失败", {
+            saveError,
+          });
+        }
+
+        // 异常路径也要清理 streaming 标志，避免会话长期卡在 is_streaming=true
+        logger.info("[ChatSidebar] onFinish/catch: 尝试清理 streaming 标志", {
+          conversationId: ctx.conversationId,
+        });
+        await updateStreamingFlag(ctx.conversationId, false);
 
         // 错误时转换到 errored → idle
         safeTransition("error", "onFinish/catch");
@@ -1367,7 +1414,7 @@ export default function ChatSidebar({
   // 生命周期管理 Hook
   const lifecycle = useChatLifecycle({
     stateMachine,
-    toolQueue,
+    toolQueue: toolExecution.toolQueue,
     acquireLock,
     releaseLock,
     sendMessage: (message, options) =>
@@ -1416,7 +1463,7 @@ export default function ChatSidebar({
       }
       return t(key);
     },
-    toolQueue: toolQueue.current,
+    toolQueue: toolExecution.toolQueue,
   });
 
   // 消息同步 Hook
@@ -1603,6 +1650,12 @@ export default function ChatSidebar({
   // ========== 事件处理函数 ==========
 
   const submitMessage = async () => {
+    // 新一轮开始时清理旧的 toolError，避免污染 shouldContinue 判断
+    if (toolExecution.toolError) {
+      toolExecution.setToolError(null);
+      logger.info("[ChatSidebar] submitMessage: 清理旧的 toolError");
+    }
+
     const trimmedInput = input.trim();
     const readyAttachments = imageAttachments.attachments.filter(
       (item) => item.status === "ready",
