@@ -268,7 +268,7 @@ function registerDrawioTools(server) {
   server.registerTool(
     "drawio_read",
     {
-      description: "读取当前 DrawIO 图表的 XML 内容",
+      description: "Read the XML content of the current DrawIO diagram",
       inputSchema: readSchema,
     },
     /** @param {DrawioReadArgs} args */
@@ -303,7 +303,7 @@ function registerDrawioTools(server) {
   server.registerTool(
     "drawio_edit_batch",
     {
-      description: "批量编辑 DrawIO 图表元素",
+      description: "Batch edit DrawIO diagram elements",
       inputSchema: editBatchSchema,
     },
     /** @param {DrawioEditBatchArgs} args */
@@ -326,7 +326,7 @@ function registerDrawioTools(server) {
   server.registerTool(
     "drawio_overwrite",
     {
-      description: "覆盖整个 DrawIO 图表的 XML 内容",
+      description: "Override the entire DrawIO diagram XML content",
       inputSchema: overwriteSchema,
     },
     /** @param {DrawioOverwriteArgs} args */

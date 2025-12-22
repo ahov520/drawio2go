@@ -109,7 +109,7 @@
     "characterCount": "{{current}} / {{max}} 字符"
   },
   "canvasContext": "画布上下文",
-  "canvasContextTooltip": "自动在聊天中附带画布中的元素信息，如果在APP中还会附带选中的元素信息",
+  "canvasContextTooltip": "对话自动注入压缩后的画布元素信息，App 中还会自动注入鼠标选中元素信息",
   "toolCalls": {
     "title": "工具调用",
     "parameters": "输入参数",

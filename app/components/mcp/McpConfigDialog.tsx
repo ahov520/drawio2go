@@ -29,6 +29,7 @@ import {
 import type { McpConfig, McpHost } from "@/app/types/mcp";
 import { useOperationToast } from "@/app/hooks/useOperationToast";
 import { extractSingleKey, normalizeSelection } from "@/app/lib/select-utils";
+import { useAppTranslation } from "@/app/i18n/hooks";
 
 /**
  * MCP 配置弹窗（Popover/Dropdown）Props
@@ -68,17 +69,6 @@ const DEFAULT_PORT_MODE: PortMode = "manual";
 const isElectronEnv = (): boolean =>
   typeof window !== "undefined" && typeof window.electronMcp !== "undefined";
 
-const validatePort = (raw: string): string | null => {
-  const trimmed = raw.trim();
-  if (!trimmed) return "端口不能为空";
-
-  const port = Number(trimmed);
-  if (!Number.isInteger(port)) return "端口必须是整数";
-  if (port < 1 || port > 65535) return "端口范围必须在 1-65535";
-
-  return null;
-};
-
 /**
  * MCP 配置弹窗（Popover/Dropdown）
  *
@@ -92,6 +82,7 @@ export function McpConfigDialog({
   onConfirm,
   trigger,
 }: McpConfigDialogProps) {
+  const { t } = useAppTranslation("mcp");
   const { pushErrorToast, extractErrorMessage } = useOperationToast();
 
   const [host, setHost] = useState<McpHost>(DEFAULT_HOST);
@@ -102,6 +93,20 @@ export function McpConfigDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const canUseMcp = useMemo(() => (isOpen ? isElectronEnv() : true), [isOpen]);
+
+  const validatePort = useCallback(
+    (raw: string): string | null => {
+      const trimmed = raw.trim();
+      if (!trimmed) return t("dialog.port.errorEmpty");
+
+      const port = Number(trimmed);
+      if (!Number.isInteger(port)) return t("dialog.port.errorInteger");
+      if (port < 1 || port > 65535) return t("dialog.port.errorRange");
+
+      return null;
+    },
+    [t],
+  );
 
   const isBusy = isSubmitting;
 
@@ -124,17 +129,20 @@ export function McpConfigDialog({
     }
   }, [isOpen, resetState]);
 
-  const handlePortChange = useCallback((value: string) => {
-    setPort(value);
-    setErrors((prev) => {
-      const message = validatePort(value);
-      if (!message && !prev.port) return prev;
-      const next: FormErrors = { ...prev };
-      if (message) next.port = message;
-      else delete next.port;
-      return next;
-    });
-  }, []);
+  const handlePortChange = useCallback(
+    (value: string) => {
+      setPort(value);
+      setErrors((prev) => {
+        const message = validatePort(value);
+        if (!message && !prev.port) return prev;
+        const next: FormErrors = { ...prev };
+        if (message) next.port = message;
+        else delete next.port;
+        return next;
+      });
+    },
+    [validatePort],
+  );
 
   const handleHostChange = useCallback((value: Selection | Key | null) => {
     const selection = normalizeSelection(value);
@@ -163,7 +171,7 @@ export function McpConfigDialog({
     if (!canUseMcp) return false;
     if (portMode === "random") return true;
     return validatePort(port) === null;
-  }, [canUseMcp, port, portMode]);
+  }, [canUseMcp, port, portMode, validatePort]);
 
   const submit = useCallback(async () => {
     if (isBusy) return;
@@ -184,15 +192,15 @@ export function McpConfigDialog({
     try {
       if (portMode === "random") {
         if (!isElectronEnv() || !window.electronMcp) {
-          throw new Error("当前环境不支持 MCP 服务器（仅 Electron 可用）");
+          throw new Error(t("errors.envNotSupported"));
         }
         resolvedPort = await window.electronMcp.getRandomPort();
       } else {
         resolvedPort = Number(port);
       }
     } catch (error) {
-      const message = extractErrorMessage(error) ?? "未知错误";
-      pushErrorToast(`获取随机端口失败：${message}`);
+      const message = extractErrorMessage(error) ?? t("errors.unknownError");
+      pushErrorToast(t("errors.getRandomPortFailed", { message }));
       setIsSubmitting(false);
       return;
     }
@@ -220,6 +228,8 @@ export function McpConfigDialog({
     port,
     portMode,
     pushErrorToast,
+    t,
+    validatePort,
   ]);
 
   const handleSubmit = useCallback(
@@ -245,15 +255,15 @@ export function McpConfigDialog({
       >
         <Surface className="w-full rounded-[var(--radius-lg)] bg-content1 p-4 shadow-[var(--shadow-4)] outline-none">
           <div
-            aria-label="MCP 配置"
+            aria-label={t("dialog.title")}
             className="flex max-h-[70vh] flex-col gap-4 overflow-auto"
           >
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-base font-semibold text-foreground">
-                MCP 配置
+                {t("dialog.title")}
               </h2>
               <CloseButton
-                aria-label="关闭"
+                aria-label={t("dialog.close")}
                 onPress={handleRequestClose}
                 isDisabled={isSubmitting}
               />
@@ -261,9 +271,9 @@ export function McpConfigDialog({
 
             {!canUseMcp ? (
               <Alert status="warning">
-                <Alert.Title>仅支持 APP 端</Alert.Title>
+                <Alert.Title>{t("dialog.webOnly.title")}</Alert.Title>
                 <Alert.Description>
-                  Web 端无法启动 MCP 服务器，请在 Electron 应用中使用该功能。
+                  {t("dialog.webOnly.description")}
                 </Alert.Description>
               </Alert>
             ) : null}
@@ -275,28 +285,28 @@ export function McpConfigDialog({
                 onSelectionChange={handleHostChange}
                 isDisabled={!canUseMcp || isBusy}
               >
-                <Label>监听地址</Label>
+                <Label>{t("dialog.host.label")}</Label>
                 <Select.Trigger className="mt-2 w-full">
                   <Select.Value />
                   <Select.Indicator />
                 </Select.Trigger>
                 <Select.Popover>
                   <ListBox>
-                    <ListBox.Item id="127.0.0.1" textValue="127.0.0.1（本地）">
+                    <ListBox.Item id="127.0.0.1" textValue={t("dialog.host.localhost")}>
                       <div className="flex min-w-0 flex-col">
-                        <span className="truncate">127.0.0.1（本地）</span>
+                        <span className="truncate">{t("dialog.host.localhost")}</span>
                         <Description className="text-xs text-default-500">
-                          仅本机可访问，安全性更高
+                          {t("dialog.host.localhostDesc")}
                         </Description>
                       </div>
                       <ListBox.ItemIndicator />
                     </ListBox.Item>
 
-                    <ListBox.Item id="0.0.0.0" textValue="0.0.0.0（局域网）">
+                    <ListBox.Item id="0.0.0.0" textValue={t("dialog.host.lan")}>
                       <div className="flex min-w-0 flex-col">
-                        <span className="truncate">0.0.0.0（局域网）</span>
+                        <span className="truncate">{t("dialog.host.lan")}</span>
                         <Description className="text-xs text-default-500">
-                          局域网设备可访问（请确保网络可信，避免公共 Wi‑Fi）
+                          {t("dialog.host.lanDesc")}
                         </Description>
                       </div>
                       <ListBox.ItemIndicator />
@@ -304,7 +314,7 @@ export function McpConfigDialog({
                   </ListBox>
                 </Select.Popover>
                 <Description className="mt-2">
-                  选择 MCP 服务绑定的 IP 地址。
+                  {t("dialog.host.description")}
                 </Description>
               </Select>
 
@@ -314,27 +324,27 @@ export function McpConfigDialog({
                 onSelectionChange={handlePortModeChange}
                 isDisabled={!canUseMcp || isBusy}
               >
-                <Label>端口模式</Label>
+                <Label>{t("dialog.portMode.label")}</Label>
                 <Select.Trigger className="mt-2 w-full">
                   <Select.Value />
                   <Select.Indicator />
                 </Select.Trigger>
                 <Select.Popover>
                   <ListBox>
-                    <ListBox.Item id="manual" textValue="指定">
+                    <ListBox.Item id="manual" textValue={t("dialog.portMode.manual")}>
                       <div className="flex min-w-0 flex-col">
-                        <span className="truncate">指定</span>
+                        <span className="truncate">{t("dialog.portMode.manual")}</span>
                         <Description className="text-xs text-default-500">
-                          手动输入端口
+                          {t("dialog.portMode.manualDesc")}
                         </Description>
                       </div>
                       <ListBox.ItemIndicator />
                     </ListBox.Item>
-                    <ListBox.Item id="random" textValue="随机">
+                    <ListBox.Item id="random" textValue={t("dialog.portMode.random")}>
                       <div className="flex min-w-0 flex-col">
-                        <span className="truncate">随机</span>
+                        <span className="truncate">{t("dialog.portMode.random")}</span>
                         <Description className="text-xs text-default-500">
-                          自动选择可用端口
+                          {t("dialog.portMode.randomDesc")}
                         </Description>
                       </div>
                       <ListBox.ItemIndicator />
@@ -343,8 +353,8 @@ export function McpConfigDialog({
                 </Select.Popover>
                 <Description className="mt-2">
                   {portMode === "random"
-                    ? "启动时自动选择可用端口（启动后可在暴露面板查看实际端口）。"
-                    : "手动指定服务监听端口。"}
+                    ? t("dialog.portMode.descriptionRandom")
+                    : t("dialog.portMode.descriptionManual")}
                 </Description>
               </Select>
 
@@ -354,7 +364,7 @@ export function McpConfigDialog({
                   isInvalid={Boolean(errors.port)}
                   isDisabled={!canUseMcp || isBusy}
                 >
-                  <Label>端口</Label>
+                  <Label>{t("dialog.port.label")}</Label>
                   <div className="mt-2 flex items-start gap-2">
                     <div className="min-w-0 flex-1">
                       <Input
@@ -365,7 +375,7 @@ export function McpConfigDialog({
                         onChange={(event) =>
                           handlePortChange(event.target.value)
                         }
-                        aria-label="端口"
+                        aria-label={t("dialog.port.label")}
                       />
                     </div>
                   </div>
@@ -380,7 +390,7 @@ export function McpConfigDialog({
                   onPress={handleRequestClose}
                   isDisabled={isBusy}
                 >
-                  取消
+                  {t("dialog.cancel")}
                 </Button>
                 <Button
                   type="submit"
@@ -390,10 +400,10 @@ export function McpConfigDialog({
                   {isSubmitting ? (
                     <span className="flex items-center gap-2">
                       <Spinner size="sm" />
-                      启动
+                      {t("dialog.start")}
                     </span>
                   ) : (
-                    "启动"
+                    t("dialog.start")
                   )}
                 </Button>
               </div>

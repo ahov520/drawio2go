@@ -2,6 +2,7 @@
 
 import { Button, type ButtonProps } from "@heroui/react";
 import { Server as ServerIcon } from "lucide-react";
+import { useAppTranslation } from "@/app/i18n/hooks";
 
 /**
  * MCP 按钮组件 Props
@@ -32,7 +33,8 @@ export function McpButton({
   onPress,
   ...buttonProps
 }: McpButtonProps) {
-  const label = isActive ? "暴露中" : "MCP 接口";
+  const { t } = useAppTranslation("mcp");
+  const label = isActive ? t("button.active") : t("button.inactive");
 
   return (
     <Button

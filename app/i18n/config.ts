@@ -19,6 +19,7 @@ export const namespaces = [
   "errors",
   "validation",
   "page",
+  "mcp",
 ] as const;
 export type Namespace = (typeof namespaces)[number];
 

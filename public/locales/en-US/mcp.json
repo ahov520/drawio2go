@@ -1,0 +1,70 @@
+{
+  "button": {
+    "active": "Exposed",
+    "inactive": "MCP Interface"
+  },
+  "dialog": {
+    "title": "MCP Configuration",
+    "close": "Close",
+    "cancel": "Cancel",
+    "start": "Start",
+    "host": {
+      "label": "Listen Address",
+      "description": "Select the IP address for MCP service binding.",
+      "localhost": "127.0.0.1 (Local)",
+      "localhostDesc": "Accessible only from this machine, more secure",
+      "lan": "0.0.0.0 (LAN)",
+      "lanDesc": "Accessible from LAN devices (ensure trusted network, avoid public Wi-Fi)"
+    },
+    "portMode": {
+      "label": "Port Mode",
+      "manual": "Specified",
+      "manualDesc": "Manually input port",
+      "random": "Random",
+      "randomDesc": "Auto-select available port",
+      "descriptionRandom": "Automatically select an available port at startup (check the exposure panel for the actual port after startup).",
+      "descriptionManual": "Manually specify the service listening port."
+    },
+    "port": {
+      "label": "Port",
+      "errorEmpty": "Port cannot be empty",
+      "errorInteger": "Port must be an integer",
+      "errorRange": "Port must be in range 1-65535"
+    },
+    "webOnly": {
+      "title": "APP Only",
+      "description": "Cannot start MCP server in web environment. Please use this feature in the Electron app."
+    }
+  },
+  "overlay": {
+    "title": "MCP Interface Exposed",
+    "status": "Exposing: {{host}}:{{port}}",
+    "stop": "Stop",
+    "stopAriaLabel": "Stop exposure",
+    "client": {
+      "label": "Client",
+      "description": "Select the client type for MCP integration.",
+      "cursor": "Cursor",
+      "claudeCode": "Claude Code",
+      "codex": "Codex",
+      "geminiCli": "Gemini CLI",
+      "generic": "Generic"
+    },
+    "versionHint": {
+      "title": "Version Control Notice",
+      "description": "Version control features remain active during external MCP calls"
+    }
+  },
+  "config": {
+    "copied": "Configuration copied",
+    "copyFailed": "Copy failed, please copy manually",
+    "copyAriaLabel": "Copy configuration",
+    "copiedAriaLabel": "Copied"
+  },
+  "errors": {
+    "envNotSupported": "MCP server not supported in this environment (Electron only)",
+    "stopFailed": "Failed to stop MCP",
+    "unknownError": "Unknown error",
+    "getRandomPortFailed": "Failed to get random port: {{message}}"
+  }
+}

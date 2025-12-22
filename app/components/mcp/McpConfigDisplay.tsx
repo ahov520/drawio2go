@@ -6,6 +6,7 @@ import { Check, Copy } from "lucide-react";
 
 import type { McpClientType } from "@/app/types/mcp";
 import { useToast } from "@/app/components/toast";
+import { useAppTranslation } from "@/app/i18n/hooks";
 
 /**
  * MCP 配置展示组件 Props
@@ -71,6 +72,7 @@ export function McpConfigDisplay({
   host,
   port,
 }: McpConfigDisplayProps) {
+  const { t } = useAppTranslation("mcp");
   const { push } = useToast();
   const [copied, setCopied] = useState(false);
 
@@ -83,12 +85,12 @@ export function McpConfigDisplay({
     try {
       await navigator.clipboard.writeText(configText);
       setCopied(true);
-      push({ variant: "success", description: "配置已复制" });
+      push({ variant: "success", description: t("config.copied") });
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
-      push({ variant: "danger", description: "复制失败，请手动复制" });
+      push({ variant: "danger", description: t("config.copyFailed") });
     }
-  }, [configText, push]);
+  }, [configText, push, t]);
 
   return (
     <div className="rounded-2xl border border-default-200 bg-content1">
@@ -97,7 +99,7 @@ export function McpConfigDisplay({
           size="sm"
           isIconOnly
           variant="tertiary"
-          aria-label={copied ? "已复制" : "复制配置"}
+          aria-label={copied ? t("config.copiedAriaLabel") : t("config.copyAriaLabel")}
           onPress={handleCopy}
         >
           {copied ? (

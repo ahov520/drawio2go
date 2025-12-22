@@ -112,7 +112,7 @@
     "characterCount": "{{current}} / {{max}} chars"
   },
   "canvasContext": "Canvas Context",
-  "canvasContextTooltip": "Auto-attach canvas elements info to chat, including selection info in APP",
+  "canvasContextTooltip": "Auto-inject compressed canvas elements into conversations, in App will injecting mouse-selected element data",
   "toolCalls": {
     "title": "Tool calls",
     "parameters": "Input parameters",

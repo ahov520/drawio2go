@@ -17,6 +17,7 @@ import { Dialog as AriaDialog, type Selection } from "react-aria-components";
 import type { McpClientType } from "@/app/types/mcp";
 import { extractSingleKey, normalizeSelection } from "@/app/lib/select-utils";
 import { McpConfigDisplay } from "@/app/components/mcp/McpConfigDisplay";
+import { useAppTranslation } from "@/app/i18n/hooks";
 
 /**
  * MCP 全屏暴露界面 Props
@@ -50,18 +51,10 @@ export interface McpExposureOverlayProps {
   onStop: () => void;
 }
 
-const CLIENT_OPTIONS: Array<{ id: McpClientType; label: string }> = [
-  { id: "cursor", label: "Cursor" },
-  { id: "claude-code", label: "Claude Code" },
-  { id: "codex", label: "Codex" },
-  { id: "gemini-cli", label: "Gemini CLI" },
-  { id: "generic", label: "通用" },
-];
-
 /**
  * MCP 全屏暴露界面
  *
- * - 使用普通 div + createPortal 实现“局部遮罩”（仅覆盖 ChatSidebar 区域），避免触发全局 inert/focus trap
+ * - 使用普通 div + createPortal 实现"局部遮罩"（仅覆盖 ChatSidebar 区域），避免触发全局 inert/focus trap
  * - 提供客户端选择器与配置示例（McpConfigDisplay）
  */
 export function McpExposureOverlay({
@@ -71,9 +64,24 @@ export function McpExposureOverlay({
   port,
   onStop,
 }: McpExposureOverlayProps) {
+  const { t } = useAppTranslation("mcp");
   const [clientType, setClientType] = useState<McpClientType>("cursor");
 
-  const statusText = useMemo(() => `正在暴露：${host}:${port}`, [host, port]);
+  const CLIENT_OPTIONS: Array<{ id: McpClientType; label: string }> = useMemo(
+    () => [
+      { id: "cursor", label: t("overlay.client.cursor") },
+      { id: "claude-code", label: t("overlay.client.claudeCode") },
+      { id: "codex", label: t("overlay.client.codex") },
+      { id: "gemini-cli", label: t("overlay.client.geminiCli") },
+      { id: "generic", label: t("overlay.client.generic") },
+    ],
+    [t],
+  );
+
+  const statusText = useMemo(
+    () => t("overlay.status", { host, port }),
+    [t, host, port],
+  );
 
   const handleClientSelectionChange = useCallback(
     (keys: Selection | Key | null) => {
@@ -84,7 +92,7 @@ export function McpExposureOverlay({
       const next = CLIENT_OPTIONS.find((opt) => opt.id === key)?.id;
       if (next) setClientType(next);
     },
-    [],
+    [CLIENT_OPTIONS],
   );
 
   if (!isOpen) return null;
@@ -106,13 +114,13 @@ export function McpExposureOverlay({
       <div className="w-full max-w-3xl">
         <Surface className="w-full rounded-2xl bg-content1 p-5 shadow-2xl outline-none">
           <AriaDialog
-            aria-label="MCP 接口已暴露"
+            aria-label={t("overlay.title")}
             className="flex max-h-[85vh] flex-col gap-5 overflow-auto"
           >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <h2 className="text-lg font-semibold text-foreground">
-                  MCP 接口已暴露
+                  {t("overlay.title")}
                 </h2>
                 <p className="mt-1 truncate text-sm text-default-500">
                   {statusText}
@@ -122,12 +130,12 @@ export function McpExposureOverlay({
               <Button
                 variant="danger"
                 size="sm"
-                aria-label="停止暴露"
+                aria-label={t("overlay.stopAriaLabel")}
                 onPress={onStop}
                 className="shrink-0"
               >
                 <XCircle size={16} aria-hidden />
-                停止
+                {t("overlay.stop")}
               </Button>
             </div>
 
@@ -137,9 +145,9 @@ export function McpExposureOverlay({
                   selectedKey={clientType}
                   onSelectionChange={handleClientSelectionChange}
                 >
-                  <Label>客户端</Label>
+                  <Label>{t("overlay.client.label")}</Label>
                   <Description className="text-default-500">
-                    选择你要接入 MCP 的客户端类型。
+                    {t("overlay.client.description")}
                   </Description>
                   <Select.Trigger className="mt-2 flex w-full items-center justify-between rounded-md border border-default-200 bg-content1 px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 hover:border-primary">
                     <Select.Value className="text-sm leading-6 text-foreground" />
@@ -166,9 +174,11 @@ export function McpExposureOverlay({
               </div>
 
               <div className="rounded-xl border border-primary/30 bg-primary-50 px-4 py-3 text-sm text-foreground">
-                <span className="font-medium text-primary">版本控制提示</span>
+                <span className="font-medium text-primary">
+                  {t("overlay.versionHint.title")}
+                </span>
                 <div className="mt-1 text-default-600">
-                  版本控制功能在被外部 MCP 调用中依然有效
+                  {t("overlay.versionHint.description")}
                 </div>
               </div>
             </div>
