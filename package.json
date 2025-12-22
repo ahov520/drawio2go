@@ -9,7 +9,7 @@
     "start": "NODE_ENV=production node server.js",
     "lint": "eslint . && npx tsc --noEmit",
     "test": "vitest run",
-    "format": "prettier --write .",
+    "format": "prettier --write --cache .",
     "electron": "electron .",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
     "electron:build": "npm run build && npm run electron:prepare && electron-builder",

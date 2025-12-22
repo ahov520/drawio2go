@@ -6,6 +6,13 @@ import { createLogger } from "@/lib/logger";
 import { normalizeDiagramXml, validateXMLFormat } from "./drawio-xml-utils";
 import { toErrorString } from "./error-handler";
 import {
+  filterNodesByPages,
+  isGlobalNode,
+  isNodeInAllowedPages,
+  mergePartialPagesXml,
+  validatePageIds,
+} from "./page-filter-utils";
+import {
   drawioEditBatchInputSchema,
   drawioOverwriteInputSchema,
   drawioReadInputSchema,
@@ -26,6 +33,18 @@ const logger = createLogger("Frontend DrawIO Tools");
 const { DRAWIO_READ, DRAWIO_EDIT_BATCH, DRAWIO_OVERWRITE } = AI_TOOL_NAMES;
 
 type InsertPosition = "append_child" | "prepend_child" | "before" | "after";
+type NodeSelectionOptions = {
+  allowedPageIds?: Set<string>;
+  /** 当启用“仅选中页面”时，禁止匹配 <mxfile> 等全局节点 */
+  rejectGlobalNodes?: boolean;
+};
+
+export interface PageFilterContext {
+  /** 选中的页面 ID 数组（空数组表示全选） */
+  selectedPageIds: string[];
+  /** 是否为 MCP 上下文（true 表示跳过页面过滤） */
+  isMcpContext: boolean;
+}
 
 export interface FrontendToolContext {
   getDrawioXML: () => Promise<string>;
@@ -34,6 +53,8 @@ export interface FrontendToolContext {
     options?: { description?: string },
   ) => Promise<{ success: boolean; error?: string }>;
   onVersionSnapshot?: (description: string) => Promise<void>;
+  /** 获取页面过滤上下文（用于“仅选中页面”场景）；返回 null/undefined 表示不启用过滤 */
+  getPageFilterContext?: () => PageFilterContext | null;
 }
 
 function ensureDomParser(): DOMParser {
@@ -72,6 +93,26 @@ function parseXml(xml: string): Document {
     );
   }
   return document;
+}
+
+function getAllowedPageIdsOrNull(
+  context: FrontendToolContext,
+  xml: string,
+): Set<string> | null {
+  const filterContext = context.getPageFilterContext?.() ?? null;
+  if (!filterContext) return null;
+
+  if (filterContext.isMcpContext) return null;
+  if (!filterContext.selectedPageIds?.length) return null;
+
+  const validation = validatePageIds(xml, filterContext.selectedPageIds);
+  if (!validation.valid) {
+    throw new Error(
+      `页面过滤失败：检测到不存在的页面 ID：${validation.invalidIds.join(", ")}`,
+    );
+  }
+
+  return new Set(filterContext.selectedPageIds);
 }
 
 function normalizeIds(id?: string | string[]): string[] {
@@ -151,7 +192,11 @@ function evaluateXPath(document: Document, expression: string): XPathResult {
   }
 }
 
-function selectNodes(document: Document, expression: string): Node[] {
+function selectNodes(
+  document: Document,
+  expression: string,
+  options?: NodeSelectionOptions,
+): Node[] {
   try {
     const resolver = document.documentElement
       ? document.createNSResolver(document.documentElement)
@@ -164,13 +209,34 @@ function selectNodes(document: Document, expression: string): Node[] {
       null,
     );
 
-    const nodes: Node[] = [];
+    let nodes: Node[] = [];
     for (let i = 0; i < snapshot.snapshotLength; i++) {
       const item = snapshot.snapshotItem(i);
       if (item) nodes.push(item);
     }
+
+    if (
+      options?.rejectGlobalNodes &&
+      nodes.length > 0 &&
+      nodes.some(isGlobalNode)
+    ) {
+      throw new Error(
+        "当前仅选中部分页面，禁止匹配全局节点（不属于任何页面，例如 <mxfile>）。请将 XPath 限定在页面（<diagram>）范围内，或切换为“全选页面”。",
+      );
+    }
+
+    if (options?.allowedPageIds) {
+      nodes = filterNodesByPages(nodes, options.allowedPageIds);
+    }
+
     return nodes;
   } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.includes("当前仅选中部分页面，禁止匹配全局节点")
+    ) {
+      throw error;
+    }
     const errorMsg = toErrorString(error);
     throw new Error(`Invalid XPath expression: "${expression}". ${errorMsg}`);
   }
@@ -179,6 +245,7 @@ function selectNodes(document: Document, expression: string): Node[] {
 function executeListMode(
   document: Document,
   filter: "all" | "vertices" | "edges",
+  allowedPageIds?: Set<string>,
 ): DrawioReadResult {
   const cells = document.getElementsByTagName("mxCell");
   const results: DrawioListResult[] = [];
@@ -187,6 +254,10 @@ function executeListMode(
     const cell = cells[i] as Element;
     const id = cell.getAttribute("id");
     if (!id) continue;
+
+    if (allowedPageIds && !isNodeInAllowedPages(cell, allowedPageIds)) {
+      continue;
+    }
 
     const isVertex = cell.getAttribute("vertex") === "1";
     const isEdge = cell.getAttribute("edge") === "1";
@@ -302,13 +373,14 @@ function convertNodeToResult(node: Node): DrawioQueryResult | null {
 function executeQueryById(
   document: Document,
   id: string | string[],
+  nodeSelectionOptions?: NodeSelectionOptions,
 ): DrawioQueryResult[] {
   const ids = normalizeIds(id);
   const results: DrawioQueryResult[] = [];
 
   for (const currentId of ids) {
     const resolvedXpath = resolveLocator({ id: currentId });
-    const nodes = selectNodes(document, resolvedXpath);
+    const nodes = selectNodes(document, resolvedXpath, nodeSelectionOptions);
     for (const node of nodes) {
       const converted = convertNodeToResult(node);
       if (converted) results.push(converted);
@@ -321,6 +393,7 @@ function executeQueryById(
 function executeQueryByXpath(
   document: Document,
   xpath: string,
+  nodeSelectionOptions?: NodeSelectionOptions,
 ): DrawioQueryResult[] {
   const trimmedXpath = xpath.trim();
   const evaluation = evaluateXPath(document, trimmedXpath);
@@ -352,6 +425,24 @@ function executeQueryByXpath(
     case XPathResult.ANY_UNORDERED_NODE_TYPE:
     case XPathResult.FIRST_ORDERED_NODE_TYPE: {
       const node = evaluation.singleNodeValue;
+      if (
+        nodeSelectionOptions?.rejectGlobalNodes &&
+        node &&
+        isGlobalNode(node)
+      ) {
+        throw new Error(
+          "当前仅选中部分页面，禁止读取全局节点（不属于任何页面，例如 <mxfile>）。请将 XPath 限定在页面（<diagram>）范围内，或切换为“全选页面”。",
+        );
+      }
+
+      if (
+        nodeSelectionOptions?.allowedPageIds &&
+        node &&
+        !isNodeInAllowedPages(node, nodeSelectionOptions.allowedPageIds)
+      ) {
+        return [];
+      }
+
       const converted = node ? convertNodeToResult(node) : null;
       return converted ? [converted] : [];
     }
@@ -360,7 +451,7 @@ function executeQueryByXpath(
   }
 
   // Node-set results (iterator/snapshot)
-  const nodes = selectNodes(document, trimmedXpath);
+  const nodes = selectNodes(document, trimmedXpath, nodeSelectionOptions);
   for (const node of nodes) {
     const converted = convertNodeToResult(node);
     if (converted) results.push(converted);
@@ -402,8 +493,9 @@ function setAttribute(
   key: string,
   value: string,
   allowNoMatch?: boolean,
+  nodeSelectionOptions?: NodeSelectionOptions,
 ): void {
-  const nodes = selectNodes(document, xpath);
+  const nodes = selectNodes(document, xpath, nodeSelectionOptions);
   if (nodes.length === 0) {
     if (allowNoMatch) return;
     throw new Error(
@@ -427,8 +519,9 @@ function removeAttribute(
   locatorLabel: string,
   key: string,
   allowNoMatch?: boolean,
+  nodeSelectionOptions?: NodeSelectionOptions,
 ): void {
-  const nodes = selectNodes(document, xpath);
+  const nodes = selectNodes(document, xpath, nodeSelectionOptions);
   if (nodes.length === 0) {
     if (allowNoMatch) return;
     throw new Error(
@@ -453,8 +546,9 @@ function insertElement(
   newXml: string,
   position?: InsertPosition,
   allowNoMatch?: boolean,
+  nodeSelectionOptions?: NodeSelectionOptions,
 ): void {
-  const targets = selectNodes(document, xpath);
+  const targets = selectNodes(document, xpath, nodeSelectionOptions);
   if (targets.length === 0) {
     if (allowNoMatch) return;
     throw new Error(
@@ -519,8 +613,9 @@ function removeElement(
   xpath: string,
   locatorLabel: string,
   allowNoMatch?: boolean,
+  nodeSelectionOptions?: NodeSelectionOptions,
 ): void {
-  const nodes = selectNodes(document, xpath);
+  const nodes = selectNodes(document, xpath, nodeSelectionOptions);
   if (nodes.length === 0) {
     if (allowNoMatch) return;
     throw new Error(
@@ -545,8 +640,9 @@ function replaceElement(
   locatorLabel: string,
   newXml: string,
   allowNoMatch?: boolean,
+  nodeSelectionOptions?: NodeSelectionOptions,
 ): void {
-  const nodes = selectNodes(document, xpath);
+  const nodes = selectNodes(document, xpath, nodeSelectionOptions);
   if (nodes.length === 0) {
     if (allowNoMatch) return;
     throw new Error(
@@ -572,8 +668,9 @@ function setTextContent(
   locatorLabel: string,
   value: string,
   allowNoMatch?: boolean,
+  nodeSelectionOptions?: NodeSelectionOptions,
 ): void {
-  const nodes = selectNodes(document, xpath);
+  const nodes = selectNodes(document, xpath, nodeSelectionOptions);
   if (nodes.length === 0) {
     if (allowNoMatch) return;
     throw new Error(
@@ -599,6 +696,7 @@ function setTextContent(
 function applyOperation(
   document: Document,
   operation: DrawioEditOperation,
+  nodeSelectionOptions?: NodeSelectionOptions,
 ): void {
   const locatorLabel = buildLocatorLabel(operation);
   const resolvedXpath = resolveLocator({
@@ -614,6 +712,7 @@ function applyOperation(
       operation.key!,
       operation.value!,
       operation.allow_no_match,
+      nodeSelectionOptions,
     );
     return;
   }
@@ -625,6 +724,7 @@ function applyOperation(
       locatorLabel,
       operation.key!,
       operation.allow_no_match,
+      nodeSelectionOptions,
     );
     return;
   }
@@ -637,6 +737,7 @@ function applyOperation(
       operation.new_xml!,
       operation.position,
       operation.allow_no_match,
+      nodeSelectionOptions,
     );
     return;
   }
@@ -647,6 +748,7 @@ function applyOperation(
       resolvedXpath,
       locatorLabel,
       operation.allow_no_match,
+      nodeSelectionOptions,
     );
     return;
   }
@@ -658,6 +760,7 @@ function applyOperation(
       locatorLabel,
       operation.new_xml!,
       operation.allow_no_match,
+      nodeSelectionOptions,
     );
     return;
   }
@@ -669,6 +772,7 @@ function applyOperation(
       locatorLabel,
       operation.value!,
       operation.allow_no_match,
+      nodeSelectionOptions,
     );
     return;
   }
@@ -693,22 +797,34 @@ async function executeDrawioReadFrontend(
 
   const xmlString = await fetchCurrentDiagramXml(context);
   const document = parseXml(xmlString);
+  const allowedPageIds = getAllowedPageIdsOrNull(context, xmlString);
+  const xpathSelectionOptions: NodeSelectionOptions | undefined = allowedPageIds
+    ? { allowedPageIds, rejectGlobalNodes: true }
+    : undefined;
 
   const trimmedXpath = xpath?.trim() || undefined;
   const finalDescription = description?.trim() || "Read diagram content";
   logger.debug("drawio_read", { description: finalDescription });
 
   if (!trimmedXpath && !id) {
-    return executeListMode(document, filter);
+    return executeListMode(document, filter, allowedPageIds ?? undefined);
   }
 
   if (id) {
-    const results = executeQueryById(document, id);
+    const results = executeQueryById(
+      document,
+      id,
+      allowedPageIds ? { allowedPageIds } : undefined,
+    );
     return { success: true, results };
   }
 
   if (trimmedXpath) {
-    const results = executeQueryByXpath(document, trimmedXpath);
+    const results = executeQueryByXpath(
+      document,
+      trimmedXpath,
+      xpathSelectionOptions,
+    );
     return { success: true, results };
   }
 
@@ -729,11 +845,15 @@ async function executeDrawioEditBatchFrontend(
 
   const originalXml = await fetchCurrentDiagramXml(context);
   const document = parseXml(originalXml);
+  const allowedPageIds = getAllowedPageIdsOrNull(context, originalXml);
+  const nodeSelectionOptions: NodeSelectionOptions | undefined = allowedPageIds
+    ? { allowedPageIds, rejectGlobalNodes: true }
+    : undefined;
 
   for (let index = 0; index < operations.length; index++) {
     const operation = operations[index];
     try {
-      applyOperation(document, operation);
+      applyOperation(document, operation, nodeSelectionOptions);
     } catch (error) {
       const errorMsg = toErrorString(error) || "Unknown error";
       const locatorInfo = operation.id
@@ -804,9 +924,38 @@ async function executeDrawioOverwriteFrontend(
   }
 
   const finalDescription = description?.trim() || "Overwrite entire diagram";
+  const filterContext = context.getPageFilterContext?.() ?? null;
+  const selectedPageIds =
+    filterContext && !filterContext.isMcpContext
+      ? (filterContext.selectedPageIds ?? [])
+      : [];
+
+  const shouldMergePartialPages = selectedPageIds.length > 0;
+  let finalXmlToWrite = drawio_xml;
+  if (shouldMergePartialPages) {
+    const originalXml = await fetchCurrentDiagramXml(context);
+    const pageValidation = validatePageIds(originalXml, selectedPageIds);
+    if (!pageValidation.valid) {
+      throw new Error(
+        `页面过滤失败：检测到不存在的页面 ID：${pageValidation.invalidIds.join(", ")}`,
+      );
+    }
+
+    const merged = mergePartialPagesXml(
+      originalXml,
+      drawio_xml,
+      selectedPageIds,
+    );
+    if (!merged.success) {
+      throw new Error(`部分页面覆盖失败：${merged.error}`);
+    }
+
+    finalXmlToWrite = merged.xml;
+  }
+
   await context.onVersionSnapshot?.(finalDescription);
 
-  const result = await context.replaceDrawioXML(drawio_xml, {
+  const result = await context.replaceDrawioXML(finalXmlToWrite, {
     description: finalDescription,
   });
 
@@ -821,7 +970,7 @@ async function executeDrawioOverwriteFrontend(
   return {
     success: true,
     message: "XML 已替换",
-    xml: drawio_xml,
+    xml: finalXmlToWrite,
   };
 }
 
