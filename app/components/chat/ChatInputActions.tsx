@@ -79,11 +79,6 @@ export default function ChatInputActions({
   const sendButtonDisabled = getSendButtonDisabled();
   const [isModelPopoverOpen, setIsModelPopoverOpen] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
-  const getSendDisabledReason = () => {
-    if (!isOnline) return t("status.networkOfflineDesc");
-    return null;
-  };
-  const sendDisabledReason = getSendDisabledReason();
 
   useEffect(() => {
     if (isModelSelectorDisabled) {
@@ -261,7 +256,7 @@ export default function ChatInputActions({
           </Dropdown.Popover>
         </Dropdown>
 
-        <TooltipRoot isDisabled={!sendDisabledReason} delay={0}>
+        <TooltipRoot isDisabled={true} delay={0}>
           <Button
             type={sendButtonType}
             variant={sendButtonVariant}
@@ -303,16 +298,7 @@ export default function ChatInputActions({
             )}
             {canCancel ? t("input.stop") : t("input.send")}
           </Button>
-          {sendDisabledReason ? (
-            <TooltipContent placement="top">
-              <p>{sendDisabledReason}</p>
-            </TooltipContent>
-          ) : null}
         </TooltipRoot>
-
-        {!canSendNewMessage && !isChatStreaming && (
-          <span className="chat-waiting-hint">{t("input.waitingForAI")}</span>
-        )}
       </div>
     </div>
   );

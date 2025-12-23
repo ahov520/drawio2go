@@ -359,13 +359,6 @@ export default function ChatInputArea({
           </div>
         ) : null}
 
-        {!isOnline && (
-          <div className="chat-network-status" role="status" aria-live="polite">
-            ⚠️ {t("status.networkOfflineShort", "网络已断开")} ·{" "}
-            {t("status.networkDisconnectedHint")}
-          </div>
-        )}
-
         {/* 按钮组 */}
         <ChatInputActions
           isSendDisabled={isSendDisabled}

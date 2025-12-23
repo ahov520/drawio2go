@@ -290,34 +290,6 @@
   background: var(--background, #0f172a);
 }
 
-.chat-waiting-hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem 0.75rem;
-  border-radius: var(--radius-md);
-  background: color-mix(in oklch, var(--warning) 14%, transparent);
-  color: var(--warning-foreground, #8a6d3b);
-  font-size: 0.875rem;
-  line-height: 1.4;
-  white-space: nowrap;
-  animation: chat-pulse 2s ease-in-out infinite;
-}
-
-.dark .chat-waiting-hint {
-  background: color-mix(in oklch, var(--warning) 18%, transparent);
-}
-
-@keyframes chat-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.6;
-  }
-}
-
 /* Markdown内容包装器 - 让打字指示器显示在同一行 */
 .message-markdown-wrapper {
   display: inline;
