@@ -11,6 +11,13 @@ import { defaultLocale } from "@/app/i18n/config";
 export const metadata: Metadata = {
   title: "DrawIO2Go - Electron DrawIO Editor",
   description: "基于 Electron + Next.js + HeroUI 构建的 DrawIO 编辑器",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: "/favicon.png",
+  },
 };
 
 export default function RootLayout({

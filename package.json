@@ -12,6 +12,7 @@
     "format": "prettier --write --cache .",
     "electron": "electron .",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron:icons": "node scripts/generate-electron-icons.js",
     "electron:build": "npm run build && npm run electron:prepare && electron-builder",
     "electron:prepare": "node scripts/prepare-electron.js",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
@@ -72,6 +73,8 @@
   "devDependencies": {
     "@electron/rebuild": "^4.0.1",
     "@eslint/eslintrc": "^3.3.3",
+    "@fiahfy/icns": "^0.0.7",
+    "@fiahfy/ico": "^0.0.5",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
@@ -90,6 +93,7 @@
     "eslint-plugin-sonarjs": "^3.0.5",
     "jsdom": "^27.2.0",
     "prettier": "^3.7.4",
+    "sharp": "^0.34.5",
     "typescript": "^5.9.3",
     "vitest": "^4.0.15",
     "wait-on": "^7.2.0"
@@ -124,10 +128,11 @@
       }
     ],
     "directories": {
-      "buildResources": "assets",
+      "buildResources": "electron/assets",
       "output": "dist"
     },
     "mac": {
+      "icon": "electron/assets/icon.icns",
       "target": [
         "dmg",
         "zip"
@@ -135,12 +140,14 @@
       "category": "public.app-category.productivity"
     },
     "win": {
+      "icon": "electron/assets/icon.ico",
       "target": [
         "nsis",
         "portable"
       ]
     },
     "linux": {
+      "icon": "electron/assets/icon.png",
       "target": [
         "AppImage",
         "deb"

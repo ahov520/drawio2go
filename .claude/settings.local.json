@@ -80,7 +80,8 @@
       "Bash(npm run format:*)",
       "WebFetch(domain:docs.litellm.ai)",
       "Bash(git show:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(file:*)"
     ],
     "deny": [],
     "ask": []

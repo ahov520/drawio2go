@@ -52,10 +52,18 @@ electron/
 #### 窗口配置
 
 - **尺寸**: 1200x800 像素
-- **图标**: `/public/icon.png`
+- **图标**: `electron/assets/icon.png`（Linux/窗口） + `electron/assets/icon.ico`（Windows） + `electron/assets/icon.icns`（macOS）
 - **Web 首选项**:
   - 开发模式: `webSecurity: false`, `sandbox: false`
   - 生产模式: `webSecurity: true`, `sandbox: true`
+
+#### 图标生成
+
+从 `public/icon/logo.svg` 生成 Electron 打包所需图标：
+
+```bash
+npm run electron:icons
+```
 
 #### IPC API (通过 preload.js 暴露)
 

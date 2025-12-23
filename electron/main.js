@@ -1,4 +1,11 @@
-const { app, BrowserWindow, ipcMain, dialog, shell } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  ipcMain,
+  dialog,
+  shell,
+  Menu,
+} = require("electron");
 const { safeStorage } = require("electron");
 const { randomUUID } = require("crypto");
 const path = require("path");
@@ -285,9 +292,16 @@ async function startEmbeddedServer() {
 }
 
 function createWindow() {
+  const windowIconPath =
+    process.platform === "win32"
+      ? path.join(__dirname, "assets", "icon.ico")
+      : path.join(__dirname, "assets", "icon.png");
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    icon: windowIconPath,
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       nodeIntegration: false,
@@ -299,6 +313,8 @@ function createWindow() {
       sandbox: isDev ? false : true, // 开发模式下禁用沙盒
     },
   });
+
+  mainWindow.setMenuBarVisibility(false);
 
   // 加载应用（统一使用 HTTP URL）
   const url = `http://localhost:${serverPort}`;
@@ -467,6 +483,8 @@ function initMcpToolBridge() {
 
 app.whenReady().then(async () => {
   try {
+    Menu.setApplicationMenu(null);
+
     try {
       const available =
         safeStorage &&
