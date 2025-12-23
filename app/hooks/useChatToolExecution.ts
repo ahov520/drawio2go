@@ -281,6 +281,325 @@ function buildToolErrorOutput(params: {
 }
 
 /**
+ * 提交工具错误的辅助函数类型
+ */
+type SubmitToolErrorFn = (args: {
+  errorText: string;
+  output?: unknown;
+  errorDetails?: unknown;
+}) => Promise<void>;
+
+/**
+ * 验证工具是否存在
+ */
+async function validateToolExists(
+  toolName: string,
+  toolCallId: string,
+  tool: unknown,
+  submitToolError: SubmitToolErrorFn,
+  setToolError: (error: Error | null) => void,
+): Promise<boolean> {
+  if (
+    tool &&
+    typeof (tool as { execute?: unknown }).execute === "function"
+  ) {
+    return true;
+  }
+
+  const errorText = `未知工具: ${toolName}`;
+  const errorDetails = { kind: "unknown", toolName };
+  const { output, combinedMessage } = buildToolErrorOutput({
+    error: "tool_not_found",
+    message: errorText,
+    errorDetails,
+  });
+
+  try {
+    await submitToolError({ errorText: combinedMessage, output, errorDetails });
+  } catch (submitError) {
+    const fatalError = buildFatalToolSubmitError({
+      fatalKind: "submitToolError",
+      toolName,
+      toolCallId,
+      submitError,
+    });
+    logger.error(
+      "[useChatToolExecution] 提交工具错误失败（tool_not_found）",
+      { error: fatalError, tool: toolName, toolCallId },
+    );
+    setToolError(fatalError);
+  }
+  return false;
+}
+
+/**
+ * 验证工具 Schema 是否存在
+ */
+async function validateToolSchema(
+  toolName: string,
+  toolCallId: string,
+  schema: unknown,
+  submitToolError: SubmitToolErrorFn,
+  setToolError: (error: Error | null) => void,
+): Promise<boolean> {
+  if (schema) {
+    return true;
+  }
+
+  const errorText = `缺少工具 schema: ${toolName}`;
+  const errorDetails = { kind: "unknown", toolName };
+  const { output, combinedMessage } = buildToolErrorOutput({
+    error: "schema_missing",
+    message: errorText,
+    errorDetails,
+  });
+
+  try {
+    await submitToolError({ errorText: combinedMessage, output, errorDetails });
+  } catch (submitError) {
+    const fatalError = buildFatalToolSubmitError({
+      fatalKind: "submitToolError",
+      toolName,
+      toolCallId,
+      submitError,
+    });
+    logger.error(
+      "[useChatToolExecution] 提交工具错误失败（schema_missing）",
+      { error: fatalError, tool: toolName, toolCallId },
+    );
+    setToolError(fatalError);
+  }
+  return false;
+}
+
+/**
+ * 验证工具输入参数
+ */
+async function validateToolInput(
+  toolName: string,
+  toolCallId: string,
+  schema: {
+    safeParse: (input: unknown) => { success: boolean; data?: unknown };
+  },
+  input: unknown,
+  submitToolError: SubmitToolErrorFn,
+  setToolError: (error: Error | null) => void,
+): Promise<{ valid: false } | { valid: true; data: unknown }> {
+  const parsed = schema.safeParse(input) as
+    | { success: true; data: unknown }
+    | { success: false; error?: { issues?: unknown } };
+
+  if (parsed.success) {
+    return { valid: true, data: parsed.data };
+  }
+
+  const errorText = `工具输入校验失败: ${toolName}`;
+  const issuesRaw = parsed.error?.issues;
+  const issues = Array.isArray(issuesRaw)
+    ? (issuesRaw as Array<Record<string, unknown>>)
+        .map((issue) => ({
+          path: Array.isArray(issue.path)
+            ? (issue.path as Array<string | number>)
+            : [],
+          message: typeof issue.message === "string" ? issue.message : "",
+          code: typeof issue.code === "string" ? issue.code : undefined,
+          expected: issue.expected,
+          received: issue.received,
+        }))
+        .filter((issue) => issue.message)
+    : [];
+
+  const errorDetails: ToolZodValidationErrorDetails = {
+    kind: "zod_validation",
+    issues,
+  };
+
+  const { output, combinedMessage } = buildToolErrorOutput({
+    error: "zod_validation",
+    message: errorText,
+    errorDetails,
+  });
+
+  try {
+    await submitToolError({ errorText: combinedMessage, output, errorDetails });
+  } catch (submitError) {
+    const fatalError = buildFatalToolSubmitError({
+      fatalKind: "submitToolError",
+      toolName,
+      toolCallId,
+      submitError,
+    });
+    logger.error(
+      "[useChatToolExecution] 提交工具错误失败（zod_validation）",
+      { error: fatalError, tool: toolName, toolCallId },
+    );
+    setToolError(fatalError);
+  }
+  return { valid: false };
+}
+
+/**
+ * 执行工具并处理结果
+ */
+async function executeToolAndHandleResult(
+  tool: Tool,
+  toolName: string,
+  toolCallId: string,
+  validatedData: unknown,
+  abortController: AbortController,
+  submitToolError: SubmitToolErrorFn,
+  addToolResult: AddToolResultFn,
+  setToolError: (error: Error | null) => void,
+): Promise<void> {
+  const timeoutMs =
+    TOOL_TIMEOUT_CONFIG[toolName as keyof typeof TOOL_TIMEOUT_CONFIG] ?? 30_000;
+
+  try {
+    // 执行工具（带超时和中止支持）
+    const executeResult =
+      typeof tool.execute === "function"
+        ? tool.execute(validatedData as never, {
+            toolCallId,
+            messages: [],
+            abortSignal: abortController.signal,
+          })
+        : Promise.reject(new Error("tool.execute is not a function"));
+
+    const output = await withTimeout(
+      Promise.resolve(executeResult),
+      timeoutMs,
+      abortController.signal,
+    );
+
+    // 工具返回了结构化失败结果
+    if (isToolErrorResult(output)) {
+      const errorDetails = output.errorDetails;
+      const baseText = output.message || output.error || "工具执行失败";
+      const combinedMessage = appendToolErrorDetailsToText(
+        baseText,
+        errorDetails,
+      );
+
+      const sanitizedOutput = {
+        ...(output as unknown as Record<string, unknown>),
+        message: combinedMessage,
+      } as Record<string, unknown>;
+      delete sanitizedOutput.errorDetails;
+
+      try {
+        await submitToolError({
+          errorText: combinedMessage,
+          output: sanitizedOutput,
+          errorDetails,
+        });
+      } catch (submitError) {
+        const fatalError = buildFatalToolSubmitError({
+          fatalKind: "submitToolError",
+          toolName,
+          toolCallId,
+          submitError,
+        });
+        logger.error(
+          "[useChatToolExecution] 提交工具结果失败（tool-error-result）",
+          { error: fatalError, tool: toolName, toolCallId },
+        );
+        setToolError(fatalError);
+      }
+      return;
+    }
+
+    // 添加工具结果（成功）
+    try {
+      await addToolResult({
+        tool: toolName,
+        toolCallId,
+        output,
+      });
+    } catch (submitError) {
+      const fatalError = buildFatalToolSubmitError({
+        fatalKind: "addToolResult",
+        toolName,
+        toolCallId,
+        submitError,
+      });
+      logger.error("[useChatToolExecution] 提交工具结果失败（success）", {
+        error: fatalError,
+        tool: toolName,
+        toolCallId,
+      });
+      setToolError(fatalError);
+    }
+  } catch (error) {
+    // 处理中止错误
+    if (isAbortError(error)) {
+      const errorDetails = { kind: "aborted" };
+      const { output, combinedMessage } = buildToolErrorOutput({
+        error: "aborted",
+        message: "已取消",
+        errorDetails,
+      });
+      try {
+        await submitToolError({
+          errorText: combinedMessage,
+          output,
+          errorDetails,
+        });
+      } catch (submitError) {
+        const fatalError = buildFatalToolSubmitError({
+          fatalKind: "submitToolError",
+          toolName,
+          toolCallId,
+          submitError,
+        });
+        logger.error("[useChatToolExecution] 提交工具错误失败（abort）", {
+          error: fatalError,
+          tool: toolName,
+          toolCallId,
+        });
+        setToolError(fatalError);
+      }
+      return;
+    }
+
+    // 处理其他错误
+    const errorText = toErrorString(error);
+    try {
+      const isTimeoutError =
+        typeof errorText === "string" &&
+        errorText.includes(`[${ErrorCodes.TIMEOUT}]`);
+
+      const errorDetails = {
+        kind: isTimeoutError ? "timeout" : "unknown",
+      };
+      const { output, combinedMessage } = buildToolErrorOutput({
+        error: isTimeoutError ? String(ErrorCodes.TIMEOUT) : "tool_error",
+        message: String(errorText),
+        errorDetails,
+      });
+
+      await submitToolError({
+        errorText: combinedMessage,
+        output,
+        errorDetails,
+      });
+    } catch (submitError) {
+      const fatalError = buildFatalToolSubmitError({
+        fatalKind: "submitToolError",
+        toolName,
+        toolCallId,
+        submitError,
+      });
+      logger.error("[useChatToolExecution] 提交工具错误失败（error）", {
+        error: fatalError,
+        tool: toolName,
+        toolCallId,
+      });
+      setToolError(fatalError);
+    }
+  }
+}
+
+/**
  * 带超时的任务执行
  *
  * @param task 异步任务
@@ -441,39 +760,14 @@ export function useChatToolExecution(
       };
 
       // 1. 验证工具存在
-      if (!tool || typeof tool.execute !== "function") {
-        const errorText = `未知工具: ${toolName}`;
-        const errorDetails = { kind: "unknown", toolName };
-        const { output, combinedMessage } = buildToolErrorOutput({
-          error: "tool_not_found",
-          message: errorText,
-          errorDetails,
-        });
-        try {
-          await submitToolError({
-            errorText: combinedMessage,
-            output,
-            errorDetails,
-          });
-        } catch (submitError) {
-          const fatalError = buildFatalToolSubmitError({
-            fatalKind: "submitToolError",
-            toolName,
-            toolCallId,
-            submitError,
-          });
-          logger.error(
-            "[useChatToolExecution] 提交工具错误失败（tool_not_found）",
-            {
-              error: fatalError,
-              tool: toolName,
-              toolCallId,
-            },
-          );
-          setToolError(fatalError);
-        }
-        return;
-      }
+      const toolExists = await validateToolExists(
+        toolName,
+        toolCallId,
+        tool,
+        submitToolError,
+        setToolError,
+      );
+      if (!toolExists) return;
 
       // 2. 获取并验证工具 schema
       const schema = (
@@ -485,97 +779,25 @@ export function useChatToolExecution(
         >
       )[toolName];
 
-      if (!schema) {
-        const errorText = `缺少工具 schema: ${toolName}`;
-        const errorDetails = { kind: "unknown", toolName };
-        const { output, combinedMessage } = buildToolErrorOutput({
-          error: "schema_missing",
-          message: errorText,
-          errorDetails,
-        });
-        try {
-          await submitToolError({
-            errorText: combinedMessage,
-            output,
-            errorDetails,
-          });
-        } catch (submitError) {
-          const fatalError = buildFatalToolSubmitError({
-            fatalKind: "submitToolError",
-            toolName,
-            toolCallId,
-            submitError,
-          });
-          logger.error(
-            "[useChatToolExecution] 提交工具错误失败（schema_missing）",
-            {
-              error: fatalError,
-              tool: toolName,
-              toolCallId,
-            },
-          );
-          setToolError(fatalError);
-        }
-        return;
-      }
+      const schemaExists = await validateToolSchema(
+        toolName,
+        toolCallId,
+        schema,
+        submitToolError,
+        setToolError,
+      );
+      if (!schemaExists) return;
 
       // 3. 验证输入参数
-      const parsed = schema.safeParse(input) as
-        | { success: true; data: unknown }
-        | { success: false; error?: { issues?: unknown } };
-      if (!parsed.success) {
-        const errorText = `工具输入校验失败: ${toolName}`;
-        const issuesRaw = parsed.error?.issues;
-        const issues = Array.isArray(issuesRaw)
-          ? (issuesRaw as Array<Record<string, unknown>>)
-              .map((issue) => ({
-                path: Array.isArray(issue.path)
-                  ? (issue.path as Array<string | number>)
-                  : [],
-                message: typeof issue.message === "string" ? issue.message : "",
-                code: typeof issue.code === "string" ? issue.code : undefined,
-                expected: issue.expected,
-                received: issue.received,
-              }))
-              .filter((issue) => issue.message)
-          : [];
-
-        const errorDetails: ToolZodValidationErrorDetails = {
-          kind: "zod_validation",
-          issues,
-        };
-
-        const { output, combinedMessage } = buildToolErrorOutput({
-          error: "zod_validation",
-          message: errorText,
-          errorDetails,
-        });
-
-        try {
-          await submitToolError({
-            errorText: combinedMessage,
-            output,
-            errorDetails,
-          });
-        } catch (submitError) {
-          const fatalError = buildFatalToolSubmitError({
-            fatalKind: "submitToolError",
-            toolName,
-            toolCallId,
-            submitError,
-          });
-          logger.error(
-            "[useChatToolExecution] 提交工具错误失败（zod_validation）",
-            {
-              error: fatalError,
-              tool: toolName,
-              toolCallId,
-            },
-          );
-          setToolError(fatalError);
-        }
-        return;
-      }
+      const validationResult = await validateToolInput(
+        toolName,
+        toolCallId,
+        schema,
+        input,
+        submitToolError,
+        setToolError,
+      );
+      if (!validationResult.valid) return;
 
       // 4. 设置当前工具调用 ID 和中止控制器
       currentToolCallIdRef.current = toolCallId;
@@ -583,157 +805,19 @@ export function useChatToolExecution(
       activeToolAbortRef.current = abortController;
 
       try {
-        // 5. 获取工具超时配置
-        const timeoutMs =
-          TOOL_TIMEOUT_CONFIG[toolName as keyof typeof TOOL_TIMEOUT_CONFIG] ??
-          30_000;
-
-        // 6. 执行工具（带超时和中止支持）
-        const output = await withTimeout(
-          Promise.resolve(
-            tool.execute(parsed.data as never, {
-              toolCallId,
-              messages: [],
-              abortSignal: abortController.signal,
-            }),
-          ),
-          timeoutMs,
-          abortController.signal,
+        // 5. 执行工具并处理结果
+        await executeToolAndHandleResult(
+          tool,
+          toolName,
+          toolCallId,
+          validationResult.data,
+          abortController,
+          submitToolError,
+          addToolResult,
+          setToolError,
         );
-
-        // 7. 工具返回了结构化失败结果：统一按错误处理（但保留 output 以便 UI 展开与持久化）
-        if (isToolErrorResult(output)) {
-          const errorDetails = output.errorDetails;
-          const baseText = output.message || output.error || "工具执行失败";
-          const combinedMessage = appendToolErrorDetailsToText(
-            baseText,
-            errorDetails,
-          );
-
-          // 注意：传给模型的 output 不携带 errorDetails，避免 API 兼容性问题
-          const sanitizedOutput = {
-            ...(output as unknown as Record<string, unknown>),
-            message: combinedMessage,
-          } as Record<string, unknown>;
-          delete sanitizedOutput.errorDetails;
-
-          try {
-            await submitToolError({
-              errorText: combinedMessage,
-              output: sanitizedOutput,
-              errorDetails,
-            });
-          } catch (submitError) {
-            const fatalError = buildFatalToolSubmitError({
-              fatalKind: "submitToolError",
-              toolName,
-              toolCallId,
-              submitError,
-            });
-            logger.error(
-              "[useChatToolExecution] 提交工具结果失败（tool-error-result）",
-              {
-                error: fatalError,
-                tool: toolName,
-                toolCallId,
-              },
-            );
-            setToolError(fatalError);
-          }
-          return;
-        }
-
-        // 8. 添加工具结果（成功）
-        try {
-          await addToolResult({
-            tool: toolName,
-            toolCallId,
-            output,
-          });
-        } catch (submitError) {
-          const fatalError = buildFatalToolSubmitError({
-            fatalKind: "addToolResult",
-            toolName,
-            toolCallId,
-            submitError,
-          });
-          logger.error("[useChatToolExecution] 提交工具结果失败（success）", {
-            error: fatalError,
-            tool: toolName,
-            toolCallId,
-          });
-          setToolError(fatalError);
-        }
-      } catch (error) {
-        // 9. 处理中止错误
-        if (isAbortError(error)) {
-          const errorDetails = { kind: "aborted" };
-          const { output, combinedMessage } = buildToolErrorOutput({
-            error: "aborted",
-            message: "已取消",
-            errorDetails,
-          });
-          try {
-            await submitToolError({
-              errorText: combinedMessage,
-              output,
-              errorDetails,
-            });
-          } catch (submitError) {
-            const fatalError = buildFatalToolSubmitError({
-              fatalKind: "submitToolError",
-              toolName,
-              toolCallId,
-              submitError,
-            });
-            logger.error("[useChatToolExecution] 提交工具错误失败（abort）", {
-              error: fatalError,
-              tool: toolName,
-              toolCallId,
-            });
-            setToolError(fatalError);
-          }
-          return;
-        }
-
-        // 10. 处理其他错误
-        const errorText = toErrorString(error);
-
-        try {
-          const isTimeoutError =
-            typeof errorText === "string" &&
-            errorText.includes(`[${ErrorCodes.TIMEOUT}]`);
-
-          const errorDetails = {
-            kind: isTimeoutError ? "timeout" : "unknown",
-          };
-          const { output, combinedMessage } = buildToolErrorOutput({
-            error: isTimeoutError ? String(ErrorCodes.TIMEOUT) : "tool_error",
-            message: String(errorText),
-            errorDetails,
-          });
-
-          await submitToolError({
-            errorText: combinedMessage,
-            output,
-            errorDetails,
-          });
-        } catch (submitError) {
-          const fatalError = buildFatalToolSubmitError({
-            fatalKind: "submitToolError",
-            toolName,
-            toolCallId,
-            submitError,
-          });
-          logger.error("[useChatToolExecution] 提交工具错误失败（error）", {
-            error: fatalError,
-            tool: toolName,
-            toolCallId,
-          });
-          setToolError(fatalError);
-        }
       } finally {
-        // 10. 清理中止控制器和当前工具调用 ID
+        // 6. 清理中止控制器和当前工具调用 ID
         if (activeToolAbortRef.current === abortController) {
           activeToolAbortRef.current = null;
         }

@@ -78,6 +78,129 @@ function extractErrorSummary(rawMessage: string): string {
   return firstLine.trim() || rawMessage;
 }
 
+/**
+ * 工具调用展开内容组件
+ * - 显示错误信息、输入参数、输出结果三个区块
+ */
+interface ToolCallExpandedContentProps {
+  effectiveState: string;
+  errorSummary: string;
+  errorDetailsText: string | null;
+  showInput: boolean;
+  showOutput: boolean;
+  throttledInputJson: string;
+  outputJson: string;
+  part: ToolMessagePart;
+  errorDetails?: unknown;
+  copiedError: boolean;
+  copiedInput: boolean;
+  copiedOutput: boolean;
+  onCopyError: () => void;
+  onCopyInput: () => void;
+  onCopyOutput: () => void;
+}
+
+function ToolCallExpandedContent({
+  effectiveState,
+  errorSummary,
+  errorDetailsText,
+  showInput,
+  showOutput,
+  throttledInputJson,
+  outputJson,
+  copiedError,
+  copiedInput,
+  copiedOutput,
+  onCopyError,
+  onCopyInput,
+  onCopyOutput,
+}: ToolCallExpandedContentProps) {
+  const { t } = useAppTranslation("chat");
+  const { pressProps: copyErrorPressProps } = usePress({
+    onPress: onCopyError,
+  });
+  const { pressProps: copyInputPressProps } = usePress({
+    onPress: onCopyInput,
+  });
+  const { pressProps: copyOutputPressProps } = usePress({
+    onPress: onCopyOutput,
+  });
+
+  return (
+    <div className="tool-call-body">
+      {/* 错误信息区块 */}
+      {effectiveState === "output-error" && (
+        <div className="tool-call-section">
+          <div className="tool-call-section-header">
+            <div className="tool-call-section-title">{t(I18N_KEYS.error)}</div>
+            <button
+              type="button"
+              className="tool-call-copy-icon-button"
+              title={copiedError ? t(I18N_KEYS.copied) : t(I18N_KEYS.copyError)}
+              aria-label={
+                copiedError ? t(I18N_KEYS.copied) : t(I18N_KEYS.copyError)
+              }
+              {...copyErrorPressProps}
+            >
+              {copiedError ? <Check size={14} /> : <Copy size={14} />}
+            </button>
+          </div>
+          <div className="tool-call-error-text">{errorSummary}</div>
+          {errorDetailsText && (
+            <pre className="tool-call-json">{errorDetailsText}</pre>
+          )}
+        </div>
+      )}
+
+      {/* 输入参数区块 */}
+      {showInput && (
+        <div className="tool-call-section">
+          <div className="tool-call-section-header">
+            <div className="tool-call-section-title">
+              {t(I18N_KEYS.parameters)}
+            </div>
+            <button
+              type="button"
+              className="tool-call-copy-icon-button"
+              title={copiedInput ? t(I18N_KEYS.copied) : t(I18N_KEYS.copyInput)}
+              aria-label={
+                copiedInput ? t(I18N_KEYS.copied) : t(I18N_KEYS.copyInput)
+              }
+              {...copyInputPressProps}
+            >
+              {copiedInput ? <Check size={14} /> : <Copy size={14} />}
+            </button>
+          </div>
+          <pre className="tool-call-json">{throttledInputJson}</pre>
+        </div>
+      )}
+
+      {/* 输出结果区块 */}
+      {showOutput && (
+        <div className="tool-call-section">
+          <div className="tool-call-section-header">
+            <div className="tool-call-section-title">{t(I18N_KEYS.result)}</div>
+            <button
+              type="button"
+              className="tool-call-copy-icon-button"
+              title={
+                copiedOutput ? t(I18N_KEYS.copied) : t(I18N_KEYS.copyOutput)
+              }
+              aria-label={
+                copiedOutput ? t(I18N_KEYS.copied) : t(I18N_KEYS.copyOutput)
+              }
+              {...copyOutputPressProps}
+            >
+              {copiedOutput ? <Check size={14} /> : <Copy size={14} />}
+            </button>
+          </div>
+          <pre className="tool-call-json">{outputJson}</pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface ToolCallCardProps {
   part: ToolMessagePart;
   expanded: boolean;
@@ -164,15 +287,6 @@ export default function ToolCallCard({
   };
 
   const { pressProps: togglePressProps } = usePress({ onPress: onToggle });
-  const { pressProps: copyErrorPressProps } = usePress({
-    onPress: handleCopyError,
-  });
-  const { pressProps: copyInputPressProps } = usePress({
-    onPress: handleCopyInput,
-  });
-  const { pressProps: copyOutputPressProps } = usePress({
-    onPress: handleCopyOutput,
-  });
 
   return (
     <div
@@ -218,85 +332,23 @@ export default function ToolCallCard({
         {getToolSummary({ ...part, state: effectiveState }, t)}
       </div>
       {expanded ? (
-        <div className="tool-call-body">
-          {/* 错误信息区块 */}
-          {effectiveState === "output-error" && (
-            <div className="tool-call-section">
-              <div className="tool-call-section-header">
-                <div className="tool-call-section-title">
-                  {t(I18N_KEYS.error)}
-                </div>
-                <button
-                  type="button"
-                  className="tool-call-copy-icon-button"
-                  title={
-                    copiedError ? t(I18N_KEYS.copied) : t(I18N_KEYS.copyError)
-                  }
-                  aria-label={
-                    copiedError ? t(I18N_KEYS.copied) : t(I18N_KEYS.copyError)
-                  }
-                  {...copyErrorPressProps}
-                >
-                  {copiedError ? <Check size={14} /> : <Copy size={14} />}
-                </button>
-              </div>
-              <div className="tool-call-error-text">{errorSummary}</div>
-              {errorDetailsText && (
-                <pre className="tool-call-json">{errorDetailsText}</pre>
-              )}
-            </div>
-          )}
-
-          {/* 输入参数区块 */}
-          {showInput && (
-            <div className="tool-call-section">
-              <div className="tool-call-section-header">
-                <div className="tool-call-section-title">
-                  {t(I18N_KEYS.parameters)}
-                </div>
-                <button
-                  type="button"
-                  className="tool-call-copy-icon-button"
-                  title={
-                    copiedInput ? t(I18N_KEYS.copied) : t(I18N_KEYS.copyInput)
-                  }
-                  aria-label={
-                    copiedInput ? t(I18N_KEYS.copied) : t(I18N_KEYS.copyInput)
-                  }
-                  {...copyInputPressProps}
-                >
-                  {copiedInput ? <Check size={14} /> : <Copy size={14} />}
-                </button>
-              </div>
-              <pre className="tool-call-json">{throttledInputJson}</pre>
-            </div>
-          )}
-
-          {/* 输出结果区块 */}
-          {showOutput && (
-            <div className="tool-call-section">
-              <div className="tool-call-section-header">
-                <div className="tool-call-section-title">
-                  {t(I18N_KEYS.result)}
-                </div>
-                <button
-                  type="button"
-                  className="tool-call-copy-icon-button"
-                  title={
-                    copiedOutput ? t(I18N_KEYS.copied) : t(I18N_KEYS.copyOutput)
-                  }
-                  aria-label={
-                    copiedOutput ? t(I18N_KEYS.copied) : t(I18N_KEYS.copyOutput)
-                  }
-                  {...copyOutputPressProps}
-                >
-                  {copiedOutput ? <Check size={14} /> : <Copy size={14} />}
-                </button>
-              </div>
-              <pre className="tool-call-json">{outputJson}</pre>
-            </div>
-          )}
-        </div>
+        <ToolCallExpandedContent
+          effectiveState={effectiveState}
+          errorSummary={errorSummary}
+          errorDetailsText={errorDetailsText}
+          showInput={showInput}
+          showOutput={showOutput}
+          throttledInputJson={throttledInputJson}
+          outputJson={outputJson}
+          part={part}
+          errorDetails={errorDetails}
+          copiedError={copiedError}
+          copiedInput={copiedInput}
+          copiedOutput={copiedOutput}
+          onCopyError={handleCopyError}
+          onCopyInput={handleCopyInput}
+          onCopyOutput={handleCopyOutput}
+        />
       ) : null}
     </div>
   );
