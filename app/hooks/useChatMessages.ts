@@ -423,7 +423,6 @@ export function useChatMessages(
 
     // 流式时不同步
     if (machine.isLocked()) {
-      logger.debug(`${LOG_PREFIX} 同步被锁定（聊天运行中），跳过 UI → storage`);
       return;
     }
 

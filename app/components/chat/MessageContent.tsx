@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import ThinkingBlock from "./ThinkingBlock";
 import ToolCallCard from "./ToolCallCard";
@@ -20,7 +21,7 @@ interface MessageContentProps {
   onThinkingBlockToggle: (messageId: string) => void;
 }
 
-export default function MessageContent({
+export default memo(function MessageContent({
   message,
   status,
   isCurrentStreaming,
@@ -123,4 +124,4 @@ export default function MessageContent({
       })}
     </>
   );
-}
+});

@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Bot, UserRound } from "lucide-react";
 import MessageContent from "./MessageContent";
 import type { ChatUIMessage, MessageMetadata } from "@/app/types/chat";
@@ -18,7 +19,7 @@ interface MessageItemProps {
   onThinkingBlockToggle: (messageId: string) => void;
 }
 
-export default function MessageItem({
+export default memo(function MessageItem({
   message,
   status,
   isCurrentStreaming,
@@ -80,4 +81,4 @@ export default function MessageItem({
       </div>
     </div>
   );
-}
+});

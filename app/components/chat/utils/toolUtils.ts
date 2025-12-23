@@ -40,6 +40,15 @@ export const getToolTitle = (type: string, t: TFunction): string => {
 };
 
 /**
+ * 提取错误消息的第一行
+ */
+const extractFirstLine = (message: string): string => {
+  const firstBlock = message.split("\n\n")[0] ?? message;
+  const firstLine = firstBlock.split("\n")[0] ?? firstBlock;
+  return firstLine.trim() || message;
+};
+
+/**
  * 获取工具调用状态摘要
  */
 export const getToolSummary = (part: ToolMessagePart, t: TFunction): string => {
@@ -53,13 +62,14 @@ export const getToolSummary = (part: ToolMessagePart, t: TFunction): string => {
       const bytes = getByteLength(part.output ?? "");
       return t("toolCalls.summary.output", { bytes });
     }
-    case "output-error":
-      return t("toolCalls.summary.error", {
-        message:
-          part.errorText ??
-          (isToolErrorResult(part.output) ? part.output.message : undefined) ??
-          t("toolCalls.error"),
-      });
+    case "output-error": {
+      const rawMessage =
+        part.errorText ??
+        (isToolErrorResult(part.output) ? part.output.message : undefined) ??
+        t("toolCalls.error");
+      const firstLine = extractFirstLine(rawMessage);
+      return t("toolCalls.summary.error", { message: firstLine });
+    }
     default:
       return t("toolCalls.status.default");
   }

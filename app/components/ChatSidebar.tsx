@@ -1109,6 +1109,7 @@ export default function ChatSidebar({
     addToolResult,
   } = useChat<UseChatMessage>({
     id: activeConversationId || "default",
+    experimental_throttle: 100, // 限制消息更新频率为 100ms，减少快速流式输出时的性能开销
     messages: initialMessages as unknown as UseChatMessage[],
     transport: chatTransport,
     onToolCall: ({ toolCall }) => {
