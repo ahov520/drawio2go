@@ -1,19 +1,18 @@
+<img width="250px" src="public/icon/logo.svg" align="left"/>
+
 # DrawIO2Go
 
-<p align="center">
-  <strong>AI 加持，人机共绘</strong>
-</p>
+<strong>AI 加持，人机共绘</strong>
+
+![Electron](https://img.shields.io/badge/Electron-38.x-47848F?logo=electron&logoColor=white)
+![Nextjs](https://img.shields.io/badge/Next.js-15-black?logo=next.js&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![Windows](https://img.shields.io/badge/-Windows-blue?logo=windows&logoColor=white)
+![MacOS](https://img.shields.io/badge/-macOS-black?&logo=apple&logoColor=white)
+![Linux](https://img.shields.io/badge/-Linux-yellow?logo=linux&logoColor=white)
 
 <p align="center">
   简体中文 | <a href="./README.md">English</a>
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Electron-38.x-47848F?logo=electron&logoColor=white" alt="Electron">
-  <img src="https://img.shields.io/badge/Next.js-15-black?logo=next.js&logoColor=white" alt="Next.js">
-  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black" alt="React">
-  <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
-  <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License">
 </p>
 
 ---
