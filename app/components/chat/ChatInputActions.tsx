@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Button,
   Dropdown,
@@ -12,48 +19,219 @@ import {
 import { RotateCcw } from "lucide-react";
 import { useAppTranslation } from "@/app/i18n/hooks";
 import type { ModelConfig, ProviderConfig } from "@/app/types/chat";
-import ModelComboBox from "./ModelComboBox";
+import type { DrawioPageInfo } from "@/app/lib/storage/page-metadata";
+import type { McpConfig } from "@/app/types/mcp";
+import { McpButton, McpConfigDialog } from "@/app/components/mcp";
 import { useToast } from "@/app/components/toast";
 import ModelIcon from "@/app/components/common/ModelIcon";
 import ImageUploadButton from "@/components/chat/ImageUploadButton";
 import { MAX_IMAGES_PER_MESSAGE } from "@/lib/attachment-converter";
+import CanvasContextButton from "./CanvasContextButton";
+import ModelComboBox from "./ModelComboBox";
+import PageSelectorButton from "./PageSelectorButton";
+import SkillButton, { type SkillButtonProps } from "./SkillButton";
 
-interface ChatInputActionsProps {
-  isSendDisabled: boolean;
-  isChatStreaming: boolean;
-  canSendNewMessage: boolean;
-  lastMessageIsUser: boolean;
-  isCompact?: boolean;
-  onCancel?: () => void;
-  onNewChat: () => void;
-  onHistory: () => void;
-  onRetry: () => void;
-  onImageUpload?: (files: File[]) => void;
-  modelSelectorProps: {
-    providers: ProviderConfig[];
-    models: ModelConfig[];
-    selectedModelId: string | null;
-    onSelectModel: (modelId: string) => Promise<void> | void;
-    isDisabled: boolean;
-    isLoading: boolean;
-    modelLabel: string;
-  };
+export interface ChatPageSelectorConfig {
+  pages: DrawioPageInfo[];
+  selectedPageIds: Set<string>;
+  onSelectionChange: (ids: Set<string>) => void;
+  onRequestRefresh?: () => Promise<string | null>;
+  isDisabled?: boolean;
 }
 
-export default function ChatInputActions({
-  isSendDisabled,
-  isChatStreaming,
-  canSendNewMessage,
-  lastMessageIsUser,
-  isCompact,
-  onCancel,
-  onNewChat,
-  onHistory,
-  onRetry,
-  onImageUpload,
+export interface ChatMcpConfigDialogConfig {
+  isActive: boolean;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: (config: McpConfig) => Promise<void>;
+  isDisabled?: boolean;
+}
+
+export interface ChatModelSelectorConfig {
+  providers: ProviderConfig[];
+  models: ModelConfig[];
+  selectedModelId: string | null;
+  onSelectModel: (modelId: string) => Promise<void> | void;
+  isDisabled: boolean;
+  isLoading: boolean;
+  modelLabel: string;
+}
+
+export interface ChatTopActionsProps {
+  skillButton?: SkillButtonProps;
+  pageSelector?: ChatPageSelectorConfig;
+  mcpConfigDialog?: ChatMcpConfigDialogConfig;
+  isInputDisabled: boolean;
+  isCanvasContextEnabled: boolean;
+  onCanvasContextToggle: () => void;
+}
+
+export function ChatTopActions({
+  skillButton,
+  pageSelector,
+  mcpConfigDialog,
+  isInputDisabled,
+  isCanvasContextEnabled,
+  onCanvasContextToggle,
+}: ChatTopActionsProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const shouldRenderPageSelector =
+    Boolean(pageSelector) && (pageSelector?.pages?.length ?? 0) > 0;
+  const hasSkillButton = Boolean(skillButton);
+  const hasMcpConfigDialog = Boolean(mcpConfigDialog);
+
+  const updateCollapseStage = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const maxStage = 4;
+    const rawStage = Number(container.dataset.collapseStage ?? "0");
+    let stage = Number.isFinite(rawStage)
+      ? Math.min(Math.max(rawStage, 0), maxStage)
+      : 0;
+
+    const fits = () => container.scrollWidth <= container.clientWidth + 1;
+    const setStage = (nextStage: number) => {
+      container.dataset.collapseStage = String(nextStage);
+    };
+
+    // 先确保当前 stage 的样式已生效，避免外部首次渲染时 dataset 缺失导致测量偏差。
+    setStage(stage);
+
+    if (!fits()) {
+      while (stage < maxStage) {
+        stage += 1;
+        setStage(stage);
+        if (fits()) break;
+      }
+      return;
+    }
+
+    while (stage > 0) {
+      const nextStage = stage - 1;
+      setStage(nextStage);
+      if (fits()) {
+        stage = nextStage;
+        continue;
+      }
+      setStage(stage);
+      break;
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const schedule = () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+      }
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null;
+        updateCollapseStage();
+      });
+    };
+
+    updateCollapseStage();
+
+    const ro = new ResizeObserver(() => schedule());
+    ro.observe(container);
+
+    const selectors = [
+      ".mcp-button",
+      ".canvas-context-button",
+      ".skill-button",
+      ".page-selector-button",
+    ];
+
+    for (const selector of selectors) {
+      const element = container.querySelector(selector);
+      if (element) ro.observe(element);
+    }
+
+    return () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      ro.disconnect();
+    };
+  }, [
+    updateCollapseStage,
+    shouldRenderPageSelector,
+    hasSkillButton,
+    hasMcpConfigDialog,
+  ]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="chat-top-actions"
+      data-collapse-stage="0"
+    >
+      <div className="chat-top-actions__item">
+        <CanvasContextButton
+          enabled={isCanvasContextEnabled}
+          onPress={onCanvasContextToggle}
+          isDisabled={isInputDisabled}
+          isIconOnly={false}
+          className="chat-icon-button"
+        />
+      </div>
+
+      {shouldRenderPageSelector ? (
+        <div className="chat-top-actions__item">
+          <PageSelectorButton
+            pages={pageSelector!.pages}
+            selectedPageIds={pageSelector!.selectedPageIds}
+            onSelectionChange={pageSelector!.onSelectionChange}
+            onRequestRefresh={pageSelector!.onRequestRefresh}
+            isDisabled={pageSelector!.isDisabled ?? isInputDisabled}
+            isIconOnly={false}
+          />
+        </div>
+      ) : null}
+
+      {skillButton ? (
+        <div className="chat-top-actions__item">
+          <SkillButton {...skillButton} isIconOnly={false} />
+        </div>
+      ) : null}
+
+      {mcpConfigDialog ? (
+        <div className="chat-top-actions__item">
+          <McpConfigDialog
+            isOpen={mcpConfigDialog.isOpen}
+            onOpenChange={mcpConfigDialog.onOpenChange}
+            onConfirm={mcpConfigDialog.onConfirm}
+            trigger={
+              <McpButton
+                isActive={mcpConfigDialog.isActive}
+                size="sm"
+                isIconOnly={false}
+                className="chat-icon-button"
+                isDisabled={
+                  Boolean(mcpConfigDialog.isDisabled) ||
+                  Boolean(mcpConfigDialog.isActive)
+                }
+              />
+            }
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ChatModelSelector({
   modelSelectorProps,
-}: ChatInputActionsProps) {
+}: {
+  modelSelectorProps: ChatModelSelectorConfig;
+}) {
   const { t } = useAppTranslation("chat");
+  const { push } = useToast();
   const {
     providers,
     models,
@@ -63,18 +241,6 @@ export default function ChatInputActions({
     isLoading: isModelSelectorLoading,
     modelLabel,
   } = modelSelectorProps;
-  const { push } = useToast();
-  const canCancel = Boolean(isChatStreaming && onCancel);
-  const sendButtonVariant: ButtonProps["variant"] = canCancel
-    ? "danger"
-    : "primary";
-  const sendButtonType = canCancel ? undefined : "submit";
-  const getSendButtonDisabled = () => {
-    if (canCancel) return false;
-    if (isChatStreaming) return true;
-    return isSendDisabled;
-  };
-  const sendButtonDisabled = getSendButtonDisabled();
   const [isModelPopoverOpen, setIsModelPopoverOpen] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
 
@@ -127,6 +293,85 @@ export default function ChatInputActions({
     },
     [isSelecting, onSelectModel, push, t],
   );
+
+  return (
+    <Dropdown isOpen={isModelPopoverOpen} onOpenChange={setIsModelPopoverOpen}>
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        className="chat-model-button"
+        isDisabled={isModelSelectorDisabled}
+        isIconOnly={false}
+        aria-label={`${t("modelSelector.label")}: ${modelLabel}`}
+      >
+        {isModelSelectorLoading ? (
+          <Spinner size="sm" />
+        ) : (
+          <ModelIcon
+            size={16}
+            modelId={selectedModelId}
+            modelName={activeModel?.modelName || activeModel?.displayName}
+            providerId={activeProvider?.id}
+            providerType={activeProvider?.providerType ?? null}
+            apiUrl={activeProvider?.apiUrl ?? null}
+            className="text-primary"
+          />
+        )}
+        <span className="chat-model-button__label">{modelLabel}</span>
+      </Button>
+      <Dropdown.Popover className="chat-model-popover" placement="top end">
+        <ModelComboBox
+          providers={providers}
+          models={models}
+          selectedModelId={selectedModelId}
+          onSelect={handleModelSelect}
+          disabled={isModelSelectorDisabled}
+          isLoading={isModelSelectorLoading}
+          isOpen={isModelPopoverOpen}
+        />
+      </Dropdown.Popover>
+    </Dropdown>
+  );
+}
+
+interface ChatInputActionsProps {
+  isSendDisabled: boolean;
+  isChatStreaming: boolean;
+  canSendNewMessage: boolean;
+  lastMessageIsUser: boolean;
+  onCancel?: () => void;
+  onNewChat: () => void;
+  onHistory: () => void;
+  onRetry: () => void;
+  onImageUpload?: (files: File[]) => void;
+  modelSelectorProps: ChatModelSelectorConfig;
+}
+
+export default function ChatInputActions({
+  isSendDisabled,
+  isChatStreaming,
+  canSendNewMessage,
+  lastMessageIsUser,
+  onCancel,
+  onNewChat,
+  onHistory,
+  onRetry,
+  onImageUpload,
+  modelSelectorProps,
+}: ChatInputActionsProps) {
+  const { t } = useAppTranslation("chat");
+  const canCancel = Boolean(isChatStreaming && onCancel);
+  const sendButtonVariant: ButtonProps["variant"] = canCancel
+    ? "danger"
+    : "primary";
+  const sendButtonType = canCancel ? undefined : "submit";
+  const getSendButtonDisabled = () => {
+    if (canCancel) return false;
+    if (isChatStreaming) return true;
+    return isSendDisabled;
+  };
+  const sendButtonDisabled = getSendButtonDisabled();
 
   return (
     <div className="chat-input-actions">
@@ -213,46 +458,7 @@ export default function ChatInputActions({
           </Button>
         )}
 
-        <Dropdown
-          isOpen={isModelPopoverOpen}
-          onOpenChange={setIsModelPopoverOpen}
-        >
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className="chat-model-button"
-            isDisabled={isModelSelectorDisabled}
-            isIconOnly={isCompact}
-            aria-label={`${t("modelSelector.label")}: ${modelLabel}`}
-          >
-            {isModelSelectorLoading ? (
-              <Spinner size="sm" />
-            ) : (
-              <ModelIcon
-                size={16}
-                modelId={selectedModelId}
-                modelName={activeModel?.modelName || activeModel?.displayName}
-                providerId={activeProvider?.id}
-                providerType={activeProvider?.providerType ?? null}
-                apiUrl={activeProvider?.apiUrl ?? null}
-                className="text-primary"
-              />
-            )}
-            <span className="chat-model-button__label">{modelLabel}</span>
-          </Button>
-          <Dropdown.Popover className="chat-model-popover" placement="top end">
-            <ModelComboBox
-              providers={providers}
-              models={models}
-              selectedModelId={selectedModelId}
-              onSelect={handleModelSelect}
-              disabled={isModelSelectorDisabled}
-              isLoading={isModelSelectorLoading}
-              isOpen={isModelPopoverOpen}
-            />
-          </Dropdown.Popover>
-        </Dropdown>
+        <ChatModelSelector modelSelectorProps={modelSelectorProps} />
 
         <TooltipRoot isDisabled={true} delay={0}>
           <Button

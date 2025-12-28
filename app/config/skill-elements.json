@@ -1,0 +1,74 @@
+{
+  "themes": [
+    {
+      "id": "modern",
+      "nameKey": "skill.theme.modern",
+      "promptFragment": "Modern (web-ready)\n- Palette: If the user provides a palette/brand colors, use it verbatim. Otherwise use neutral base + 1 accent (optional 1 secondary).\n- Shapes: rounded rectangles as the default; consistent stroke width; clear text contrast.\n- Layout: grid aligned; consistent spacing; generous whitespace; use subtle containers for grouping.\n- Connectors: prefer orthogonal routing; minimal bends; avoid crossings.\n- Avoid: gradients, heavy shadows, 3D, over-decoration, rainbow palettes."
+    },
+    {
+      "id": "academic",
+      "nameKey": "skill.theme.academic",
+      "promptFragment": "Academic (paper figure)\n- Palette: If the user provides a palette/brand colors, use it verbatim. Otherwise use neutral base + 1 primary accent (+ optional 1 secondary for categories), with restrained saturation.\n- Shapes: more rectilinear; moderate corner radius; clear titled group boxes.\n- Layout: strict alignment; even spacing; stable label placement; prioritize readability.\n- Connectors: orthogonal with explicit waypoints when needed; minimize crossings; dashed lines only for a clear semantic meaning.\n- Avoid: decorative icons, thick outlines, heavy fills, strong shadows."
+    },
+    {
+      "id": "minimal",
+      "nameKey": "skill.theme.minimal",
+      "promptFragment": "Minimal\n- Palette: If the user provides a palette, use it verbatim. Otherwise use monochrome or two-tone (mostly neutral + optional light accent).\n- Shapes: only basic shapes; minimal icons; emphasize structure via spacing, not decoration.\n- Fill: prefer no fill or very light fills; keep strokes thin and consistent.\n- Layout: strict alignment; large whitespace; short labels.\n- Connectors: thin, short, orthogonal routes; avoid crossings."
+    },
+    {
+      "id": "custom",
+      "nameKey": "skill.theme.custom",
+      "promptFragment": "Custom\n- Follow the user's style description/palette/brand rules exactly.\n- If key parameters are missing, ask only what you must: palette, corner radius, stroke width, typography, connector style (orthogonal vs curved), layout density.\n- Keep the palette small and consistent; do not invent arbitrary colors."
+    }
+  ],
+  "knowledge": [
+    {
+      "id": "general",
+      "nameKey": "skill.element.general",
+      "required": true,
+      "promptFragment": "[General]\nrectangle: box (also text labels / group frames via style)\nellipse: circle/ellipse\nrhombus: decision diamond\ntriangle: triangle\nswimlane: container/lane\nnote: sticky note\ncurlyBracket: brace (flipH=1 for right)\nimage: icon (shape=image;image=<PATH or data URL>)"
+    },
+    {
+      "id": "basic",
+      "nameKey": "skill.element.basic",
+      "required": false,
+      "promptFragment": "[Flowchart]\nmxgraph.flowchart.terminator: start/end\nmxgraph.flowchart.process: process step\nmxgraph.flowchart.decision: decision\nmxgraph.flowchart.data: input/output\nmxgraph.flowchart.predefined_process: subprocess\nmxgraph.flowchart.document: document"
+    },
+    {
+      "id": "misc",
+      "nameKey": "skill.element.misc",
+      "required": false,
+      "promptFragment": "[Misc]\nnote: note/sticky\ncurlyBracket: brace (flipH=1 for right)\nswimlane: swimlane/container\nimage: custom icon (SVG via image=<...>)"
+    },
+    {
+      "id": "uml",
+      "nameKey": "skill.element.uml",
+      "required": false,
+      "promptFragment": "[UML]\nswimlane: class/interface box (HTML value with separators)\numlLifeline: lifeline\numlActor: actor\nellipse: use case\numlState: state\nendState: final state (typically with ellipse)"
+    },
+    {
+      "id": "aws",
+      "nameKey": "skill.element.aws",
+      "required": false,
+      "promptFragment": "[AWS]\nmxgraph.aws4.ec2: EC2 instance\nmxgraph.aws4.s3: S3 bucket\nmxgraph.aws4.lambda: Lambda function\nmxgraph.aws4.rds: RDS\nmxgraph.aws4.dynamodb: DynamoDB\nmxgraph.aws4.vpc: VPC\nmxgraph.aws4.application_load_balancer: Application Load Balancer\nmxgraph.aws4.cloudfront: CloudFront\nmxgraph.aws4.api_gateway: API Gateway\nmxgraph.aws4.group: group/container (optional grIcon=mxgraph.aws4.group_*)"
+    },
+    {
+      "id": "azure",
+      "nameKey": "skill.element.azure",
+      "required": false,
+      "promptFragment": "[Azure icons: image=<path>]\nimg/lib/azure2/compute/Virtual_Machine.svg: Virtual Machine\nimg/lib/azure2/general/Blob_Block.svg: Blob Storage\nimg/lib/azure2/databases/SQL_Database.svg: SQL Database\nimg/lib/azure2/compute/Function_Apps.svg: Functions\nimg/lib/azure2/app_services/App_Services.svg: App Service\nimg/lib/azure2/networking/Virtual_Networks.svg: Virtual Network\nimg/lib/azure2/networking/Load_Balancers.svg: Load Balancer\nimg/lib/azure2/networking/Application_Gateways.svg: Application Gateway\nimg/lib/azure2/other/AKS_Automatic.svg: AKS\nimg/lib/azure2/compute/Container_Instances.svg: Container Instances"
+    },
+    {
+      "id": "gcp",
+      "nameKey": "skill.element.gcp",
+      "required": false,
+      "promptFragment": "[GCP]\nmxgraph.gcp2.compute_engine: Compute Engine\nmxgraph.gcp2.cloud_storage: Cloud Storage\nmxgraph.gcp2.bigquery: BigQuery\nmxgraph.gcp2.cloud_functions: Cloud Functions\nmxgraph.gcp2.container_engine: GKE\nmxgraph.gcp2.cloud_run: Cloud Run\nmxgraph.gcp2.cloud_pubsub: Pub/Sub"
+    },
+    {
+      "id": "network",
+      "nameKey": "skill.element.network",
+      "required": false,
+      "promptFragment": "[Network]\nmxgraph.cisco19.router: router\nmxgraph.cisco19.l3_switch: L3 switch\nmxgraph.cisco19.firewall: firewall\nmxgraph.cisco19.server: server\nmxgraph.cisco19.workstation: workstation\nmxgraph.cisco19.cloud: cloud"
+    }
+  ]
+}

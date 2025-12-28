@@ -111,7 +111,7 @@
     "characterCount": "{{current}} / {{max}} chars"
   },
   "canvasContext": "Canvas Context",
-  "canvasContextTooltip": "Auto-inject compressed canvas elements into conversations, in App will injecting mouse-selected element data",
+  "canvasContextTooltip": "Auto-inject a canvas summary (vertex/edge counts). In App, also inject selected element IDs.",
   "pageSelector": {
     "title": "Page Selector",
     "allPages": "All pages",
@@ -123,6 +123,45 @@
     "togglePage": "Toggle page selection",
     "ariaLabel": "Select page scope",
     "noPagesSelected": "Please select at least one page"
+  },
+  "skill": {
+    "buttonLabel": "{{theme}}",
+    "ariaLabel": "Configure diagram style and knowledge",
+    "disabled": {
+      "missingTemplate": "System prompt must include {{theme}} and {{knowledge}} placeholders.",
+      "partialTemplate": "System prompt must include both {{theme}} and {{knowledge}} placeholders.",
+      "unavailable": "Skill settings are unavailable right now."
+    },
+    "theme": {
+      "label": "Style",
+      "description": "Choose an overall diagram style (follows your palette)",
+      "modern": "Modern",
+      "academic": "Academic",
+      "minimal": "Minimal",
+      "custom": "Custom",
+      "unknown": "Unknown style"
+    },
+    "knowledge": {
+      "label": "Knowledge",
+      "description": "Choose knowledge types (multi-select)",
+      "required": "Required"
+    },
+    "custom": {
+      "title": "Custom style",
+      "placeholder": "Describe the style you want: tone (cool/warm/neutral), saturation & contrast, line weight, corner radius, connector style (orthogonal/curved/arrows), layout density, typography/annotation style. If you provide a primary color or palette, it will be followed.",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "element": {
+      "general": "General",
+      "basic": "Basic Flow",
+      "misc": "Misc",
+      "uml": "UML",
+      "aws": "AWS",
+      "azure": "Azure",
+      "gcp": "GCP",
+      "network": "Network"
+    }
   },
   "toolCalls": {
     "title": "Tool calls",

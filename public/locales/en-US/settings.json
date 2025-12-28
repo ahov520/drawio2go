@@ -120,6 +120,12 @@
       "resetTitle": "Reset to Default System Prompt",
       "resetConfirm": "This will discard your current edits. Confirm reset to default system prompt?"
     },
+    "defaultSettings": {
+      "title": "Defaults for New Chats",
+      "description": "New chats will use these defaults",
+      "themeLabel": "Default Style",
+      "knowledgeLabel": "Default Knowledge"
+    },
     "futureFeatures": "Future releases will include additional agent configuration options such as thinking mode toggles, tool call strategies, and more."
   },
   "models": {

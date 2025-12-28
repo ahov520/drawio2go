@@ -15,7 +15,11 @@ import {
   type ModelConfig,
   type ProviderConfig,
 } from "@/app/types/chat";
-import ChatInputActions from "./ChatInputActions";
+import ChatInputActions, {
+  ChatTopActions,
+  type ChatMcpConfigDialogConfig,
+  type ChatPageSelectorConfig,
+} from "./ChatInputActions";
 import { useAppTranslation, useI18n } from "@/app/i18n/hooks";
 import { useToast } from "@/app/components/toast";
 import {
@@ -23,15 +27,10 @@ import {
   type AttachmentItem,
 } from "@/hooks/useImageAttachments";
 import { useDropzone } from "@/hooks/useDropzone";
-import { useContainerQuery } from "@/hooks/useContainerQuery";
 import ImagePreviewBar from "@/components/chat/ImagePreviewBar";
 import { toErrorString } from "@/app/lib/error-handler";
 import { dispatchSidebarNavigate } from "@/app/lib/ui-events";
-import { McpButton, McpConfigDialog } from "@/app/components/mcp";
-import type { McpConfig } from "@/app/types/mcp";
-import CanvasContextButton from "./CanvasContextButton";
-import PageSelectorButton from "./PageSelectorButton";
-import type { DrawioPageInfo } from "@/app/lib/storage/page-metadata";
+import type { SkillButtonProps } from "./SkillButton";
 
 const MIN_BASE_TEXTAREA_HEIGHT = 60;
 
@@ -51,6 +50,7 @@ interface ChatInputAreaProps {
   onRetry: () => void;
   imageAttachments?: ReturnType<typeof useImageAttachments>;
   onAttachmentsChange?: (attachments: AttachmentItem[]) => void;
+  skillButton?: SkillButtonProps;
   modelSelectorProps: {
     providers: ProviderConfig[];
     models: ModelConfig[];
@@ -67,24 +67,12 @@ interface ChatInputAreaProps {
   /**
    * 页面选择器（Milestone M5：受控模式）。
    */
-  pageSelector?: {
-    pages: DrawioPageInfo[];
-    selectedPageIds: Set<string>;
-    onSelectionChange: (ids: Set<string>) => void;
-    onRequestRefresh?: () => Promise<string | null>;
-    isDisabled?: boolean;
-  };
+  pageSelector?: ChatPageSelectorConfig;
 
   /**
    * MCP 配置弹窗（Popover/Dropdown）。
    */
-  mcpConfigDialog?: {
-    isActive: boolean;
-    isOpen: boolean;
-    onOpenChange: (open: boolean) => void;
-    onConfirm: (config: McpConfig) => Promise<void>;
-    isDisabled?: boolean;
-  };
+  mcpConfigDialog?: ChatMcpConfigDialogConfig;
 }
 
 export default function ChatInputArea({
@@ -103,6 +91,7 @@ export default function ChatInputArea({
   onRetry,
   imageAttachments,
   onAttachmentsChange,
+  skillButton,
   modelSelectorProps,
   isCanvasContextEnabled,
   onCanvasContextToggle,
@@ -113,7 +102,6 @@ export default function ChatInputArea({
   const { t: tCommon } = useI18n();
   const { push } = useToast();
   const textareaContainerRef = useRef<HTMLDivElement | null>(null);
-  const inputContainerRef = useRef<HTMLFormElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const baseHeightRef = useRef<number | null>(null);
   const internalAttachments = useImageAttachments();
@@ -145,13 +133,6 @@ export default function ChatInputArea({
     isModelConfigMissing ||
     !canSendNewMessage ||
     !isOnline;
-
-  const shouldRenderPageSelector =
-    Boolean(pageSelector) && (pageSelector?.pages?.length ?? 0) > 0;
-
-  const isCompactActions = useContainerQuery(inputContainerRef, {
-    maxWidth: 400,
-  });
 
   useEffect(() => {
     onAttachmentsChange?.(attachmentItems);
@@ -283,11 +264,7 @@ export default function ChatInputArea({
       ref={textareaContainerRef}
       {...rootProps}
     >
-      <form
-        onSubmit={onSubmit}
-        className="chat-input-container gap-2"
-        ref={inputContainerRef}
-      >
+      <form onSubmit={onSubmit} className="chat-input-container gap-2">
         {hasAttachments ? (
           <ImagePreviewBar
             attachments={attachmentItems}
@@ -295,42 +272,14 @@ export default function ChatInputArea({
           />
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-2">
-          <CanvasContextButton
-            enabled={isCanvasContextEnabled}
-            onPress={onCanvasContextToggle}
-          />
-          {shouldRenderPageSelector ? (
-            <PageSelectorButton
-              pages={pageSelector!.pages}
-              selectedPageIds={pageSelector!.selectedPageIds}
-              onSelectionChange={pageSelector!.onSelectionChange}
-              onRequestRefresh={pageSelector!.onRequestRefresh}
-              isDisabled={pageSelector!.isDisabled ?? isInputDisabled}
-              isIconOnly={isCompactActions}
-            />
-          ) : null}
-          {mcpConfigDialog ? (
-            <div className="ml-auto">
-              <McpConfigDialog
-                isOpen={mcpConfigDialog.isOpen}
-                onOpenChange={mcpConfigDialog.onOpenChange}
-                onConfirm={mcpConfigDialog.onConfirm}
-                trigger={
-                  <McpButton
-                    isActive={mcpConfigDialog.isActive}
-                    size="sm"
-                    isIconOnly={isCompactActions}
-                    isDisabled={
-                      Boolean(mcpConfigDialog.isDisabled) ||
-                      Boolean(mcpConfigDialog.isActive)
-                    }
-                  />
-                }
-              />
-            </div>
-          ) : null}
-        </div>
+        <ChatTopActions
+          skillButton={skillButton}
+          pageSelector={pageSelector}
+          mcpConfigDialog={mcpConfigDialog}
+          isInputDisabled={isInputDisabled}
+          isCanvasContextEnabled={isCanvasContextEnabled}
+          onCanvasContextToggle={onCanvasContextToggle}
+        />
 
         {/* 多行文本输入框 */}
         <TextArea
@@ -371,7 +320,6 @@ export default function ChatInputArea({
           onRetry={onRetry}
           onImageUpload={handleImageUpload}
           modelSelectorProps={modelSelectorProps}
-          isCompact={isCompactActions}
         />
       </form>
 

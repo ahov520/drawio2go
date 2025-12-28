@@ -6,6 +6,7 @@ import {
   type AgentSettings,
   type ModelConfig,
   type ProviderConfig,
+  type SkillSettings,
 } from "@/app/types/chat";
 import { DEFAULT_AGENT_SETTINGS } from "@/app/lib/config-utils";
 import { debounce } from "@/app/lib/utils";
@@ -349,6 +350,20 @@ export default function SettingsSidebar({
     [debouncedSaveAgentSettings],
   );
 
+  const handleAgentSkillSettingsChange = useCallback(
+    (nextSkillSettings: SkillSettings) => {
+      const nextSettings: AgentSettings = {
+        ...agentSettingsRef.current,
+        skillSettings: nextSkillSettings,
+        updatedAt: Date.now(),
+      };
+
+      setAgentSettings(nextSettings);
+      debouncedSaveAgentSettings(nextSettings);
+    },
+    [debouncedSaveAgentSettings],
+  );
+
   const handleVersionSettingsChange = useCallback(
     (settings: { autoVersionOnAIEdit: boolean }) => {
       setVersionSettings(settings);
@@ -404,6 +419,11 @@ export default function SettingsSidebar({
             <AgentSettingsPanel
               systemPrompt={agentSettings.systemPrompt}
               onChange={handleAgentSystemPromptChange}
+              skillSettings={
+                agentSettings.skillSettings ??
+                DEFAULT_AGENT_SETTINGS.skillSettings
+              }
+              onSkillSettingsChange={handleAgentSkillSettingsChange}
               error={systemPromptError}
             />
           )}

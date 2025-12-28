@@ -6,18 +6,30 @@ import {
   Description,
   FieldError,
   Label,
+  ListBox,
   TextArea,
   TextField,
 } from "@heroui/react";
 import { RotateCcw } from "lucide-react";
+import Image from "next/image";
+import type { Selection } from "react-aria-components";
 import { useTranslation } from "react-i18next";
 
 import ConfirmDialog from "../common/ConfirmDialog";
+import { useAppTranslation } from "@/app/i18n/hooks";
 import { DEFAULT_SYSTEM_PROMPT } from "@/app/lib/config-utils";
+import type { SkillKnowledgeId, SkillSettings } from "@/app/types/chat";
+import {
+  getRequiredKnowledge,
+  getThemeById,
+  skillKnowledgeConfig,
+} from "@/app/config/skill-elements";
 
 export interface AgentSettingsPanelProps {
   systemPrompt: string;
   onChange: (systemPrompt: string) => void;
+  skillSettings: SkillSettings;
+  onSkillSettingsChange: (settings: SkillSettings) => void;
   // 可选：由父组件传入的错误信息
   error?: string;
 }
@@ -28,12 +40,25 @@ export const isSystemPromptValid = (value: string): boolean =>
 export const getSystemPromptError = (value: string): string | null =>
   isSystemPromptValid(value) ? null : "系统提示词不能为空";
 
+const themeOptions = skillKnowledgeConfig.themes;
+const knowledgeOptions = skillKnowledgeConfig.knowledge;
+const knowledgeOrder = knowledgeOptions.map((item) => item.id);
+
+const buildOrderedKnowledge = (
+  ids: Set<SkillKnowledgeId>,
+): SkillKnowledgeId[] => {
+  return knowledgeOrder.filter((id) => ids.has(id));
+};
+
 export default function AgentSettingsPanel({
   systemPrompt,
   onChange,
+  skillSettings,
+  onSkillSettingsChange,
   error,
 }: AgentSettingsPanelProps) {
   const { t } = useTranslation("settings");
+  const { t: tChat } = useAppTranslation("chat");
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
 
   const handleReset = useCallback(() => {
@@ -46,6 +71,90 @@ export default function AgentSettingsPanel({
       ? undefined
       : t("agent.systemPrompt.errorEmpty", "系统提示词不能为空");
   }, [error, systemPrompt, t]);
+
+  const requiredKnowledgeIds = useMemo<Set<SkillKnowledgeId>>(
+    () => new Set(getRequiredKnowledge().map((item) => item.id)),
+    [],
+  );
+
+  const availableKnowledgeIds = useMemo<Set<SkillKnowledgeId>>(
+    () => new Set(knowledgeOptions.map((item) => item.id)),
+    [],
+  );
+
+  const selectedKnowledgeIds = useMemo(() => {
+    const next = new Set<SkillKnowledgeId>();
+    for (const id of skillSettings.selectedKnowledge) {
+      if (availableKnowledgeIds.has(id)) {
+        next.add(id);
+      }
+    }
+    for (const id of requiredKnowledgeIds) {
+      next.add(id);
+    }
+    return next;
+  }, [
+    availableKnowledgeIds,
+    skillSettings.selectedKnowledge,
+    requiredKnowledgeIds,
+  ]);
+
+  const selectedTheme = useMemo(() => {
+    return (
+      getThemeById(
+        skillSettings.selectedTheme as Parameters<typeof getThemeById>[0],
+      ) ?? themeOptions[0]
+    );
+  }, [skillSettings.selectedTheme]);
+
+  const handleThemeChange = useCallback(
+    (value: string) => {
+      if (!value || value === skillSettings.selectedTheme) return;
+      onSkillSettingsChange({
+        ...skillSettings,
+        selectedTheme: value,
+      });
+    },
+    [onSkillSettingsChange, skillSettings],
+  );
+
+  const handleKnowledgeChange = useCallback(
+    (keys: Selection) => {
+      if (keys === "all") {
+        const allIds = new Set<SkillKnowledgeId>(knowledgeOrder);
+        for (const id of requiredKnowledgeIds) {
+          allIds.add(id);
+        }
+        onSkillSettingsChange({
+          ...skillSettings,
+          selectedKnowledge: buildOrderedKnowledge(allIds),
+        });
+        return;
+      }
+
+      const next = new Set<SkillKnowledgeId>();
+      for (const key of keys) {
+        const id = String(key) as SkillKnowledgeId;
+        if (availableKnowledgeIds.has(id)) {
+          next.add(id);
+        }
+      }
+      for (const id of requiredKnowledgeIds) {
+        next.add(id);
+      }
+
+      onSkillSettingsChange({
+        ...skillSettings,
+        selectedKnowledge: buildOrderedKnowledge(next),
+      });
+    },
+    [
+      availableKnowledgeIds,
+      onSkillSettingsChange,
+      requiredKnowledgeIds,
+      skillSettings,
+    ],
+  );
 
   return (
     <div className="settings-panel flex flex-col gap-6">
@@ -93,6 +202,112 @@ export default function AgentSettingsPanel({
           <FieldError className="mt-2 text-sm">{derivedError}</FieldError>
         ) : null}
       </TextField>
+
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <Label className="text-sm font-semibold text-foreground">
+            {t("agent.defaultSettings.title", "新对话默认设置")}
+          </Label>
+          <Description className="text-sm text-default-500">
+            {t("agent.defaultSettings.description", "新对话将使用这些默认设置")}
+          </Description>
+        </div>
+
+        <div className="skill-section">
+          <div className="skill-section__header">
+            <Label className="skill-section__title">
+              {t("agent.defaultSettings.themeLabel", "默认风格设置")}
+            </Label>
+            <p className="skill-section__hint">
+              {tChat("skill.theme.description")}
+            </p>
+          </div>
+          <div
+            className="skill-theme-grid"
+            role="radiogroup"
+            aria-label={t("agent.defaultSettings.themeLabel", "默认风格设置")}
+          >
+            {themeOptions.map((theme) => {
+              const isSelected =
+                (selectedTheme?.id ?? skillSettings.selectedTheme) === theme.id;
+              return (
+                <button
+                  key={theme.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={isSelected}
+                  aria-label={tChat(theme.nameKey)}
+                  className={[
+                    "skill-theme-card",
+                    isSelected && "skill-theme-card--selected",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  onClick={() => handleThemeChange(theme.id)}
+                >
+                  <span className="skill-theme-thumbnail">
+                    <Image
+                      src={`/images/skill-themes/${theme.id}.svg`}
+                      alt=""
+                      aria-hidden="true"
+                      className="skill-theme-thumbnail__image"
+                      width={80}
+                      height={60}
+                    />
+                  </span>
+                  <span className="skill-theme-label">
+                    {tChat(theme.nameKey)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="skill-section">
+          <div className="skill-section__header">
+            <Label className="skill-section__title">
+              {t("agent.defaultSettings.knowledgeLabel", "默认知识选择")}
+            </Label>
+            <p className="skill-section__hint">
+              {tChat("skill.knowledge.description")}
+            </p>
+          </div>
+          <ListBox
+            aria-label={t(
+              "agent.defaultSettings.knowledgeLabel",
+              "默认知识选择",
+            )}
+            selectionMode="multiple"
+            selectedKeys={selectedKnowledgeIds}
+            onSelectionChange={handleKnowledgeChange}
+            disabledKeys={new Set(requiredKnowledgeIds.values())}
+            className="skill-elements-list"
+          >
+            {knowledgeOptions.map((item) => {
+              const isRequired = requiredKnowledgeIds.has(item.id);
+              return (
+                <ListBox.Item
+                  key={item.id}
+                  id={item.id}
+                  textValue={tChat(item.nameKey)}
+                  className="skill-element-item"
+                >
+                  <span className="skill-element-item__label">
+                    {tChat(item.nameKey)}
+                  </span>
+                  {isRequired ? (
+                    <span className="skill-element-item__required">
+                      {tChat("skill.knowledge.required")}
+                    </span>
+                  ) : null}
+                  <ListBox.ItemIndicator />
+                </ListBox.Item>
+              );
+            })}
+          </ListBox>
+        </div>
+      </div>
 
       <ConfirmDialog
         isOpen={isResetDialogOpen}

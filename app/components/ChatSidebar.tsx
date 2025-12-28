@@ -45,8 +45,16 @@ import {
   getStorage,
   WIP_VERSION,
 } from "@/app/lib/storage";
-import type { ChatUIMessage, MessageMetadata } from "@/app/types/chat";
-import { DEFAULT_LLM_CONFIG } from "@/app/lib/config-utils";
+import type {
+  ChatUIMessage,
+  MessageMetadata,
+  SkillSettings,
+} from "@/app/types/chat";
+import {
+  DEFAULT_AGENT_SETTINGS,
+  DEFAULT_LLM_CONFIG,
+  DEFAULT_SKILL_SETTINGS,
+} from "@/app/lib/config-utils";
 import type { DrawioEditorRef } from "@/app/components/DrawioEditorNative";
 import { getDrawioXML, replaceDrawioXML } from "@/app/lib/drawio-tools";
 import type { DrawioReadResult } from "@/app/types/drawio-tools";
@@ -78,8 +86,6 @@ const logger = createLogger("ChatSidebar");
 type UseChatMessage = UIMessage<MessageMetadata>;
 
 // ========== 辅助函数 ==========
-
-const CANVAS_CONTEXT_MAX_ITEMS = 100;
 
 const hasImageParts = (msg: unknown): boolean => {
   if (!msg || typeof msg !== "object") return false;
@@ -213,20 +219,10 @@ function buildToolSchemaPayload(
   return payload;
 }
 
-function formatDrawioStatusTag(items: Array<{ id: string; type: string }>) {
-  const filtered = items.filter((item) => item.id !== "0" && item.id !== "1");
-
-  const total = filtered.length;
-  const sliced = filtered.slice(0, CANVAS_CONTEXT_MAX_ITEMS);
-
-  let payload = sliced.map((item) => `${item.id}:${item.type}`).join(",");
-  if (total > CANVAS_CONTEXT_MAX_ITEMS) {
-    payload = payload
-      ? `${payload},...(truncated, total: ${total})`
-      : `...(truncated, total: ${total})`;
-  }
-
-  return `<drawio_status content="id:type">${payload}</drawio_status>`;
+function formatDrawioStatusTag(counts: { vertices: number; edges: number }) {
+  const vertices = Math.max(0, Math.floor(counts.vertices));
+  const edges = Math.max(0, Math.floor(counts.edges));
+  return `<drawio_status vertices="${vertices}" edges="${edges}"/>`;
 }
 
 function formatUserSelectTag(ids: readonly string[]) {
@@ -255,14 +251,18 @@ async function buildCanvasContextPrefix(options: {
   const list = "list" in result ? result.list : undefined;
   if (!Array.isArray(list)) return null;
 
-  const items = list
-    .map((entry) => ({
-      id: entry.id,
-      type: entry.type,
-    }))
-    .filter((entry) => Boolean(entry.id));
+  let vertices = 0;
+  let edges = 0;
+  for (const entry of list) {
+    if (!entry || typeof entry !== "object") continue;
+    if ((entry as { id?: unknown }).id === "0") continue;
+    if ((entry as { id?: unknown }).id === "1") continue;
+    const type = (entry as { type?: unknown }).type;
+    if (type === "vertex") vertices += 1;
+    else if (type === "edge") edges += 1;
+  }
 
-  const lines: string[] = [formatDrawioStatusTag(items)];
+  const lines: string[] = [formatDrawioStatusTag({ vertices, edges })];
   if (isAppEnv) {
     const selectTag = formatUserSelectTag(selectionIds);
     if (selectTag) lines.push(selectTag);
@@ -439,6 +439,13 @@ export default function ChatSidebar({
   const mcpOverlayContainerRef = useRef<HTMLDivElement | null>(null);
   const [mcpOverlayPortalContainer, setMcpOverlayPortalContainer] =
     useState<Element | null>(null);
+  const [skillSettings, setSkillSettings] = useState<SkillSettings>(
+    DEFAULT_SKILL_SETTINGS,
+  );
+  const [skillSettingsLoading, setSkillSettingsLoading] = useState(true);
+  const [systemPrompt, setSystemPrompt] = useState(
+    DEFAULT_AGENT_SETTINGS.systemPrompt,
+  );
   const chatShellContainerRef = useRef<HTMLDivElement | null>(null);
   const isMountedRef = useRef(true);
 
@@ -483,7 +490,12 @@ export default function ChatSidebar({
     useOperationToast();
   const imageAttachments = useImageAttachments();
   const mcpServer = useMcpServer();
-  const { getSetting } = useStorageSettings();
+  const {
+    getSetting,
+    getAgentSettings,
+    saveSkillSettings,
+    subscribeSettingsUpdates,
+  } = useStorageSettings();
   const { createHistoricalVersion, getAllXMLVersions } =
     useStorageXMLVersions();
 
@@ -508,6 +520,50 @@ export default function ChatSidebar({
   const { canChat, lockHolder, acquireLock, releaseLock } =
     useChatLock(resolvedProjectUuid);
   const { isOnline, offlineReason } = useNetworkStatus();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadAgentSettings = async () => {
+      try {
+        const settings = await getAgentSettings();
+        if (cancelled) return;
+        setSkillSettings(settings.skillSettings ?? DEFAULT_SKILL_SETTINGS);
+        setSystemPrompt(
+          settings.systemPrompt ?? DEFAULT_AGENT_SETTINGS.systemPrompt,
+        );
+      } catch (error) {
+        logger.warn("[ChatSidebar] 获取 Skill 设置失败", { error });
+      } finally {
+        if (!cancelled) setSkillSettingsLoading(false);
+      }
+    };
+
+    void loadAgentSettings();
+
+    const unsubscribe = subscribeSettingsUpdates((detail) => {
+      if (detail.type === "agent") {
+        void loadAgentSettings();
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, [getAgentSettings, subscribeSettingsUpdates]);
+
+  const handleSkillSettingsChange = useCallback(
+    async (nextSettings: SkillSettings) => {
+      setSkillSettings(nextSettings);
+      try {
+        await saveSkillSettings(nextSettings);
+      } catch (error) {
+        logger.error("[ChatSidebar] 保存 Skill 设置失败", { error });
+      }
+    },
+    [saveSkillSettings],
+  );
 
   useEffect(() => {
     setMcpOverlayPortalContainer(mcpOverlayContainerRef.current);
@@ -2012,6 +2068,7 @@ export default function ChatSidebar({
   };
 
   const modelSelectorDisabled = isChatStreaming || selectorLoading;
+  const skillButtonDisabled = isChatStreaming || skillSettingsLoading;
   const isModelConfigMissing = providers.length === 0 || models.length === 0;
   const isInputDisabled =
     configLoading ||
@@ -2109,6 +2166,12 @@ export default function ChatSidebar({
                 onHistory={handleHistory}
                 onRetry={handleRetry}
                 imageAttachments={imageAttachments}
+                skillButton={{
+                  skillSettings,
+                  onSkillSettingsChange: handleSkillSettingsChange,
+                  systemPrompt,
+                  isDisabled: skillButtonDisabled,
+                }}
                 modelSelectorProps={{
                   providers,
                   models,

@@ -24,6 +24,7 @@ export default function CanvasContextButton({
 }: CanvasContextButtonProps) {
   const { t } = useAppTranslation("chat");
   const label = t("canvasContext");
+  const { className, ...restButtonProps } = buttonProps;
 
   return (
     <TooltipRoot delay={0}>
@@ -34,10 +35,13 @@ export default function CanvasContextButton({
         aria-label={label}
         aria-pressed={enabled}
         onPress={onPress}
-        {...buttonProps}
+        className={["canvas-context-button", className]
+          .filter(Boolean)
+          .join(" ")}
+        {...restButtonProps}
       >
         <SquareMousePointer size={16} aria-hidden />
-        {label}
+        <span className="canvas-context-button__label">{label}</span>
       </Button>
       <TooltipContent placement="top">
         <p>{t("canvasContextTooltip")}</p>
