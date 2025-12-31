@@ -164,12 +164,6 @@ export const HISTORY_PROMPT_V1_1_1: HistoryPromptVersion = {
   description: "v1.1.1 版本系统提示词（历史记录）",
 };
 
-export const HISTORY_PROMPT_MAIN: HistoryPromptVersion = {
-  version: "main",
-  prompt: LEGACY_PROMPT_V1_1_1_MAIN,
-  description: "main 分支历史系统提示词（当时与 v1.1.1 相同）",
-};
-
 export const HISTORY_PROMPT_V1_1_2: HistoryPromptVersion = {
   version: "v1.1.2",
   prompt: V1_1_2_PROMPT,
@@ -178,7 +172,6 @@ export const HISTORY_PROMPT_V1_1_2: HistoryPromptVersion = {
 
 export const HISTORY_PROMPT_VERSIONS: HistoryPromptVersion[] = [
   HISTORY_PROMPT_V1_1_1,
-  HISTORY_PROMPT_MAIN,
   HISTORY_PROMPT_V1_1_2,
 ];
 

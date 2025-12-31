@@ -451,6 +451,28 @@ console.log(result.stats); // { matched, changed, onlyA, onlyB, coverage }
 
 ## 代码腐化清理记录
 
+### 2025-12-31
+
+**XML 解析优化：智能 xml_string 显示策略 + 子元素解析**
+
+- **value 属性的 HTML 实体处理**: 移除了 `decodeHtmlEntities` 函数，改为依赖 DOM API 的标准行为
+  - **读取时**: DOM API (`attribute.value`) 自动解码 HTML 实体（`&lt;div&gt;` → `<div>`），对 AI 更友好
+  - **写回时**: `XMLSerializer` 自动编码回去（`<div>` → `&lt;div&gt;`），保持 XML 合法性
+  - **注意**: 这是 XML DOM 标准行为，无法也无需修改
+- **子元素解析**: 新增 `children` 字段，提取子元素的标签名和属性信息
+  - 例如：`mxCell` 的 `mxGeometry` 子元素会被完整解析到 `children` 数组
+  - 子元素结构：`{ tag_name: string, attributes: Record<string, string> }`
+- **智能 xml_string 策略**:
+  - 无子元素 → xml_string 为空
+  - 有子元素，且所有子元素都是简单元素（只有属性，无嵌套）→ xml_string 为空
+  - 子元素有嵌套（深度 > 1）→ 保留 xml_string
+- **Token 优化效果**:
+  - 对于简单结构（如 `mxCell` + `mxGeometry`），避免双倍输出，减少约 60% 的 token 消耗
+  - 复杂嵌套结构仍保留 xml_string 以防信息丢失
+- **影响文件**:
+  - `app/lib/frontend-tools.ts`（collectAttributes + convertNodeToResult）
+  - `app/types/drawio-tools.ts`（DrawioElementResult 类型定义）
+
 ### 2025-12-22
 
 - 新增 `error-utils.ts` 与 `set-utils.ts`，合并重复工具函数

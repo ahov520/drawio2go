@@ -387,11 +387,44 @@ function convertNodeToResult(node: Node): DrawioQueryResult | null {
   switch (node.nodeType) {
     case node.ELEMENT_NODE: {
       const element = node as Element;
+      const attributes = collectAttributes(element);
+
+      // 解析子元素信息
+      const childElements: Array<{ tag_name: string; attributes: Record<string, string> }> = [];
+      const childNodes = Array.from(element.childNodes).filter(n => n.nodeType === 1);
+
+      for (const child of childNodes) {
+        const childElement = child as Element;
+        childElements.push({
+          tag_name: childElement.tagName,
+          attributes: collectAttributes(childElement),
+        });
+      }
+
+      // 智能判断是否需要显示 xml_string：
+      // - 如果元素没有子元素 → xml_string 为空
+      // - 如果元素有子元素，且所有子元素都是简单元素（只有属性，没有嵌套子元素）→ xml_string 为空
+      // - 如果子元素还有嵌套子元素（深度 > 1）→ 保留 xml_string
+      let shouldShowXmlString = false;
+
+      if (childElements.length > 0) {
+        // 检查子元素是否有嵌套子元素
+        for (const child of childNodes) {
+          const childElement = child as Element;
+          const grandChildren = Array.from(childElement.childNodes).filter(n => n.nodeType === 1);
+          if (grandChildren.length > 0) {
+            shouldShowXmlString = true;
+            break;
+          }
+        }
+      }
+
       return {
         type: "element",
         tag_name: element.tagName,
-        attributes: collectAttributes(element),
-        xml_string: xmlSerializer.serializeToString(element),
+        attributes,
+        children: childElements.length > 0 ? childElements : undefined,
+        xml_string: shouldShowXmlString ? xmlSerializer.serializeToString(element) : "",
         matched_xpath: matchedXPath,
       };
     }
@@ -1798,7 +1831,10 @@ function createDrawioReadTool(context: FrontendToolContext) {
 3. **xpath mode**: XPath expression for complex queries
    - Example: \`{ "xpath": "//mxCell[@vertex='1']" }\`
 
-**Returns:** Each result includes \`matched_xpath\` field for use in subsequent edit operations.
+**Returns:**
+- Each result includes \`matched_xpath\` field for use in subsequent edit operations
+- \`children\`: Array of direct child elements (tag_name + attributes), e.g., mxGeometry info
+- \`xml_string\`: Full XML only shown for complex nested structures; empty for simple elements to reduce tokens
 
 **Best Practice:** Use this tool before editing to understand current diagram state.`,
     inputSchema: drawioReadInputSchema.optional(),
@@ -1827,6 +1863,7 @@ function createDrawioEditBatchTool(context: FrontendToolContext) {
 **Locator (choose one per operation):**
 - \`id\`: mxCell ID (preferred, auto-converts to XPath \`//mxCell[@id='xxx']\`)
 - \`xpath\`: XPath expression for complex targeting
+  - **Edit child elements**: Use path like \`//mxCell[@id='xxx']/mxGeometry\` to target children
 
 **Operation Types:**
 | Type | Required Fields | Description |

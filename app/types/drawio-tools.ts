@@ -85,6 +85,10 @@ export interface DrawioElementResult extends DrawioQueryResultBase {
   type: "element";
   tag_name: string;
   attributes: Record<string, string>;
+  children?: Array<{
+    tag_name: string;
+    attributes: Record<string, string>;
+  }>;
   xml_string: string;
 }
 
