@@ -28,19 +28,19 @@ https://github.com/user-attachments/assets/40fe5c3b-0f37-4fbf-b6ac-60b8734f2d14
     <td width="33.33%" valign="top" align="center">
       <h3><em>NEW:</em> Canvas Enhancement</h3>
       <p>After inserting images, it will automatically check if connection lines overlap with elements, avoiding AI connection errors</p>
-      <img src="https://github.com/user-attachments/assets/91904af5-e00c-4517-bce0-8162672df0a9" width="90%" />
+      <img src="https://github.com/user-attachments/assets/82cb7777-7cdf-4a94-85bf-9da02cb42496" width="90%" />
       <br />
     </td>
     <td width="33.33%" valign="top" align="center">
       <h3><em>NEW:</em> LLM Enhancement</h3>
       <p>Specify drawing style/colors and even add DrawIO element knowledge*</p>
-      <img src="https://github.com/user-attachments/assets/85fef675-b748-4b99-a693-93f898ea69b0" width="65%" />
+      <img src="https://github.com/user-attachments/assets/892dddb5-6975-4565-b3f1-027691a2c0c9" width="65%" />
       <br />
     </td>
     <td width="33.33%" valign="top" align="center">
       <h3><em>NEW:</em> Custom DrawIO Canvas</h3>
       <p>Fully customize DrawIO canvas, modify default appearance theme / switch to self-hosted URL</p>
-      <img src="https://github.com/user-attachments/assets/8456c678-6cac-4f2f-b5a0-ef4d107ec21f" alt="MCP" />
+      <img src="https://github.com/user-attachments/assets/04d56aee-6b3c-4365-bf11-57f59bb8fc2b" alt="MCP" />
       <br />
     </td>
   </tr>
