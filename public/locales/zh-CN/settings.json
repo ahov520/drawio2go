@@ -168,7 +168,10 @@
       "reset": "恢复默认",
       "errorEmpty": "系统提示词不能为空",
       "resetTitle": "恢复默认系统提示词",
-      "resetConfirm": "此操作将丢失当前编辑的内容，确认恢复默认系统提示词吗？"
+      "resetConfirm": "此操作将丢失当前编辑的内容，确认恢复默认系统提示词吗？",
+      "upgradeToastTitle": "检测到旧版本提示词",
+      "upgradeToastDescription": "你正在使用 {{version}} 版本的提示词，可以升级到最新版本获得更好的体验",
+      "upgradeToastAction": "升级到最新版"
     },
     "defaultSettings": {
       "title": "新对话默认设置",

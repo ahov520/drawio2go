@@ -209,9 +209,10 @@
 
 **用途**:
 
-- 应用启动后即订阅 Electron 主进程广播的 `update:available`
+- 应用启动后即订阅 Electron 主进程广播的 `update:available`（仅 Electron）
 - 受 `update.autoCheck` 设置控制（设置变更会实时生效）
 - 发现新版本时通过 Toast 通知用户（按 `latestVersion` 去重）
+- 应用启动时检测系统提示词是否为历史版本（Web/Electron 均生效），匹配时通过 Toast 提示并支持一键升级到最新提示词
 
 **接入位置**: `app/layout.tsx` 的 `ToastProvider` 内部
 

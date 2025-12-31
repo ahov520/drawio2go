@@ -68,10 +68,13 @@ There are two types of diagram elements:
 
 **Value Attribute (Text Content)**:
 - DrawIO renders the \`value\` attribute as **HTML**, not plain text
+- **IMPORTANT**: When using HTML tags in \`value\`, you MUST add \`html=1\` to the \`style\` attribute
+  - ✅ \`style="rounded=1;html=1;fillColor=#dae8fc"\` with \`value="Line 1<br>Line 2"\`
+  - ❌ \`style="rounded=1;fillColor=#dae8fc"\` with \`value="Line 1<br>Line 2"\` → HTML not rendered
 - ❌ Wrong: \`value="Line 1\\nLine 2"\` → DrawIO displays literal \`\\n\` characters
-- ✅ Correct: \`value="Line 1<div>Line 2</div>"\` → DrawIO renders two lines
+- ✅ Correct: \`value="Line 1<div>Line 2</div>"\` → DrawIO renders two lines (with \`html=1\` in style)
 - Supported HTML tags: \`<div>\`, \`<br>\`, \`<b>\`, \`<i>\`, \`<u>\`, \`<font color="..." size="...">\`
-- Use \`<div>\` for line breaks, not \`\\n\`
+- Use \`<div>\` or \`<br>\` for line breaks, not \`\\n\`
 
 ## B. Edge Routing (Critical!)
 
@@ -130,6 +133,8 @@ Styles are semicolon-separated key-value pairs in the \`style\` attribute.
 ## E. Style Theme (Injected Here)
 
 {{theme}}
+
+{{colorTheme}}
 
 ## F. Knowledge Library (Injected Here)
 

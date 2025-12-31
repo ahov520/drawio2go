@@ -3,17 +3,17 @@
     {
       "id": "modern",
       "nameKey": "skill.theme.modern",
-      "promptFragment": "Modern (web/product docs, marketing)\n- Color: Use user palette if provided; else neutral base + 1 accent (optional 1 secondary). No rainbow.\n- Shapes: Rounded rectangles primary; uniform stroke width; high text contrast.\n- Layout: Grid-aligned; consistent spacing; generous whitespace; subtle container grouping.\n- Connectors: Orthogonal routing; minimize bends/crossings.\n- Avoid: Gradients, heavy shadows, 3D effects, excessive decoration."
+      "promptFragment": "Modern (modern product/engineering docs)\n- Palette: Prefer injected user palette / color theme. If none is provided, use neutral base + 1 accent (optional 1 secondary). Keep palette small; ensure high text contrast; avoid rainbow.\n- Shapes: Rounded rectangles with subtle radius; consistent stroke width; light fills; use containers for grouping.\n- Layout: Grid-aligned; consistent padding/gaps; clear visual hierarchy; generous whitespace.\n- Connectors: Orthogonal routing with explicit waypoints; consistent arrowheads; minimize crossings.\n- Avoid: Gradients, heavy shadows, 3D effects, decorative clutter."
     },
     {
       "id": "academic",
       "nameKey": "skill.theme.academic",
-      "promptFragment": "Academic (papers, technical docs, journals)\n- Color: Use user palette if provided; else neutral base + 1 primary accent (optional 1 secondary), restrained saturation.\n- Shapes: Rectilinear/right angles; moderate corners; clear titled group frames.\n- Layout: Strict alignment; uniform spacing; stable label positions; readability first.\n- Connectors: Orthogonal + explicit waypoints; minimal crossings; dashed only for clear semantics.\n- Avoid: Decorative icons, thick outlines, heavy fills, strong shadows."
+      "promptFragment": "Academic (papers, technical docs, e-journals)\n- Palette: Prefer injected palette/color theme. If none is provided, use neutral + 1 muted accent (optional 1 secondary). Must remain legible in grayscale; never rely on color alone (use labels/line styles).\n- Shapes: Mostly rectilinear; minimal rounding; white/light fills; consistent line weights; tidy group frames.\n- Layout: Strict alignment; uniform spacing; stable label positions; readable at 100% and 50% scale.\n- Connectors: Orthogonal with explicit waypoints; avoid crossings; dashed lines only with clear semantics and labels.\n- Avoid: Decorative icons, thick outlines, heavy fills, strong shadows."
     },
     {
       "id": "minimal",
       "nameKey": "skill.theme.minimal",
-      "promptFragment": "Minimal (concept maps, wireframes, clean presentations)\n- Color: Use user palette if provided; else monochrome or dual-tone.\n- Shapes: Basic forms (rect, ellipse); no/light fill; thin borders.\n- Layout: Abundant whitespace; loose spacing; minimal connections.\n- Connectors: Straight/simple orthogonal; thin lines; open arrows.\n- Avoid: Shadows, gradients, thick borders, dense elements, complex icons."
+      "promptFragment": "Minimal (wireframes, concept maps)\n- Palette: Prefer injected palette/color theme. If none is provided, use monochrome/dual-tone; use color sparingly and consistently.\n- Shapes: Basic forms only; no icons; no/very light fill; thin borders.\n- Layout: Few elements; lots of whitespace; short labels; avoid dense clusters.\n- Connectors: Straight or simple orthogonal; thin lines; open arrows; minimal bends.\n- Avoid: Shadows, gradients, heavy borders, complex shapes, visual noise."
     },
     {
       "id": "custom",
@@ -77,7 +77,7 @@
       "nameKey": "skill.element.general",
       "description": "Base shapes (rectangle, ellipse, rhombus, etc.)",
       "required": true,
-      "promptFragment": "| ID | Meaning | Example style |\n|---|---|---|\n| rectangle | Basic box, text label, group frame | rounded=1;fillColor=#f5f5f5;strokeColor=#666666 |\n| ellipse | Circle or oval shape | ellipse;fillColor=#ffffff;strokeColor=#666666 |\n| rhombus | Decision diamond | rhombus;fillColor=#ffe6cc;strokeColor=#d79b00 |\n| triangle | Triangle shape | triangle;fillColor=#dae8fc;strokeColor=#6c8ebf |\n| text | Plain text label | text;html=1;align=center;verticalAlign=middle |\n| line | Straight line | line;strokeColor=#666666;strokeWidth=2 |\n| image | Custom icon/image | shape=image;image=data:image/svg+xml,... |\n| swimlane | Container/lane | swimlane;fillColor=#f5f5f5;strokeColor=#666666 |\n| note | Sticky note | shape=note;fillColor=#fff2cc;strokeColor=#d6b656 |\n| curlyBracket | Brace (use flipH=1 for right) | shape=curlyBracket;fillColor=none;strokeColor=#666666 |",
+      "promptFragment": "**HTML in value**: Add `html=1` to style when using HTML tags (e.g., `<br>`, `<b>`, `<div>`) in the `value` attribute.\n\n| ID | Meaning | Example style |\n|---|---|---|\n| rectangle | Basic box, text label, group frame | rounded=1;html=1;fillColor=#f5f5f5;strokeColor=#666666 |\n| ellipse | Circle or oval shape | ellipse;html=1;fillColor=#ffffff;strokeColor=#666666 |\n| rhombus | Decision diamond | rhombus;html=1;fillColor=#ffe6cc;strokeColor=#d79b00 |\n| triangle | Triangle shape | triangle;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf |\n| text | Plain text label | text;html=1;align=center;verticalAlign=middle |\n| line | Straight line | line;strokeColor=#666666;strokeWidth=2 |\n| image | Custom icon/image | shape=image;image=data:image/svg+xml,... |\n| swimlane | Container/lane | swimlane;html=1;fillColor=#f5f5f5;strokeColor=#666666 |\n| note | Sticky note | shape=note;html=1;fillColor=#fff2cc;strokeColor=#d6b656 |\n| curlyBracket | Brace (use flipH=1 for right) | shape=curlyBracket;fillColor=none;strokeColor=#666666 |",
       "sizeBytes": 800
     },
     {

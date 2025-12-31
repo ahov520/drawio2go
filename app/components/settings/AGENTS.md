@@ -121,6 +121,7 @@ interface AgentSettingsPanelProps {
 
 - 内联 TextField + TextArea 直接编辑系统提示词（15 行默认高度）
 - 恢复默认：按钮 + `ConfirmDialog`（variant="danger"），使用 `DEFAULT_SYSTEM_PROMPT`
+- 提示词升级提醒：由 `app/hooks/useUpdateChecker.ts` 在设置页挂载后统一检测（命中历史版本且不等于当前默认值时 Toast warning），提供“升级到最新版”按钮一键替换为 `DEFAULT_SYSTEM_PROMPT`
 - 校验辅助：导出 `isSystemPromptValid` / `getSystemPromptError`，空白时展示 `FieldError`
 - 新对话默认设置：复用 `skill-elements` 配置，支持默认风格/颜色主题/默认知识多选（必选项锁定）
   - **自定义风格提示词**：当选择 `custom` 风格时可编辑 `customThemePrompt`，用于替换 `{{theme}}` 注入内容

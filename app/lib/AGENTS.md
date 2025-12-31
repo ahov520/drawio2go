@@ -20,6 +20,7 @@
 | **svg-smart-diff.ts**              | SVG 智能差异对比引擎（基于 data-cell-id + 几何语义）                |
 | **config-utils.ts**                | LLM 配置规范化工具（默认值、类型校验、URL 规范化）                  |
 | **prompt-template.ts**             | 系统提示词模板变量替换                                              |
+| **prompt-history.ts**              | 历史系统提示词版本记录与匹配（用于升级提醒）                        |
 | **model-factory.ts**               | 服务器侧模型工厂（供 `/api/ai-proxy` 使用）                         |
 | **error-classifier.ts**            | 服务器侧错误分类与归一化                                            |
 | **model-capabilities.ts**          | 模型能力白名单与查找辅助函数                                        |

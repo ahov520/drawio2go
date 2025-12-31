@@ -57,6 +57,7 @@ export default function SettingsSidebar({
     updateGeneralSettings,
     getSetting,
     setSetting,
+    subscribeSettingsUpdates,
   } = useStorageSettings();
 
   const [defaultPath, setDefaultPath] = useState("");
@@ -422,6 +423,28 @@ export default function SettingsSidebar({
       flushPendingSaves();
     };
   }, [flushPendingSaves]);
+
+  // 订阅 settings-updated 事件，当 Agent 设置被外部更新时（如提示词升级）重新加载
+  useEffect(() => {
+    const unsubscribe = subscribeSettingsUpdates(async (detail) => {
+      if (detail.type !== "agent") return;
+
+      try {
+        // 取消防抖队列中的待保存任务，避免覆盖新值
+        debouncedSaveAgentSettings.cancel();
+
+        // 重新加载 Agent 设置
+        const loadedAgent = await getAgentSettings();
+        setAgentSettings(loadedAgent ?? DEFAULT_AGENT_SETTINGS);
+
+        logger.info("[SettingsSidebar] Agent 设置已从外部更新，重新加载完成");
+      } catch (e) {
+        logger.warn("[SettingsSidebar] 重新加载 Agent 设置失败", e);
+      }
+    });
+
+    return unsubscribe;
+  }, [subscribeSettingsUpdates, getAgentSettings, debouncedSaveAgentSettings]);
 
   const systemPromptError = useMemo(
     () =>

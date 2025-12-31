@@ -168,7 +168,10 @@
       "reset": "Reset to Default",
       "errorEmpty": "System prompt cannot be empty",
       "resetTitle": "Reset to Default System Prompt",
-      "resetConfirm": "This will discard your current edits. Confirm reset to default system prompt?"
+      "resetConfirm": "This will discard your current edits. Confirm reset to default system prompt?",
+      "upgradeToastTitle": "Outdated system prompt detected",
+      "upgradeToastDescription": "You are using a {{version}} system prompt. Upgrade to the latest version for better experience.",
+      "upgradeToastAction": "Upgrade to latest"
     },
     "defaultSettings": {
       "title": "Defaults for New Chats",
