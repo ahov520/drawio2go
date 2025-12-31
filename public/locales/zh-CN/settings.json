@@ -11,6 +11,8 @@
     "title": "关于",
     "description": "应用信息与更新检查",
     "appVersionLabel": "版本",
+    "tagline": "AI 赋能，人机协作",
+    "license": "MIT 许可证",
     "github": {
       "open": "打开 GitHub"
     },

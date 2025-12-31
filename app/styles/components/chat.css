@@ -234,6 +234,10 @@
   align-items: center;
 }
 
+.chat-top-actions__item--mcp {
+  margin-left: auto;
+}
+
 .chat-top-actions .canvas-context-button,
 .chat-top-actions .skill-button,
 .chat-top-actions .mcp-button,

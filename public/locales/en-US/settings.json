@@ -11,6 +11,8 @@
     "title": "About",
     "description": "Application information and update checks",
     "appVersionLabel": "Version",
+    "tagline": "AI-Powered, Human-AI Collaboration",
+    "license": "MIT License",
     "github": {
       "open": "Open GitHub"
     },

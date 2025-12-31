@@ -207,7 +207,7 @@ export function ChatTopActions({
       ) : null}
 
       {mcpConfigDialog ? (
-        <div className="chat-top-actions__item">
+        <div className="chat-top-actions__item chat-top-actions__item--mcp">
           <McpConfigDialog
             isOpen={mcpConfigDialog.isOpen}
             onOpenChange={mcpConfigDialog.onOpenChange}
