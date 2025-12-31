@@ -134,7 +134,12 @@ export type DrawioEditBatchResult = ToolResult<{
   warnings?: string[];
   layout_check?: {
     overlaps_found: number;
-    overlaps_sample: Array<{ edgeId: string; vertexId: string }>;
+    overlaps_sample: Array<{
+      edgeId: string;
+      vertexId: string;
+      seg: [number, number, number, number]; // [x1, y1, x2, y2] 重叠线段起点和终点
+      vtx: [number, number]; // [cx, cy] 顶点中心坐标
+    }>;
   };
 }>;
 

@@ -3,17 +3,17 @@
     {
       "id": "modern",
       "nameKey": "skill.theme.modern",
-      "promptFragment": "Modern (modern product/engineering docs)\n- Palette: Prefer injected user palette / color theme. If none is provided, use neutral base + 1 accent (optional 1 secondary). Keep palette small; ensure high text contrast; avoid rainbow.\n- Shapes: Rounded rectangles with subtle radius; consistent stroke width; light fills; use containers for grouping.\n- Layout: Grid-aligned; consistent padding/gaps; clear visual hierarchy; generous whitespace.\n- Connectors: Orthogonal routing with explicit waypoints; consistent arrowheads; minimize crossings.\n- Avoid: Gradients, heavy shadows, 3D effects, decorative clutter."
+      "promptFragment": "Modern (modern product/engineering docs)\n- Palette: Follow user's color theme if provided. If none is provided, use neutral base + 1 accent (optional 1 secondary). Keep palette small; ensure high text contrast; avoid rainbow.\n- Shapes: Rounded rectangles with subtle radius; consistent stroke width; light fills; use containers for grouping.\n- Layout: Grid-aligned; consistent padding/gaps; clear visual hierarchy; generous whitespace.\n- Connectors: Orthogonal routing with explicit waypoints; consistent arrowheads; minimize crossings.\n- Avoid: Gradients, heavy shadows, 3D effects, decorative clutter."
     },
     {
       "id": "academic",
       "nameKey": "skill.theme.academic",
-      "promptFragment": "Academic (papers, technical docs, e-journals)\n- Palette: Prefer injected palette/color theme. If none is provided, use neutral + 1 muted accent (optional 1 secondary). Must remain legible in grayscale; never rely on color alone (use labels/line styles).\n- Shapes: Mostly rectilinear; minimal rounding; white/light fills; consistent line weights; tidy group frames.\n- Layout: Strict alignment; uniform spacing; stable label positions; readable at 100% and 50% scale.\n- Connectors: Orthogonal with explicit waypoints; avoid crossings; dashed lines only with clear semantics and labels.\n- Avoid: Decorative icons, thick outlines, heavy fills, strong shadows."
+      "promptFragment": "Academic (papers, technical docs, e-journals)\n- Palette: Follow user's color theme if provided. If none is provided, use neutral + 1 muted accent (optional 1 secondary). Must remain legible in grayscale; never rely on color alone (use labels/line styles).\n- Shapes: Mostly rectilinear; minimal rounding; white/light fills; consistent line weights; tidy group frames.\n- Layout: Strict alignment; uniform spacing; stable label positions; readable at 100% and 50% scale.\n- Connectors: Orthogonal with explicit waypoints; avoid crossings; dashed lines only with clear semantics and labels.\n- Avoid: Decorative icons, thick outlines, heavy fills, strong shadows."
     },
     {
       "id": "minimal",
       "nameKey": "skill.theme.minimal",
-      "promptFragment": "Minimal (wireframes, concept maps)\n- Palette: Prefer injected palette/color theme. If none is provided, use monochrome/dual-tone; use color sparingly and consistently.\n- Shapes: Basic forms only; no icons; no/very light fill; thin borders.\n- Layout: Few elements; lots of whitespace; short labels; avoid dense clusters.\n- Connectors: Straight or simple orthogonal; thin lines; open arrows; minimal bends.\n- Avoid: Shadows, gradients, heavy borders, complex shapes, visual noise."
+      "promptFragment": "Minimal (wireframes, concept maps)\n- Palette: Follow user's color theme if provided. If none is provided, use monochrome/dual-tone; use color sparingly and consistently.\n- Shapes: Basic forms only; no icons; no/very light fill; thin borders.\n- Layout: Few elements; lots of whitespace; short labels; avoid dense clusters.\n- Connectors: Straight or simple orthogonal; thin lines; open arrows; minimal bends.\n- Avoid: Shadows, gradients, heavy borders, complex shapes, visual noise."
     },
     {
       "id": "custom",

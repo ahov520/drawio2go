@@ -1557,12 +1557,15 @@ function buildLayoutVertexIndex(params: {
   vertices: Element[];
   allowedPageIds?: Set<string> | null;
 }): {
-  verticesByPage: Map<string, Array<{ id: string; rect: LayoutRect }>>;
+  verticesByPage: Map<
+    string,
+    Array<{ id: string; rect: LayoutRect; center: LayoutPoint }>
+  >;
   vertexCentersById: Map<string, LayoutPoint>;
 } {
   const verticesByPage = new Map<
     string,
-    Array<{ id: string; rect: LayoutRect }>
+    Array<{ id: string; rect: LayoutRect; center: LayoutPoint }>
   >();
   const vertexCentersById = new Map<string, LayoutPoint>();
 
@@ -1576,7 +1579,7 @@ function buildLayoutVertexIndex(params: {
     vertexCentersById.set(info.id, info.center);
 
     const list = verticesByPage.get(info.pageId) ?? [];
-    list.push({ id: info.id, rect: info.rect });
+    list.push({ id: info.id, rect: info.rect, center: info.center });
     verticesByPage.set(info.pageId, list);
   }
 
@@ -1585,10 +1588,18 @@ function buildLayoutVertexIndex(params: {
 
 function recordLayoutOverlap(params: {
   overlapKeys: Set<string>;
-  overlapsSample: Array<{ edgeId: string; vertexId: string }>;
+  overlapsSample: Array<{
+    edgeId: string;
+    vertexId: string;
+    seg: [number, number, number, number];
+    vtx: [number, number];
+  }>;
   maxSamples: number;
   edgeId: string;
   vertexId: string;
+  segmentStart: LayoutPoint;
+  segmentEnd: LayoutPoint;
+  vertexCenter: LayoutPoint;
 }): void {
   const key = `${params.edgeId}::${params.vertexId}`;
   if (params.overlapKeys.has(key)) return;
@@ -1598,6 +1609,16 @@ function recordLayoutOverlap(params: {
     params.overlapsSample.push({
       edgeId: params.edgeId,
       vertexId: params.vertexId,
+      seg: [
+        Math.round(params.segmentStart.x),
+        Math.round(params.segmentStart.y),
+        Math.round(params.segmentEnd.x),
+        Math.round(params.segmentEnd.y),
+      ],
+      vtx: [
+        Math.round(params.vertexCenter.x),
+        Math.round(params.vertexCenter.y),
+      ],
     });
   }
 }
@@ -1606,10 +1627,15 @@ function collectSegmentOverlaps(params: {
   edgeId: string;
   a: LayoutPoint;
   b: LayoutPoint;
-  vertices: Array<{ id: string; rect: LayoutRect }>;
+  vertices: Array<{ id: string; rect: LayoutRect; center: LayoutPoint }>;
   exclude: Set<string>;
   overlapKeys: Set<string>;
-  overlapsSample: Array<{ edgeId: string; vertexId: string }>;
+  overlapsSample: Array<{
+    edgeId: string;
+    vertexId: string;
+    seg: [number, number, number, number];
+    vtx: [number, number];
+  }>;
   maxSamples: number;
 }): void {
   for (const vertex of params.vertices) {
@@ -1622,16 +1648,27 @@ function collectSegmentOverlaps(params: {
       maxSamples: params.maxSamples,
       edgeId: params.edgeId,
       vertexId: vertex.id,
+      segmentStart: params.a,
+      segmentEnd: params.b,
+      vertexCenter: vertex.center,
     });
   }
 }
 
 function collectPolylineOverlaps(params: {
   polyline: NonNullable<ReturnType<typeof buildEdgePolyline>>;
-  verticesByPage: Map<string, Array<{ id: string; rect: LayoutRect }>>;
+  verticesByPage: Map<
+    string,
+    Array<{ id: string; rect: LayoutRect; center: LayoutPoint }>
+  >;
   allowedPageIds?: Set<string> | null;
   overlapKeys: Set<string>;
-  overlapsSample: Array<{ edgeId: string; vertexId: string }>;
+  overlapsSample: Array<{
+    edgeId: string;
+    vertexId: string;
+    seg: [number, number, number, number];
+    vtx: [number, number];
+  }>;
   maxSamples: number;
 }): void {
   if (
@@ -1667,15 +1704,28 @@ function collectPolylineOverlaps(params: {
 
 function computeLayoutOverlaps(params: {
   edges: Element[];
-  verticesByPage: Map<string, Array<{ id: string; rect: LayoutRect }>>;
+  verticesByPage: Map<
+    string,
+    Array<{ id: string; rect: LayoutRect; center: LayoutPoint }>
+  >;
   vertexCentersById: Map<string, LayoutPoint>;
   allowedPageIds?: Set<string> | null;
 }): {
   overlapsFound: number;
-  overlapsSample: Array<{ edgeId: string; vertexId: string }>;
+  overlapsSample: Array<{
+    edgeId: string;
+    vertexId: string;
+    seg: [number, number, number, number];
+    vtx: [number, number];
+  }>;
 } {
   const overlapKeys = new Set<string>();
-  const overlapsSample: Array<{ edgeId: string; vertexId: string }> = [];
+  const overlapsSample: Array<{
+    edgeId: string;
+    vertexId: string;
+    seg: [number, number, number, number];
+    vtx: [number, number];
+  }> = [];
   const maxSamples = 8;
 
   for (const edge of params.edges) {
@@ -1706,7 +1756,12 @@ function runLayoutOverlapCheck(params: {
   allowedPageIds?: Set<string> | null;
 }): {
   overlapsFound: number;
-  overlapsSample: Array<{ edgeId: string; vertexId: string }>;
+  overlapsSample: Array<{
+    edgeId: string;
+    vertexId: string;
+    seg: [number, number, number, number];
+    vtx: [number, number];
+  }>;
 } {
   const vertexNodes = selectMxCellElements(
     params.document,
