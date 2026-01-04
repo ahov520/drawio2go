@@ -202,17 +202,19 @@ Open [http://localhost:3000](http://localhost:3000) in your browser
 - [x] In web version, conversations may not be cancellable
 - [x] Some specific errors from drawio tools cannot be captured currently
 - [x] Conversation saving currently has some issues, may cause historical conversation loading exceptions
-- [ ] Some UI display issues exist
+- [x] Some UI display issues exist
 
 ## Upcoming Features
 
 - [x] Support for passing selected elements from canvas to AI in Electron
-- [ ] Multi-page drawio support
+- [x] Multi-page drawio support
 - [ ] Full image/file conversation support
-- [ ] Support for custom DrawIO widget URL
-- [ ] Direct export to png/svg
-- [ ] Add more LLM API support
+- [x] Support for custom DrawIO widget URL
+- [x] Direct export to png/svg
+- [x] Add more LLM API support
 - [ ] Support for exporting projects to files
+- [ ] Vision render review
+- [ ] Support headless mode
 
 ## Project Structure
 
