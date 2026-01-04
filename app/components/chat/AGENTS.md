@@ -168,6 +168,8 @@ ChatInputArea（输入组件）
 
 ### 基础消息列表
 
+> ThinkingBlock 的展开 key 使用 `${message.id}-${partIndex}`（partIndex 为 `message.parts` 的索引），同一条消息内多个 reasoning 可独立展开。
+
 ```tsx
 import { MessageList, ChatInputArea } from "@/app/components/chat";
 
@@ -195,10 +197,10 @@ export function ChatPanel() {
             [key]: !prev[key],
           }));
         }}
-        onThinkingBlockToggle={(messageId) => {
+        onThinkingBlockToggle={(expansionKey) => {
           setExpandedThinkingBlocks((prev) => ({
             ...prev,
-            [messageId]: !prev[messageId],
+            [expansionKey]: !prev[expansionKey],
           }));
         }}
       />

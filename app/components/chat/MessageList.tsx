@@ -73,7 +73,7 @@ interface MessageListProps {
   expandedToolCalls: Record<string, boolean>;
   expandedThinkingBlocks: Record<string, boolean>;
   onToolCallToggle: (key: string) => void;
-  onThinkingBlockToggle: (messageId: string) => void;
+  onThinkingBlockToggle: (expansionKey: string) => void;
 }
 
 export default function MessageList({

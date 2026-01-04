@@ -19,7 +19,7 @@ interface MessageContentProps {
   expandedToolCalls: Record<string, boolean>;
   expandedThinkingBlocks: Record<string, boolean>;
   onToolCallToggle: (key: string) => void;
-  onThinkingBlockToggle: (messageId: string) => void;
+  onThinkingBlockToggle: (expansionKey: string) => void;
 }
 
 export default memo(function MessageContent({
@@ -42,14 +42,15 @@ export default memo(function MessageContent({
         // 思考内容
         if (part.type === "reasoning") {
           const isReasoningStreaming = part.state === "streaming";
+          const expansionKey = `${message.id}-${index}`;
           return (
             <ThinkingBlock
-              key={`${message.id}-${index}`}
+              key={expansionKey}
               reasoning={part.text ?? ""}
               isStreaming={isReasoningStreaming}
               durationMs={part.durationMs}
-              expanded={expandedThinkingBlocks[message.id] ?? false}
-              onToggle={() => onThinkingBlockToggle(message.id)}
+              expanded={expandedThinkingBlocks[expansionKey] ?? false}
+              onToggle={() => onThinkingBlockToggle(expansionKey)}
             />
           );
         }

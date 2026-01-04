@@ -2148,10 +2148,10 @@ export default function ChatSidebar({
     }));
   };
 
-  const handleThinkingBlockToggle = (messageId: string) => {
+  const handleThinkingBlockToggle = (expansionKey: string) => {
     setExpandedThinkingBlocks((prev) => ({
       ...prev,
-      [messageId]: !prev[messageId],
+      [expansionKey]: !prev[expansionKey],
     }));
   };
 
