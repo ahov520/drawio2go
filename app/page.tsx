@@ -374,9 +374,9 @@ export default function Home() {
     };
   }, [push, t, tp]);
 
-  // 自动保存图表到统一存储层
+  // 自动保存图表到统一存储层（autosave 只负责落盘，禁止回写 diagramState，避免 initialXml 变化触发编辑器 merge 形成反馈环路）
   const flushPendingSave = useCallback(
-    async (projectUuid: string, options?: { skipStateUpdate?: boolean }) => {
+    async (projectUuid: string) => {
       if (typeof window === "undefined" || !projectUuid) {
         return;
       }
@@ -402,13 +402,6 @@ export default function Home() {
       try {
         await saveXML(xmlToSave, projectUuid);
         lastSavedXmlByProjectRef.current.set(projectUuid, xmlToSave);
-
-        if (
-          !options?.skipStateUpdate &&
-          activeProjectUuidRef.current === projectUuid
-        ) {
-          setDiagramState({ projectUuid, xml: xmlToSave });
-        }
       } catch (error) {
         logger.error("自动保存失败", {
           projectId: projectUuid,
@@ -453,7 +446,7 @@ export default function Home() {
         if (entry.timeout) {
           clearTimeout(entry.timeout);
         }
-        void flushPendingSave(projectUuid, { skipStateUpdate: true });
+        void flushPendingSave(projectUuid);
       });
     };
   }, [flushPendingSave]);
