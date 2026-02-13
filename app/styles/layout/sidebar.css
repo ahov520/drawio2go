@@ -78,6 +78,7 @@
 .sidebar-tab-strip {
   display: flex;
   align-items: center;
+  gap: var(--spacing-xs);
   padding: 0 var(--spacing-sm);
   height: var(--sidebar-tabs-height);
   border-bottom: 1px solid var(--border-light);
@@ -92,6 +93,15 @@
   border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
+
+.sidebar-close-button {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.sidebar-close-button:hover {
+  color: var(--text-primary);
+}
 .sidebar-tab-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -422,5 +432,9 @@
 
   .sidebar-tab-strip {
     padding: 0 var(--spacing-sm);
+  }
+
+  .sidebar-tab-list {
+    gap: var(--spacing-xs);
   }
 }

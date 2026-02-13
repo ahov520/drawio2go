@@ -18,7 +18,9 @@
 .editor-container {
   flex: 1;
   overflow: hidden;
-  transition: width 0.3s ease;
+  transition:
+    width var(--transition-normal),
+    height var(--transition-normal);
   width: 100%;
   height: calc(100dvh - var(--top-bar-height));
   min-height: calc(100vh - var(--top-bar-height));
@@ -120,6 +122,68 @@
 }
 
 @media (max-width: 768px) {
+  .top-bar {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "center toggle"
+      "actions actions";
+    align-items: center;
+    row-gap: var(--spacing-compact-sm);
+    column-gap: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    height: auto;
+    min-height: 0;
+  }
+
+  .top-bar-selection {
+    display: none;
+  }
+
+  .top-bar-center {
+    grid-area: center;
+    justify-content: flex-start;
+    min-width: 0;
+  }
+
+  .top-bar-project {
+    justify-content: flex-start;
+    max-width: 100%;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .top-bar-actions {
+    grid-area: actions;
+    justify-self: stretch;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .top-bar-actions > * {
+    flex-shrink: 0;
+  }
+
+  .top-bar-button {
+    min-width: 0;
+  }
+
+  .top-bar-button__label {
+    display: none;
+  }
+
+  .top-bar-actions > :last-child {
+    margin-left: auto;
+  }
+
+  .main-container {
+    height: 100dvh;
+  }
+
+  .editor-container {
+    height: calc(100dvh - var(--top-bar-height-mobile, 104px));
+    min-height: calc(100vh - var(--top-bar-height-mobile, 104px));
+  }
+
   .main-container.sidebar-open {
     padding-right: 0;
   }
