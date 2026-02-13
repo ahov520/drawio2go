@@ -7,6 +7,7 @@
   "aria": {
     "navigation": "Sidebar Navigation",
     "tabsList": "Sidebar Options",
-    "resizeHandle": "Resize Sidebar Width"
+    "resizeHandle": "Resize Sidebar Width",
+    "closeSidebar": "Close sidebar"
   }
 }

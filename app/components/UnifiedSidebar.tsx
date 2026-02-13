@@ -11,8 +11,8 @@ import {
   type MutableRefObject,
 } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { Tabs } from "@heroui/react";
-import { History, MessageSquare, Settings } from "lucide-react";
+import { Button, Tabs } from "@heroui/react";
+import { History, MessageSquare, Settings, X } from "lucide-react";
 import ChatSidebar from "./ChatSidebar";
 import SettingsSidebar from "./SettingsSidebar";
 import { VersionSidebar } from "./VersionSidebar";
@@ -216,6 +216,16 @@ export default function UnifiedSidebar({
                 </Tabs.Tab>
               ))}
             </Tabs.List>
+            <Button
+              isIconOnly
+              variant="tertiary"
+              size="sm"
+              className="sidebar-close-button"
+              aria-label={t("aria.closeSidebar")}
+              onPress={onClose}
+            >
+              <X size={16} />
+            </Button>
           </Tabs.ListContainer>
         </Tabs>
 

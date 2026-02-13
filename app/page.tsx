@@ -304,7 +304,8 @@ export default function Home() {
         try {
           const general = await getGeneralSettings();
           setSettings({ defaultPath: general.defaultPath });
-          setIsSidebarOpen(general.sidebarExpanded);
+          const isMobileViewport = window.matchMedia("(max-width: 768px)").matches;
+          setIsSidebarOpen(isMobileViewport ? false : general.sidebarExpanded);
         } catch (error) {
           logger.error("加载通用设置失败", { error });
         }

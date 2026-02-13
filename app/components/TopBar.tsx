@@ -65,7 +65,7 @@ export default function TopBar({
             onPress={onLoad}
           >
             <Upload className="h-4 w-4" />
-            {t("buttons.load")}
+            <span className="top-bar-button__label">{t("buttons.load")}</span>
           </Button>
         )}
 
@@ -73,7 +73,9 @@ export default function TopBar({
           <Dropdown>
             <Button variant="primary" size="sm" className="top-bar-button">
               <FileDown className="h-4 w-4" />
-              {t("buttons.export")}
+              <span className="top-bar-button__label">
+                {t("buttons.export")}
+              </span>
               <ChevronDown className="ml-0.5 h-4 w-4 opacity-70" />
             </Button>
             <Dropdown.Popover className="z-[1000] min-w-[180px]">
